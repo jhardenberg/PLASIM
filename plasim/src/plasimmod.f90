@@ -148,7 +148,6 @@
 !     **************************
 
       integer :: kick     =  1  ! add noise for kick > 0
-      integer :: mars     =  0  ! global switch for planet mars
       integer :: noutput  =  1  ! master switch for output: 0=no output
       integer :: nafter   =  0  ! write data interval: 0 = once per day
       integer :: naqua    =  0  ! 1: switch to aqua planet mode
@@ -534,6 +533,8 @@
       real :: eccen  = 0.0             ! Eccentricity of Orbit
       real :: obliq  = 0.0             ! Obliquity of Orbit
       real :: mvelp  = 0.0             ! Longitude of moving vernal equinox
+
+      real :: p_wsmax  = 0.0           ! Planet max field capacity of soil water (m) (0.5 Earth, 0. Mars)
 
 !     ******************************************
 !     * GUI (Graphical User Interface for X11) *

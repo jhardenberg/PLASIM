@@ -15,7 +15,7 @@ namelist /planet_nl/ nfixorb, eccen, mvelp, obliq  &
                 , akap, alr, alv, als, gascon, ra1, ra2, ra4, tmelt &
                 , pnu, ga, plarad &
                 , gsol0 &
-                , yplanet
+                , yplanet,p_wsmax
 
 
 yplanet = "Exo"      ! Planet name
@@ -66,6 +66,12 @@ plarad        = 6371220.0     ! Radius
 ! *********
 
 gsol0         = 1365.0     ! Solar constant
+
+! *********
+! Land
+! *********
+
+p_wsmax = 0.5   ! Maximum field capacity (m)
 
 ! ********
 ! Namelist

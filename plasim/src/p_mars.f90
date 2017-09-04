@@ -15,11 +15,10 @@ namelist /planet_nl/ nfixorb, eccen, mvelp, obliq  &
                 , akap, alr, gascon, ra1, ra2, ra4 &
                 , pnu, ga, plarad &
                 , gsol0 &
-                , yplanet
+                , yplanet, p_wsmax
 
 yplanet = "Mars"     ! Planet name
 !nplanet = 4          ! Planet index
-mars    = 1          ! Switch
 
 ! *********
 ! Astronomy
@@ -77,6 +76,12 @@ plarad        = 3396200.0  ! Radius
 
 gsol0         =  595.0     ! Solar constant
 no3           =    0.0     ! No ozone
+
+! *********
+! Land
+! *********
+
+p_wsmax = 0.   ! Maximum field capacity (m)
 
 ! ********
 ! Namelist

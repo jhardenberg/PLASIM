@@ -15,7 +15,7 @@ namelist /planet_nl/ nfixorb, eccen, mvelp, obliq  &
                 , akap, alr, gascon, ra1, ra2, ra4 &
                 , pnu, ga, plarad &
                 , gsol0 &
-                , yplanet
+                , yplanet,p_wsmax
 
 yplanet = "Earth"    ! Planet name
 ! nplanet = 3          ! 3rd. stone from the sun
@@ -62,6 +62,12 @@ plarad        = 6371220.0     ! Radius
 ! *********
 
 gsol0         = 1365.0     ! Solar constant
+
+! *********
+! Land
+! *********
+
+p_wsmax = 0.5   ! Maximum field capacity (m)
 
 ! ********
 ! Namelist

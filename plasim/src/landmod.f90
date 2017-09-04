@@ -8,8 +8,6 @@
 !     parameters
 !
       parameter(NLSOIL=5)
-      parameter(WSMAX_EARTH = 0.5) ! Initial value vor Earth
-      parameter(WSMAX_MARS  = 0.0) ! Initial value for Mars
 !
 !     namelist parameters
 !
@@ -31,7 +29,7 @@
       real    :: dztop    = 0.20  ! thickness of the uppermost soil layer (m)
       real    :: dsmax    = 5.00  ! maximum snow depth (m-h20; -1 = no limit)
 
-      real    :: wsmax    = WSMAX_EARTH ! max field capacity of soil water (m)
+      real    :: wsmax    = p_wsmax ! max field capacity of soil water (m)
       real    :: dwatcini = 0           ! water content of soil (m)
 
 !     SIMBA - fixed parameters
@@ -139,14 +137,14 @@
       dtcl(:,:)   = tmelt
       dtclim(:)   = tmelt
 
-      if (mars == 1) then
-         wsmax = WSMAX_MARS
+!      if (mars == 1) then
+!         wsmax = WSMAX_MARS
 !        nlandt = 0
 !        nlandw = 0
 !        dtclsoil(:) = tmelt_CO2
 !        dsoilt(:,:) = tmelt_CO2
 !        dsnowt(:)   = tmelt_CO2
-      endif
+!      endif
 
       if (mypid == NROOT) then
       open(12,file=landmod_namelist)
