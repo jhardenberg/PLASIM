@@ -18,7 +18,7 @@ namelist /planet_nl/ nfixorb, eccen, mvelp, obliq  &
                 , yplanet
 
 yplanet = "Mars"     ! Planet name
-nplanet = 4          ! Planet index
+!nplanet = 4          ! Planet index
 mars    = 1          ! Switch
 
 ! *********
@@ -103,19 +103,19 @@ end
 subroutine print_planet
 use radmod
 
-p_mass        =    0.6419  ! [10^24 kg]
-p_volume      =   16.318   ! [10^10 km3]
-p_radius_eq   = 3393.0     ! Equatorial radius
-p_radius_po   = 3373.0     ! Polar radius
-p_radius_me   = 3390.0     ! Mean radius
-p_ellipticity =    0.0065  ! Ellipticity
-p_density     = 3933.0     ! [kg/m3]
-p_albedo      =    0.16    ! Bond albedo
-p_blackt      =  216.6     ! Black body temperature
-p_sidrot      =   24.6229  ! Sidereal rotation period
-p_inclination =   23.98    ! Equatorial inclination
-p_perihelion  =  206.6     ! Perihelion [10^6 km]
-p_aphelion    =  249.2     ! Aphelion [10^6 km]
+!p_mass        =    0.6419  ! [10^24 kg]
+!p_volume      =   16.318   ! [10^10 km3]
+!p_radius_eq   = 3393.0     ! Equatorial radius
+!p_radius_po   = 3373.0     ! Polar radius
+!p_radius_me   = 3390.0     ! Mean radius
+!p_ellipticity =    0.0065  ! Ellipticity
+!p_density     = 3933.0     ! [kg/m3]
+!p_albedo      =    0.16    ! Bond albedo
+!p_blackt      =  216.6     ! Black body temperature
+!p_sidrot      =   24.6229  ! Sidereal rotation period
+!p_inclination =   23.98    ! Equatorial inclination
+!p_perihelion  =  206.6     ! Perihelion [10^6 km]
+!p_aphelion    =  249.2     ! Aphelion [10^6 km]
 p_sidorbit    =  sidereal_year / sidereal_day ! Sidereal orbit period
 
 write(nud,4000)
@@ -124,28 +124,38 @@ write(nud,1100) 'Simulating:',yplanet
 write(nud,1000)
 write(nud,2000) 'Parameter','Units','Value'
 write(nud,1000)
-write(nud,3000) 'Mass'             ,'[10^24 kg]'  ,p_mass
-write(nud,3000) 'Volume'           ,'[10^10 km3]' ,p_volume
-write(nud,3000) 'Equatorial radius','[km]'        ,p_radius_eq
-write(nud,3000) 'Polar radius'     ,'[km]'        ,p_radius_po
-write(nud,3000) 'Mean radius'      ,'[km]'        ,p_radius_me
-write(nud,3000) 'Ellipticity'      ,' '           ,p_ellipticity
-write(nud,3000) 'Mean density'     ,'[kg/m3]'     ,p_density
+!write(nud,3000) 'Mass'             ,'[10^24 kg]'  ,p_mass
+!write(nud,3000) 'Volume'           ,'[10^10 km3]' ,p_volume
+!write(nud,3000) 'Equatorial radius','[km]'        ,p_radius_eq
+!write(nud,3000) 'Polar radius'     ,'[km]'        ,p_radius_po
+write(nud,3000) 'Mean radius'      ,'[km]'        ,plarad/1000.0
+!write(nud,3000) 'Ellipticity'      ,' '           ,p_ellipticity
+!write(nud,3000) 'Mean density'     ,'[kg/m3]'     ,p_density
 write(nud,3000) 'Surface gravity'  ,'[m/s2]'      ,ga
-write(nud,3000) 'Bond albedo'      ,' '           ,p_albedo
+!write(nud,3000) 'Bond albedo'      ,' '           ,p_albedo
 write(nud,3000) 'Solar irradiance' ,'[W/m2]'      ,gsol0
-write(nud,3000) 'Black-body temperature','[K]'    ,p_blackt
+!write(nud,3000) 'Black-body temperature','[K]'    ,p_blackt
 write(nud,3000) 'Sidereal orbit period' ,'[days]' ,p_sidorbit
-write(nud,3000) 'Sidereal rotation period','[hrs]',p_sidrot
-write(nud,3000) 'Equatorial inclination'  ,'[deg]',p_inclination
-write(nud,3000) 'Perihelion'       ,'[10^6 km]'   ,p_perihelion
-write(nud,3000) 'Aphelion'         ,'[10^6 km]'   ,p_aphelion
-write(nud,3000) 'Orbit eccentricity'    ,' '      ,eccen
-write(nud,3000) 'Gas constant'          ,' '      ,gascon
-write(nud,3000) 'Mean surface pressure' ,'[Pa]'   ,psurf 
+write(nud,3000) 'Sidereal rotation period','[h]'  ,sidereal_day/3600.0
+!write(nud,3000) 'Perihelion'       ,'[10^6 km]'   ,p_perihelion
+!write(nud,3000) 'Aphelion'         ,'[10^6 km]'   ,p_aphelion
+write(nud,3000) 'Mean surface pressure' ,'[Pa]'   ,psurf
 write(nud,1000)
 write(nud,4000)
 
+if (nfixorb /= 0) then
+   write(nud,3010) 'Using fixed orbit'       ,' '
+   write(nud,3000) 'Longitude of perihelion' ,'[deg]' ,mvelp
+   write(nud,3000) 'Equatorial inclination'  ,'[deg]' ,obliq
+   write(nud,3000) 'Orbit eccentricity'      ,' '     ,eccen
+else
+   write(nud,3010) 'Using Berger orbit' ,'nfixorb=0'
+endif
+
+write(nud,3000) 'Rotation factor'       ,' '      ,rotspd
+write(nud,3000) 'Gas constant'          ,' '      ,gascon
+write(nud,1000)
+write(nud,4000)
 return
 
  1000 format(50('*'))
