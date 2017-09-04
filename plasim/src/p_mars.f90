@@ -75,7 +75,7 @@ plarad        = 3396200.0  ! Radius
 ! *********
 
 gsol0         =  595.0     ! Solar constant
-no3           =    0.0     ! No ozone
+no3           =    0       ! No ozone
 
 ! *********
 ! Land
@@ -167,6 +167,7 @@ return
  1100 format('* ',a24,1x,a21,' *')
  2000 format('* ',a24,1x,a11,a10,' *')
  3000 format('* ',a24,1x,a11,f10.4,' *')
+ 3010 format('* ',a24,1x,a11,10x  ,' *')
  4000 format(/)
       end  
 

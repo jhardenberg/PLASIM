@@ -12,7 +12,7 @@ logical :: lex
 namelist /planet_nl/ nfixorb, eccen, mvelp, obliq  &
                 , rotspd, sidereal_day, solar_day  &
                 , sidereal_year, tropical_year     &
-                , akap, alr, alv, als, gascon, ra1, ra2, ra4, tmelt &
+                , akap, alr, gascon, ra1, ra2, ra4, &
                 , pnu, ga, plarad &
                 , gsol0 &
                 , yplanet,p_wsmax
@@ -27,6 +27,7 @@ yplanet = "Exo"      ! Planet name
 
 eccen         =     0.016715  ! Eccentricity (AMIP-II value)
 mvelp         =   102.7       ! Longitude of perihelion
+nfixorb       =     1          ! Don't use Berger orbits
 obliq         =    23.441     ! Obliquity [deg] (AMIP-II)
 rotspd        =     1.0       ! Rotation speed (factor)
 sidereal_day  =    86164.0916 !      23h 56m 04s
@@ -40,19 +41,27 @@ tropical_year = 31556956.0    ! 365d 05h 49m 16s
 
 akap    =   0.286     ! Kappa (Poisson constant R/Cp)
 alr     =   0.0065    ! Lapse rate
-als     = 2.8345E6    ! Latent heat of sublimation
-alv     = 2.5008E6    ! Latent heat of vaporization
 gascon  = 287.0       ! Gas constant
+psurf   = 101100.0       ! Mean surface pressure [Pa]
 ra1     = 610.78      ! Parameter for Magnus-Teten-Formula
 ra2     =  17.2693882 ! for saturation vapor pressure
 ra4     =  35.86      ! over liquid water
-tmelt   = 273.16      ! Melting point (H2O)
+tgr     = 288.0       ! mean ground temperature
+
+! ********
+! Calendar
+! ********
+
+n_days_per_month =  30 !
+n_days_per_year  = 360 ! if set to 365 uses real Earth calendar
 
 ! ********
 ! Numerics
 ! ********
 
-pnu     = 0.1        ! Time filter constant
+ndivdamp = 0         ! Initial start divergence damping
+pnu      = 0.1       ! Time filter constant
+oroscale = 1.0       ! Scale orography
 
 ! *******
 ! Physics
@@ -66,6 +75,7 @@ plarad        = 6371220.0     ! Radius
 ! *********
 
 gsol0         = 1365.0     ! Solar constant
+no3     = 1      ! switch for ozone (0=no,1=yes,2=datafile)
 
 ! *********
 ! Land
@@ -98,16 +108,6 @@ end
 subroutine print_planet
 use radmod
 
-!p_mass        =    5.9736  ! [10^24 kg]
-!p_volume      =  108.321   ! [10^10 km3]
-!p_radius_eq   = 6378.0     ! Equatorial radius
-!p_radius_po   = 6356.0     ! Polar radius
-!p_ellipticity =    0.0034  ! Ellipticity
-!p_density     = 5520.0     ! [kg/m3]
-!p_albedo      =    0.385   ! Bond albedo
-!p_blackt      =  247.3     ! Black body temperature
-!p_perihelion  =  147.1     ! Perihelion [10^6 km]
-!p_aphelion    =  152.1     ! Aphelion [10^6 km]
 p_sidorbit    =  sidereal_year / sidereal_day ! Sidereal orbit period
 
 write(nud,4000)
@@ -116,21 +116,11 @@ write(nud,1100) 'Simulating:',yplanet
 write(nud,1000)
 write(nud,2000) 'Parameter','Units','Value'
 write(nud,1000)
-!write(nud,3000) 'Mass'             ,'[10^24 kg]'  ,p_mass
-!write(nud,3000) 'Volume'           ,'[10^10 km3]' ,p_volume
-!write(nud,3000) 'Equatorial radius','[km]'        ,p_radius_eq
-!write(nud,3000) 'Polar radius'     ,'[km]'        ,p_radius_po
 write(nud,3000) 'Mean radius'      ,'[km]'        ,plarad/1000.0
-!write(nud,3000) 'Ellipticity'      ,' '           ,p_ellipticity
-!write(nud,3000) 'Mean density'     ,'[kg/m3]'     ,p_density
 write(nud,3000) 'Surface gravity'  ,'[m/s2]'      ,ga
-!write(nud,3000) 'Bond albedo'      ,' '           ,p_albedo
 write(nud,3000) 'Solar irradiance' ,'[W/m2]'      ,gsol0
-!write(nud,3000) 'Black-body temperature','[K]'    ,p_blackt
 write(nud,3000) 'Sidereal orbit period' ,'[days]' ,p_sidorbit
 write(nud,3000) 'Sidereal rotation period','[h]'  ,sidereal_day/3600.0
-!write(nud,3000) 'Perihelion'       ,'[10^6 km]'   ,p_perihelion
-!write(nud,3000) 'Aphelion'         ,'[10^6 km]'   ,p_aphelion
 write(nud,3000) 'Mean surface pressure' ,'[Pa]'   ,psurf
 write(nud,1000)
 write(nud,4000)

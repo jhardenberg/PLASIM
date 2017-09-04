@@ -26,6 +26,7 @@ yplanet = "Earth"    ! Planet name
 
 eccen         =     0.016715  ! Eccentricity (AMIP-II value)
 mvelp         =   102.7       ! Longitude of perihelion
+nfixorb       =     0          ! use Berger orbits
 obliq         =    23.441     ! Obliquity [deg] (AMIP-II)
 rotspd        =     1.0       ! Rotation speed (factor)
 sidereal_day  =    86164.0916 !      23h 56m 04s
@@ -40,15 +41,26 @@ tropical_year = 31556956.0    ! 365d 05h 49m 16s
 akap    =   0.286     ! Kappa (Poisson constant R/Cp)
 alr     =   0.0065    ! Lapse rate
 gascon  = 287.0       ! Gas constant
+psurf   = 101100.0       ! Mean surface pressure [Pa]
 ra1     = 610.78      ! Parameter for Magnus-Teten-Formula
 ra2     =  17.2693882 ! for saturation vapor pressure
 ra4     =  35.86      ! over liquid water
+tgr     = 288.0       ! mean ground temperature
+
+! ********
+! Calendar
+! ********
+
+n_days_per_month =  30 !
+n_days_per_year  = 360 ! set to 365 for real calendar
 
 ! ********
 ! Numerics
 ! ********
 
-pnu     = 0.1        ! Time filter constant
+ndivdamp = 0         ! Initial start divergence damping
+pnu      = 0.1       ! Time filter constant
+oroscale = 1.0       ! Scale orography
 
 ! *******
 ! Physics
@@ -62,6 +74,7 @@ plarad        = 6371220.0     ! Radius
 ! *********
 
 gsol0         = 1365.0     ! Solar constant
+no3     = 1      ! switch for ozone (0=no,1=yes,2=datafile)
 
 ! *********
 ! Land
@@ -104,7 +117,7 @@ use radmod
 !p_blackt      =  247.3     ! Black body temperature
 !p_perihelion  =  147.1     ! Perihelion [10^6 km]
 !p_aphelion    =  152.1     ! Aphelion [10^6 km]
-!p_sidorbit    =  sidereal_year / sidereal_day ! Sidereal orbit period
+p_sidorbit    =  sidereal_year / sidereal_day ! Sidereal orbit period
 
 write(nud,4000)
 write(nud,1000)
