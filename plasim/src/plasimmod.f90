@@ -116,7 +116,7 @@
       parameter(TWOPI  = PI + PI)          ! 2 Pi
       parameter(RV     = 461.51)           ! Gas constant for water vapour
       parameter(ACPV   = 1870.)            ! Specific heat for water vapour
-      parameter(TMELT_CO2 = 148.0)         ! Melting point (CO2) - for Mars
+!      parameter(TMELT_CO2 = 148.0)         ! Melting point (CO2) - for Mars
 
 !     ***************
 !     * Date & Time *
