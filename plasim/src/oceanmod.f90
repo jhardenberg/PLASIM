@@ -22,7 +22,6 @@
       parameter(CPS=4180.)              ! Specific heat of sea water (J/kg*K)
       parameter(CLFI  = 3.28E5)         ! Heat of fusion of ice (J/kg)
       parameter(TFREEZE=271.25)         ! Freezing point (K)
-      parameter(PLARAD=6.371E6)         ! Earth radius (m)
       parameter(PI = 3.14159265359D0)   ! PI
 !
 !     namelist parameter
@@ -1287,6 +1286,8 @@
 
       subroutine hdiffo(psst)
       use oceanmod
+      use pumamod, only: plarad
+
       parameter(nsub=100)
 !
       real(kind=8) :: psst(NHOR,NLEV_OCE)
