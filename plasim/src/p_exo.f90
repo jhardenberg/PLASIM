@@ -25,10 +25,10 @@ yplanet = "Exo"      ! Planet name
 ! Astronomy
 ! *********
 
-eccen         =     0.016715  ! Eccentricity (AMIP-II value)
+eccen         =     0.016715  ! Eccentricity (AMIP-II value) (GM)
 mvelp         =   102.7       ! Longitude of perihelion
 nfixorb       =     1          ! Don't use Berger orbits
-obliq         =    23.441     ! Obliquity [deg] (AMIP-II)
+obliq         =    23.441     ! Obliquity [deg] (AMIP-II) (GM)
 rotspd        =     1.0       ! Rotation speed (factor)
 sidereal_day  =    86164.0916 !      23h 56m 04s
 solar_day     =    86400.0    !      24h 00m 00s
@@ -42,7 +42,7 @@ tropical_year = 31556956.0    ! 365d 05h 49m 16s
 akap    =   0.286     ! Kappa (Poisson constant R/Cp)
 alr     =   0.0065    ! Lapse rate
 gascon  = 287.0       ! Gas constant
-psurf   = 101100.0       ! Mean surface pressure [Pa]
+psurf   = 101100.0       ! Mean surface pressure [Pa]       (GM)
 ra1     = 610.78      ! Parameter for Magnus-Teten-Formula
 ra2     =  17.2693882 ! for saturation vapor pressure
 ra4     =  35.86      ! over liquid water
@@ -67,14 +67,14 @@ oroscale = 1.0       ! Scale orography
 ! Physics
 ! *******
 
-ga            =       9.80665 ! Gravity (mean on NN)
-plarad        = 6371220.0     ! Radius
+ga            =       9.80665 ! Gravity (mean on NN) (GM)
+plarad        = 6371220.0     ! Radius   (GM)
 
 ! *********
 ! Radiation
 ! *********
 
-gsol0         = 1365.0     ! Solar constant
+gsol0         = 1365.0     ! Solar constant  (GM)
 no3     = 1      ! switch for ozone (0=no,1=yes,2=datafile)
 
 ! *********
