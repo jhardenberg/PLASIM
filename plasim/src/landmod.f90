@@ -29,7 +29,7 @@
       real    :: dztop    = 0.20  ! thickness of the uppermost soil layer (m)
       real    :: dsmax    = 5.00  ! maximum snow depth (m-h20; -1 = no limit)
 
-      real    :: wsmax    = p_wsmax ! max field capacity of soil water (m)
+      real    :: wsmax    = 0.5    ! max field capacity of soil water (m)
       real    :: dwatcini = 0           ! water content of soil (m)
 
 !     SIMBA - fixed parameters
@@ -137,6 +137,7 @@
       dtcl(:,:)   = tmelt
       dtclim(:)   = tmelt
 
+      wsmax=p_wsmax
 !      if (mars == 1) then
 !         wsmax = WSMAX_MARS
 !        nlandt = 0

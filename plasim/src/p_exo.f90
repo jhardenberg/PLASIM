@@ -29,17 +29,17 @@ eccen         =     0.016715  ! Eccentricity (AMIP-II value) (GM)
 mvelp         =   102.7       ! Longitude of perihelion
 nfixorb       =     1          ! Don't use Berger orbits
 obliq         =    23.441     ! Obliquity [deg] (AMIP-II) (GM)
-rotspd        =     1.0       ! Rotation speed (factor)
-sidereal_day  =    86164.0916 !      23h 56m 04s
-solar_day     =    86400.0    !      24h 00m 00s
-sidereal_year = 31558149.0    ! 365d 06h 09m 09s
+rotspd        =     1.0       ! Rotation speed (factor)  (JJ useful?)
+sidereal_day  =    86164.0916 !      23h 56m 04sa  (GM)
+solar_day     =    86400.0    !      24h 00m 00s   (should be derived JJ)
+sidereal_year = 31558149.0    ! 365d 06h 09m 09s   (GM)
 tropical_year = 31556956.0    ! 365d 05h 49m 16s
 
 ! **********
 ! Atmosphere
 ! **********
 
-akap    =   0.286     ! Kappa (Poisson constant R/Cp)
+akap    =   0.286     ! Kappa (Poisson constant R/Cp) 
 alr     =   0.0065    ! Lapse rate
 gascon  = 287.0       ! Gas constant
 psurf   = 101100.0       ! Mean surface pressure [Pa]       (GM)
