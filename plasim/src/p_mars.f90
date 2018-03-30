@@ -11,7 +11,7 @@ logical :: lex
 
 namelist /planet_nl/ nfixorb, eccen, mvelp, obliq  &
                 , rotspd, sidereal_day, solar_day  &
-                , sidereal_year, tropical_year     &
+!                , sidereal_year, tropical_year     &
                 , akap, alr, gascon, ra1, ra2, ra4 &
                 , pnu, ga, plarad &
                 , gsol0 &
@@ -31,8 +31,8 @@ obliq         =    25.19       ! Obliquity [deg] (AMIP-II)
 rotspd        =     1.0        ! Rotation speed (factor)
 sidereal_day  = 88642.663      ! 24h 37m 22s
 solar_day     = 88775.24409    ! 24h 39m 35s
-sidereal_year = 59355072.0     ! 687d (Earth days)
-tropical_year = 59355048.3     ! 686d (Earth days)
+!sidereal_year = 59355072.0     ! 687d (Earth days)
+!tropical_year = 59355048.3     ! 686d (Earth days)
 ltidally_locked = .false.
 tl_substellar = 180.0
 
@@ -122,7 +122,7 @@ use radmod
 !p_inclination =   23.98    ! Equatorial inclination
 !p_perihelion  =  206.6     ! Perihelion [10^6 km]
 !p_aphelion    =  249.2     ! Aphelion [10^6 km]
-p_sidorbit    =  sidereal_year / sidereal_day ! Sidereal orbit period
+!p_sidorbit    =  sidereal_year / sidereal_day ! Sidereal orbit period
 
 write(nud,4000)
 write(nud,1000)
@@ -141,7 +141,7 @@ write(nud,3000) 'Surface gravity'  ,'[m/s2]'      ,ga
 !write(nud,3000) 'Bond albedo'      ,' '           ,p_albedo
 write(nud,3000) 'Solar irradiance' ,'[W/m2]'      ,gsol0
 !write(nud,3000) 'Black-body temperature','[K]'    ,p_blackt
-write(nud,3000) 'Sidereal orbit period' ,'[days]' ,p_sidorbit
+!write(nud,3000) 'Sidereal orbit period' ,'[days]' ,p_sidorbit
 write(nud,3000) 'Sidereal rotation period','[h]'  ,sidereal_day/3600.0
 !write(nud,3000) 'Perihelion'       ,'[10^6 km]'   ,p_perihelion
 !write(nud,3000) 'Aphelion'         ,'[10^6 km]'   ,p_aphelion

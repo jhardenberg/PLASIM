@@ -516,8 +516,8 @@
       real :: pnu    = 0.0             ! Time filter
       real :: sidereal_day  = 0.0      ! Length of sidereal day [sec]
       real :: solar_day     = 0.0      ! Length of solar day [sec]
-      real :: sidereal_year = 0.0      ! Length of sidereal year [sec]
-      real :: tropical_year = 0.0      ! Length of tropical year [sec]
+!      real :: sidereal_year = 0.0      ! Length of sidereal year [sec]
+!      real :: tropical_year = 0.0      ! Length of tropical year [sec]
       real :: ww     = 0.0             ! Omega used for scaling
       real :: oroscale = 1.0           ! Orography scaling
       real :: ra1    = 0.0             !
