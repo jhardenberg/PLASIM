@@ -15,7 +15,7 @@ namelist /planet_nl/ nfixorb, eccen, mvelp, obliq  &
                 , akap, alr, gascon, ra1, ra2, ra4 &
                 , pnu, ga, plarad &
                 , gsol0 &
-                , yplanet, p_wsmax
+                , yplanet,p_wsmax,tl_substellar,ltidally_locked
 
 yplanet = "Mars"     ! Planet name
 !nplanet = 4          ! Planet index
@@ -33,7 +33,8 @@ sidereal_day  = 88642.663      ! 24h 37m 22s
 solar_day     = 88775.24409    ! 24h 39m 35s
 sidereal_year = 59355072.0     ! 687d (Earth days)
 tropical_year = 59355048.3     ! 686d (Earth days)
-
+ltidally_locked = .false.
+tl_substellar = 180.0
 
 ! **********
 ! Atmosphere

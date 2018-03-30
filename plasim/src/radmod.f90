@@ -755,14 +755,20 @@
       zmuz    = 0.0
       zdawn = sin(dawn * PI / 180.0) ! compute dawn/dusk angle 
       zrlon = TWOPI / NLON           ! scale lambda to radians
-      zrtim = TWOPI / 1440.0         ! scale time   to radians
+      if(ltidally_locked) then
+         zrtim = 0.0
+         zoff= (tl_substellar - 180.0) / 360.0 * TWOPI - PI
+      else
+         zrtim = TWOPI * 60 / solar_day          ! scale time   to radians
+         zoff = -PI
+      endif
       zmins = ihou * 60 + imin
       jhor = 0
-      if (ncstsol==0) then
+      if (ncstsol==0) then ! JJJ What is the use of ncstsol=1 anyway?
        do jlat = 1 , NLPP
         do jlon = 0 , NLON-1
          jhor = jhor + 1
-         zhangle = zmins * zrtim + jlon * zrlon - PI
+         zhangle = zmins * zrtim + jlon * zrlon + zoff  ! includes an offset for the tidally locked case
          zmuz=sin(zdecl)*sid(jlat)+cola(jlat)*cos(zdecl)*cos(zhangle)
          if (zmuz > zdawn) gmu0(jhor) = zmuz
         enddo

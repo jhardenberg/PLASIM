@@ -536,6 +536,9 @@
 
       real :: p_wsmax  = 0.0           ! Planet max field capacity of soil water (m) (0.5 Earth, 0. Mars)
 
+      real :: tl_substellar = 180.0    ! Position of substellar point in degrees (0-360)
+      logical :: ltidally_locked = .false.  ! tidally locked planet or not (used in radmod)
+
 !     ******************************************
 !     * GUI (Graphical User Interface for X11) *
 !     ******************************************

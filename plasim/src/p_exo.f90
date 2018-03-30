@@ -15,7 +15,7 @@ namelist /planet_nl/ nfixorb, eccen, mvelp, obliq  &
                 , akap, alr, gascon, ra1, ra2, ra4, &
                 , pnu, ga, plarad &
                 , gsol0 &
-                , yplanet,p_wsmax
+                , yplanet,p_wsmax,tl_substellar,ltidally_locked
 
 
 yplanet = "Exo"      ! Planet name
@@ -34,6 +34,8 @@ sidereal_day  =    86164.0916 !      23h 56m 04sa  (GM)
 solar_day     =    86400.0    !      24h 00m 00s   (should be derived JJ)
 sidereal_year = 31558149.0    ! 365d 06h 09m 09s   (GM)
 tropical_year = 31556956.0    ! 365d 05h 49m 16s
+ltidally_locked = .false.
+tl_substellar = 180.0
 
 ! **********
 ! Atmosphere
