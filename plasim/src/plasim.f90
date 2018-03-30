@@ -1120,7 +1120,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 !     set sponge layer time scale
 
       if(dampsp > 0.) then
-       if(dampsp < (solar_day/ntspd)) dampsp=dampsp*solar_day
+       if(dampsp < (solar_day/ntspd)) dampsp=dampsp*earth_solar_day
        dampsp=solar_day/(TWOPI*dampsp)
       endif
 
