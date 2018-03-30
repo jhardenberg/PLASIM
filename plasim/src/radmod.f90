@@ -758,6 +758,7 @@
       if(ltidally_locked) then
          zrtim = 0.0
          zoff= (tl_substellar - 180.0) / 360.0 * TWOPI - PI
+         ndcycle=1
       else
          zrtim = TWOPI * 60 / solar_day          ! scale time   to radians
          zoff = -PI
