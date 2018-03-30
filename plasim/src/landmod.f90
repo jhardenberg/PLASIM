@@ -191,8 +191,10 @@
 
 !     scale taus from years to seconds
 
-      tau_veg  = tau_veg  * n_days_per_year * solar_day
-      tau_soil = tau_soil * n_days_per_year * solar_day
+!      tau_veg  = tau_veg  * n_days_per_year * solar_day
+!      tau_soil = tau_soil * n_days_per_year * solar_day
+      tau_veg  = tau_veg  * 86400 * 365   ! expressed in EARTH years
+      tau_soil = tau_soil * 86400 * 365
 
       if (tau_veg < 1.0 .or. tau_soil < 1.0) then
          write(nud,*)' *** error: tau_veg = ',tau_veg,'  tau_soil = ',tau_soil

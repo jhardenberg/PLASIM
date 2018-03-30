@@ -51,7 +51,7 @@
       integer :: ngui   = 0        ! switch for gui
       integer :: naout  = 0        ! no additional output fields 
 !
-      real :: taunc         =  0.  ! time scale for newtonian cooling
+      real :: taunc         =  0.  ! time scale for newtonian cooling (in earth days)
       real :: xmind         = 0.1  ! minimal ice thickness (m)
       real :: xmaxd         = 9.0  ! maximal ice thickness (m; neg. = no limit)
       real :: thicec        = 0.5  ! threshold to obtain make mask from comp. 
@@ -68,6 +68,7 @@
       real :: xdt           = 0.   ! timestep (sec.)
       real :: cicemin       = 0.5  ! minimum compactness to be ice
       real :: solar_day  = 86400.0 ! length of day [sec]
+      real :: earth_solar_day  = 86400.0 ! length of day [sec]
 !
 !     global arrays
 !
@@ -317,7 +318,7 @@
 !     set time step
 !
       xdt   = solar_day / real(ntspd)
-      taunc = solar_day * taunc
+      taunc = earth_solar_day * taunc ! Physical constant expressed in EARTH days
 
       if (nrestart == 0) then ! read start file
        

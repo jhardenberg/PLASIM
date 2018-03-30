@@ -1120,7 +1120,10 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 !     set sponge layer time scale
 
       if(dampsp > 0.) then
-       if(dampsp < (solar_day/ntspd)) dampsp=dampsp*earth_solar_day
+       if(dampsp < (solar_day/ntspd)) then
+            dampsp=dampsp*earth_solar_day
+            write(nud,*) 'dampsp: assuming [days] - converting to [sec]'
+       endif
        dampsp=solar_day/(TWOPI*dampsp)
       endif
 
@@ -1209,13 +1212,13 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       call dayseccheck(tdissq,"tdissq")
 
       where (restim > 0.0)
-         damp = solar_day / (TWOPI * restim)
+         damp = sidereal_day / (TWOPI * restim) ! this is a dynamic param, should be based on sidereal day not solar
       elsewhere
          damp = 0.0
       endwhere
          
       where (tfrc > 0.0)
-          tfrc = solar_day / (TWOPI * tfrc)
+          tfrc = sidereal_day / (TWOPI * tfrc)
       elsewhere
           tfrc = 0.0
       endwhere
@@ -1225,22 +1228,22 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       do jlev=1,NLEV
        jdel = ndel(jlev)
        if (tdissd(jlev) > 0.0) then
-        tdissd(jlev) = solar_day/(TWOPI*tdissd(jlev))
+        tdissd(jlev) = sidereal_day/(TWOPI*tdissd(jlev))
        else
         tdissd(jlev)=0.
        endif
        if (tdissz(jlev) > 0.0) then
-        tdissz(jlev) = solar_day/(TWOPI*tdissz(jlev))
+        tdissz(jlev) = sidereal_day/(TWOPI*tdissz(jlev))
        else
         tdissz(jlev)=0.
        endif
        if (tdisst(jlev) > 0.0) then
-        tdisst(jlev) = solar_day/(TWOPI*tdisst(jlev))
+        tdisst(jlev) = sidereal_day/(TWOPI*tdisst(jlev))
        else
         tdisst(jlev) = 0.
        endif
        if (tdissq(jlev) > 0.0) then
-        tdissq(jlev) = solar_day/(TWOPI*tdissq(jlev))
+        tdissq(jlev) = sidereal_day/(TWOPI*tdissq(jlev))
        else
         tdissq(jlev)=0.
        endif

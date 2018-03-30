@@ -62,6 +62,7 @@
 !
       real :: dtmix                     ! time step (s)
       real :: solar_day    = 86400.0    ! 24 * 60 * 60 (for Earth)
+      real :: earth_solar_day    = 86400.0    ! 24 * 60 * 60 (for Earth)
 !
       real :: dlam                      ! delta longitude
       real :: dphi(NLAT)                ! delta latitude
@@ -237,7 +238,7 @@
 !
 !     compute taunc in s
 !
-      taunc = solar_day  * taunc
+      taunc = earth_solar_day  * taunc ! expressed in EARTH days
 !
       if (nrestart == 0) then ! new start (read start file)
          call mpsurfgp('yls',yls,NHOR,1)
