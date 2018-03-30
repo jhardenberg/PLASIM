@@ -516,6 +516,7 @@
       real :: pnu    = 0.0             ! Time filter
       real :: sidereal_day  = 0.0      ! Length of sidereal day [sec]
       real :: solar_day     = 0.0      ! Length of solar day [sec]
+      real :: earth_solar_day     = 86400.0      ! Length of solar day [sec]
 !      real :: sidereal_year = 0.0      ! Length of sidereal year [sec]
 !      real :: tropical_year = 0.0      ! Length of tropical year [sec]
       real :: ww     = 0.0             ! Omega used for scaling

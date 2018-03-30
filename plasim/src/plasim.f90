@@ -982,18 +982,18 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 !     preset namelist parameter according to model set up
 !
       if (NLEV==10) then
-         tfrc(1)      =  20.0 * solar_day
-         tfrc(2)      = 100.0 * solar_day
-         tfrc(3:NLEV) =   0.0 * solar_day
+         tfrc(1)      =  20.0 * earth_solar_day ! expressed in EARTH days
+         tfrc(2)      = 100.0 * earth_solar_day
+         tfrc(3:NLEV) =   0.0 * earth_solar_day
       endif
 !
       if(NTRU==42) then
        nhdiff=16
        ndel(:)=4
-       tdissq(:)=0.1  * solar_day
-       tdisst(:)=0.76 * solar_day
-       tdissz(:)=0.3  * solar_day
-       tdissd(:)=0.06 * solar_day
+       tdissq(:)=0.1  * earth_solar_day
+       tdisst(:)=0.76 * earth_solar_day
+       tdissz(:)=0.3  * earth_solar_day
+       tdissd(:)=0.06 * earth_solar_day
       endif
 
 !
@@ -1145,7 +1145,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       if (zmax < (solar_day / ntspd) .and. zmax > 0.0) then
          write(nud,*) 'old maxval(',trim(yn),') = ',zmax
          write(nud,*) 'assuming [days] - converting to [sec]'
-         pf(:) = pf(:) * solar_day
+         pf(:) = pf(:) * earth_solar_day
          write(nud,*) 'new maxval(',trim(yn),') = ',maxval(pf(:))
       endif   
       return
