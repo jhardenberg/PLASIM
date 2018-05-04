@@ -43,12 +43,14 @@
       integer :: nentropy         = 0   ! switch for entropy diagnostics
       integer :: nlsg             = 0   ! coupling flag to lsg   
       integer :: naomod           = 320 ! atmos/ocean(lsg) ration    
+      integer :: nshdiff          = 0   ! flag to use separate hdiffk north and south 
 
 !
       real :: dlayer(NLEV_OCE)  = 50.   ! layer depth (m)
       real :: taunc             =  0.   ! newtonian cooling timescale (d)
       real :: vdiffkl(NLEV_OCE) = 1.E-4 ! vertikal diffusion coeff. [m**2/s]
-      real :: hdiffk(NLEV_OCE)  = 1.E3  ! horizontal diffusion coeff. [m**2/s]
+      real :: hdiffk(NLEV_OCE)  = 1.E5  ! horizontal diffusion coeff. [m**2/s]
+      real :: hdiffk2(NLEV_OCE) = 1.E4  ! horizontal diffusion coeff. SOUTH [m**2/s]
 !
 !     global integer
 !
@@ -144,7 +146,7 @@
 !
       namelist/oceanmod_nl/ndiag,nout,nfluko,ntspd,nocean,nprint,nprhor    &
     &                  ,nperpetual_ocean,naomod,nlsg,taunc,dlayer       &
-    &                  ,vdiffkl,newsurf,hdiffk,nentropy,nhdiff
+    &                  ,vdiffkl,newsurf,hdiffk,hdiffk2,nshdiff,nentropy,nhdiff
 !
 !     get process id
 !
@@ -215,10 +217,12 @@
       call mpbci(naomod)
       call mpbci(nentropy)
       call mpbci(nhdiff)
+      call mpbci(nshdiff)
       call mpbcr(taunc)
       call mpbcr(solar_day)
       call mpbcrn(vdiffkl,NLEV_OCE)
       call mpbcrn(hdiffk,NLEV_OCE)
+      call mpbcrn(hdiffk2,NLEV_OCE)
       call mpbcrn(dlayer,NLEV_OCE)
 !
       do jlev=1,NLEV_OCE
@@ -1307,7 +1311,8 @@
       call mpgagp(zls,yls,1)
 !
       do jlev=1,NLEV_OCE
-       zfac=hdiffk(jlev)/plarad/plarad
+       zfac=hdiffk(jlev)/plarad/plarad   ! Diffusivity Global or NORTH
+       zfac2=hdiffk2(jlev)/plarad/plarad ! Diffusivity SOUTH
 !
        call mpgagp(zt,zsst(1,jlev),1)
 !
@@ -1351,6 +1356,7 @@
          zdty(:,0)=0.
          zdty(:,NLAT)=0.
 !
+         if(nshdiff==0) then
          do jlat=1,NLAT
           jlam=jlat-1
           do jlon=1,NLON
@@ -1364,6 +1370,36 @@
            endif
           enddo
          enddo
+         else
+! NORTH
+         do jlat=1,NLAT/2
+          jlam=jlat-1
+          do jlon=1,NLON
+           jlom=jlon-1
+           if(zls(jlon,jlat) < 1.) then
+            zdtdt(jlon,jlat)=((zdtx(jlon,jlat)-zdtx(jlom,jlat))         &
+     &                        /dlam/cphi(jlat)/cphi(jlat)               &
+     &                       +(zdty(jlon,jlat)-zdty(jlon,jlam))         &
+     &                        /dmue(jlat))                              &
+     &                      *zfac
+           endif
+          enddo
+         enddo
+! SOUTH
+         do jlat=NLAT/2+1,NLAT
+          jlam=jlat-1
+          do jlon=1,NLON
+           jlom=jlon-1
+           if(zls(jlon,jlat) < 1.) then
+            zdtdt(jlon,jlat)=((zdtx(jlon,jlat)-zdtx(jlom,jlat))         &
+     &                        /dlam/cphi(jlat)/cphi(jlat)               &
+     &                       +(zdty(jlon,jlat)-zdty(jlon,jlam))         &
+     &                        /dmue(jlat))                              &
+     &                      *zfac2
+           endif
+          enddo
+         enddo
+         endif
 !
          if(nentropy > 0) then
           where(zls(:,:) < 1.)
