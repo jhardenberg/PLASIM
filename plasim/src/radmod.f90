@@ -51,6 +51,8 @@
       integer :: iyrbp   = -50    ! Year before present (1950 AD)
                                   ! default = 2000 AD
 
+      real :: tswr1mod(NLEV)                   ! modulation of tswr1
+
       real :: rcl1(3)=(/0.15,0.30,0.60/) ! cloud albedos spectral range 1
       real :: rcl2(3)=(/0.15,0.30,0.60/) ! cloud albedos spectral range 2
       real :: acl2(3)=(/0.05,0.10,0.20/) ! cloud absorptivities spectral range 2
@@ -142,7 +144,7 @@
      &               ,iyrbp,nswr,nlwr                                   &
      &               ,a0o3,a1o3,aco3,bo3,co3,toffo3,o3scale             &
      &               ,nsol,nswrcl,nrscat,rcl1,rcl2,acl2,clgray,tpofmt   &
-     &               ,acllwr,tswr1,tswr2,tswr3,th2oc,dawn
+     &               ,acllwr,tswr1,tswr2,tswr3,th2oc,dawn,tswr1mod
 !
 !     namelist parameter:
 !
@@ -242,6 +244,8 @@
        endif
       endif
 !
+      tswr1mod(:)=1.0
+  
       if(jtune==0) then
        if(mypid==NROOT) then
         write(nud,*)'No radiation setup for this resolution (NTRU,NLEV)'
@@ -298,6 +302,7 @@
       call mpbci(nsol)
       call mpbci(nrscat)
       call mpbci(nswrcl)
+      call mpbcrn(tswr1mod,NLEV)
 
 !
 !     determine orbital parameters
@@ -1019,9 +1024,9 @@
 !
       zcs(:) = 1.0 ! Clear sky fraction (1.0 = clear sky)
       zmu00  = 0.5
-      zb3    = tswr1 * SQRT(zmu00) / zmu00
       zb4    = tswr2 * SQRT(zmu00)
       zb5    = tswr3 * zmu00 * zmu00
+      zb3    = tswr1 * SQRT(zmu00) / zmu00
 !
 !     prescribed
 !
@@ -1065,6 +1070,7 @@
        zrcl2s(:,:)=0.0
        ztcl2s(:,:)=1.0
        do jlev=1,NLEV
+        zb3    = tswr1 * tswr1mod(jlev) * SQRT(zmu00) / zmu00
         where(losun(:) .and. (dcc(:,jlev) > 0.))
          zlwp(:) = min(1000.0,1000.*dql(:,jlev)*dp(:)/ga*dsigma(jlev))
          ztau(:) = 2.0 * ALOG10(zlwp(:)+1.5)**3.9
@@ -1081,7 +1087,7 @@
          ztcl2s(:,jlev)=4.*zu(:)/zr(:)
          zrcl2s(:,jlev)=(zu(:)*zu(:)-1.)/zr(:)*(zexp(:)-1./zexp(:))
 
-         zb1(:)  = tswr1*SQRT(zmu0(:))
+         zb1(:)  = tswr1*SQRT(zmu0(:))*tswr1mod(jlev)
          zb2(:)  = tswr2*SQRT(zmu0(:))/ALOG(3.+0.1*ztau(:))
          zom0(:) = min(0.9999,1.-tswr3*zmu0(:)*zmu0(:)*zlog(:))
          zun(:)  = 1.0 - zom0(:)
