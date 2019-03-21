@@ -1712,7 +1712,7 @@
 !
           implicit none
           real, parameter :: ORB_ECCEN_MIN  =   0.0                ! minimum value for eccen
-          real, parameter :: ORB_ECCEN_MAX  =   0.1                ! maximum value for eccen
+          real, parameter :: ORB_ECCEN_MAX  =   1.0                ! maximum value for eccen
           real, parameter :: ORB_OBLIQ_MIN  = -90.0                ! minimum value for obliq
           real, parameter :: ORB_OBLIQ_MAX  = +90.0                ! maximum value for obliq
           real, parameter :: ORB_MVELP_MIN  =   0.0                ! minimum value for mvelp
