@@ -13,7 +13,7 @@ namelist /planet_nl/ nfixorb, eccen, mvelp, obliq  &
                 , rotspd, sidereal_day, solar_day  &
 !                , sidereal_year, tropical_year     &
                 , akap, alr, gascon, ra1, ra2, ra4 &
-                , pnu, ga, plarad &
+                , pnu, ga, plarad, psurf &
                 , gsol0 &
                 , yplanet,p_wsmax,tl_substellar,ltidally_locked
 
