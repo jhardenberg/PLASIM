@@ -1,6 +1,9 @@
       module cplmod
+      use resmod
 !
-      parameter(nxa=64,nya=32)  !T21
+      parameter(nxa=NLAT_ATM + NLAT_ATM)
+      parameter(nya=NLAT_ATM)  
+      !parameter(nxa=64,nya=32) !T42
       !parameter(nxa=128,nya=64) !T42
       parameter(nxo=72,nyot=76,nyo=nyot-4)
       parameter(radea=6.371E6)
