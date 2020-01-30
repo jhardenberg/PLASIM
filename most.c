@@ -1804,6 +1804,7 @@ int WriteRunScript(int model)
    fputs("   LSGNAME=`printf '%s_LSG.%04d.nc' $EXP $YEAR`\n",fp);
    fputs("   DIAGNAME=`printf '%s_DIAG.%04d.txt' $EXP $YEAR`\n",fp);
    fputs("   RESTNAME=`printf '%s_REST.%04d' $EXP $YEAR`\n",fp);
+   fputs("   LSGRESTNAME=`printf '%s_LSGREST.%04d' $EXP $YEAR`\n",fp);
    if (porm < 2)
    {
       fprintf(fp,"   ./%s\n",exec_name);
@@ -1844,8 +1845,10 @@ int WriteRunScript(int model)
       fprintf(fp,"   [ -e lsg_output ] && $srv2nc lsg_output output/$LSGNAME\n");
       fprintf(fp,"   [ -e %s_status ] && cp %s_status %s_restart\n",
               ShortModelName[model],ShortModelName[model],ShortModelName[model]);
-      fprintf(fp,"   [ -e %s_status ] && mv %s_status $RESTNAME\n",
+      fprintf(fp,"   [ -e %s_status ] && mv %s_status restart/$RESTNAME\n",
               ShortModelName[model],ShortModelName[model]);
+      fprintf(fp,"   [ -e kleiswi ] && cp kleiswi restart/kleiswi\n");
+      fprintf(fp,"   [ -e kleiin1 ] && cp kleiin1 restart/$LSGRESTNAME\n");
    }
    fputs("done\n",fp);
    fclose(fp);
