@@ -343,6 +343,7 @@ int Preprocessed;
 int SAMindex;
 int ScreenHeight;
 int Expert = 1;
+int SuperExpert = 0;
 int PumaEnabled;
 int CatEnabled;
 int SamEnabled;
@@ -620,7 +621,7 @@ void ChangeModel(int NewMo)
           for (i=0 ; i < PLANETS ; ++i) SelPlanet[i]->no = 0;
        }
    }
-   if (Expert)
+   if (SuperExpert)
    {
       if (NewMo == CAT)
       {
@@ -1316,7 +1317,7 @@ void InitSelections(void)
    Sel->h    = FixFontHeight + 1;
    Sel->w    = FixFontHeight + 1;
    Sel->yt   = Sel->y + FixFontAscent + 1;
-   Sel->div  = Sel->iv   =  0;
+   Sel->div  = Sel->iv   =  1;
    Sel->no   = 1;
    SelOce    = Sel;
    Sel->piv  = &Oce;
@@ -1407,7 +1408,7 @@ void InitSelections(void)
 
    // Horizontal resolution
 
-   if (Expert)
+   if (SuperExpert)
    {
       Sel = NewSel(Sel);
       InitNextSelection(Sel,dys,"Latitudes #1");
@@ -3387,6 +3388,18 @@ void WriteNamelistFile(char *nl,  int instance)
    {
       fprintf(fp," %-12s=%6d\n","NOCEAN",Oce);
       fprintf(fp," %-12s=%6d\n","NLSG"  ,Lsg);
+      if ( Lsg == 0) {
+         fprintf(fp," %-12s=%6d\n","NHDIFF"  , 1);
+         fprintf(fp," %-12s=%6d\n","NSHDIFF" , 1);
+         fprintf(fp," %-12s= %5.1e\n","HDIFFK"  , 1.e5);
+         if ( Latitudes == 32) { // T21
+            fprintf(fp," %-12s= %5.1e\n","HDIFFK2"  , 1.e4);
+	 } else { // T42
+            fprintf(fp," %-12s= %5.1e\n","HDIFFK2"  , 3.e4);
+         }
+      } else {
+         fprintf(fp," %-12s=%6d\n","NHDIFF"  , 0);
+      }
    }
    if (!strcmp(nl,"plasim"))
    {
@@ -4498,6 +4511,14 @@ void InitGUI(void)
       fclose(xpp);
    }
 
+   xpp = fopen("SuperExpert","r"); // Expert mode ?
+   if (xpp)
+   {
+      Expert = 1;
+      SuperExpert = 1;
+      fclose(xpp);
+   }
+
    xpp = fopen("cat","r"); // Cat enabled
    if (xpp)
    {
@@ -4559,14 +4580,14 @@ void InitGUI(void)
 
    InitNamelist();
    
-   ChangeModel(PLASIM);
-   NamelistSelector(PLASIM);
    ChangeModel(CAT);
    NamelistSelector(CAT);
    ChangeModel(SAM);
    NamelistSelector(SAM);
    ChangeModel(PUMA);
    NamelistSelector(PUMA);
+   ChangeModel(PLASIM);
+   NamelistSelector(PLASIM);
 
    if (ReadSettings(cfg_file))
    {
