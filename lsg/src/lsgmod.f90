@@ -8068,10 +8068,11 @@
       else if (ken==22) then
 ! These are params from 0.8e-4 to 1.3e-4, as studied by R. Sciascia 
 ! in her master thesis
-!        astar=1.05e-4            !!FL 1.3E-4   !!ORI 1.44e-04
-!        arange=0.1687e-4         !!FL 0.3E-4   !!ORI 0.78e-04
-!        zstar=2800.              !!FL 2800.    !!ORI 2800.
-!        lambda=3.60e-03          !!FL 4.5E-3   !!ORI 3.60e-03
+!        astar=1.0479e-4            !!FL 1.3E-4   !!ORI 1.44e-04
+!        arange=0.1673e-4         !!FL 0.3E-4   !!ORI 0.78e-04
+!        zstar=2500.              !!FL 2800.    !!ORI 2800.
+!        lambda=4.50e-03          !!FL 4.5E-3   !!ORI 3.60e-03
+! Parameters after the tuning in Angeloni et al. 2020
         astar=0.8462e-04
         arange=0.3011e-04
         zstar=2500.
