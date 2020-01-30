@@ -8062,14 +8062,20 @@
 !     recommended values according to 14C simulations
       if (ken==11) then
         astar=1.80e-04  !1.90e-04
-       arange=1.01e-04 !1.00e-04
-       zstar=3000.
-       lambda=3.40e-03 !3.50e-03
+        arange=1.01e-04 !1.00e-04
+        zstar=3000.
+        lambda=3.40e-03 !3.50e-03
       else if (ken==22) then
-        astar=1.44e-04           !!FL 1.3E-4   !!ORI 1.44e-04
-        arange=0.78e-04          !!FL 0.3E-4   !!ORI 0.78e-04
-        zstar=2800.              !!FL 2800.    !!ORI 2800.
-        lambda=3.60e-03          !!FL 4.5E-3   !!ORI 3.60e-03
+! These are params from 0.8e-4 to 1.3e-4, as studied by R. Sciascia 
+! in her master thesis
+!        astar=1.05e-4            !!FL 1.3E-4   !!ORI 1.44e-04
+!        arange=0.1687e-4         !!FL 0.3E-4   !!ORI 0.78e-04
+!        zstar=2800.              !!FL 2800.    !!ORI 2800.
+!        lambda=3.60e-03          !!FL 4.5E-3   !!ORI 3.60e-03
+        astar=0.8462e-04
+        arange=0.3011e-04
+        zstar=2500.
+        lambda=4.5e-03
       end if
 
       do k=1,ken

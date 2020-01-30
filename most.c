@@ -1710,6 +1710,7 @@ void GenerateNames(void)
 {
    Truncation = (2 * Latitudes - 1) / 3;
    sprintf(namelist_name,"%s_namelist",ShortModelName[Model]);
+   printf("Doing GenerateNames JJJ %d\n",Truncation);
    if (Model == CAT)
    {
       if (Cores < 2) strcpy(exec_name,"most_cat.x");
@@ -1728,6 +1729,7 @@ void GenerateNames(void)
    else
       sprintf(exec_name,"most_%s_t%d_l%d_p%d.x",
       ShortModelName[Model],Truncation,Levels,Cores);
+   printf("execname is JJJ %s %d\n",exec_name,Cores);
 
    sprintf(diag_name,"%s_diag",ShortModelName[Model]);
    sprintf(outp_name,"%s_output",ShortModelName[Model]);
@@ -2356,11 +2358,11 @@ int CheckPlasimNamelist(void)
 
    // LSG works currently only with T21 PlaSim
    
-   if (Lsg)
-   {
-       Resolution = RES_T21;
-       Latitudes = ResLat[RES_T21];
-   }
+//   if (Lsg)
+//   {
+//       Resolution = RES_T21;
+//       Latitudes = ResLat[RES_T21];
+//  }
 
    // Check # of latitudes for correct values (FFT requirements)
 

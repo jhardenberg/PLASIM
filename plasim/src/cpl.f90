@@ -1,6 +1,7 @@
       module cplmod
 !
-      parameter(nxa=64,nya=32)
+      parameter(nxa=64,nya=32)  !T21
+      !parameter(nxa=128,nya=64) !T42
       parameter(nxo=72,nyot=76,nyo=nyot-4)
       parameter(radea=6.371E6)
       parameter(nud=6)           ! output unit
