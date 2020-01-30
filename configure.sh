@@ -261,9 +261,9 @@ echo >> makefile "	rm -f *.o *.x F90* most_*"
 
 #create directories
 
-mkdir -p puma/bld
-mkdir -p puma/bin
-mkdir -p puma/run
+#mkdir -p puma/bld
+#mkdir -p puma/bin
+#mkdir -p puma/run
 mkdir -p plasim/bld
 mkdir -p plasim/bin
 mkdir -p plasim/run
