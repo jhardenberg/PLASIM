@@ -514,8 +514,6 @@
 !     *****************************************
 
       if(ndiaggp3d > 0) then
-        ! MMM
-        ! do jdiag=22,ndiaggp3d
        do jdiag=1,ndiaggp3d
         jcode=20+jdiag
         do jlev=1,NLEV
