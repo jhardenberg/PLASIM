@@ -1788,7 +1788,7 @@ int WriteRunScript(int model)
    if (ngui) {
       fputs("YEAR2=1\n",fp);
     } else {
-      fputs("YEAR2=10\n",fp);
+      fprintf(fp,"YEAR2=%d\n",SimYears);
     }
    fputs("average=\"-m\"  # Comment this line if you do not want monthly averaging\n", fp);
    fputs("srv2nc=/usr/local/bin/srv2nc",fp);
