@@ -1746,6 +1746,7 @@ int WriteRunScript(int model)
    int porm;
    FILE *fp;
    char command[256];
+   char cwd[256];
    char run[256];
 
    strcpy(exec_nam2,exec_name); // Duplicate exec name
@@ -1791,7 +1792,8 @@ int WriteRunScript(int model)
       fprintf(fp,"YEAR2=%d\n",SimYears);
     }
    fputs("average=\"-m\"  # Comment this line if you do not want monthly averaging\n", fp);
-   fputs("srv2nc=/usr/local/bin/srv2nc",fp);
+   getcwd(cwd, sizeof(cwd));
+   fprintf(fp,"srv2nc=%s/scripts/srv2nc\n", cwd);
    fprintf(fp,"[ $# == 1 ] && cd $1\n");
    fprintf(fp,"rm -f %s_restart\n",ShortModelName[model]);
    fputs("rm -f Abort_Message\n",fp);
