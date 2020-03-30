@@ -1,6 +1,7 @@
       module oceanmod
 
       use resmod
+      use pumamod, only: naqua
 !
 !     version identifier (date)
 !
@@ -245,7 +246,7 @@
       taunc = solar_day  * taunc
 !
       if (nrestart == 0) then ! new start (read start file)
-         call mpsurfgp('yls',yls,NHOR,1)
+         if (naqua == 0) call mpsurfgp('yls',yls,NHOR,1)
          call mpsurfgp('yclsst',yclsst,NHOR,14)
 
 !        make sure, that land sea mask values are 0 or 1

@@ -1,6 +1,7 @@
       module icemod
 
       use resmod
+      use pumamod, only: naqua
 !
 !     version identifier (date)
 !
@@ -181,49 +182,52 @@
       subroutine read_ice_surface
       use icemod
 
-      call mpsurfgp('xls',xls,NHOR,1)
-
-      call mpsurfgp('xclsst' ,xclsst ,NHOR,14)
-      call mpsurfgp('xclicec',xclicec,NHOR,14)
-      call mpsurfgp('xcliced',xcliced,NHOR,14)
+      if (naqua == 0) then
+          call mpsurfgp('xclsst' ,xclsst ,NHOR,14)
+          call mpsurfgp('xclicec',xclicec,NHOR,14)
+          call mpsurfgp('xcliced',xcliced,NHOR,14)
+          call mpsurfgp('xls',xls,NHOR,1)
 
 !     make sure, that land sea mask values are 0 or 1
+          where (xls(:) > 0.5)
+              xls(:) = 1.0
+          elsewhere
+              xls(:) = 0.0
+          endwhere
 
-      where (xls(:) > 0.5)
-         xls(:) = 1.0
-      elsewhere
-         xls(:) = 0.0
-      endwhere
+          call mpmaxval(xclicec,NHOR,14,zmax)
+          if (zmax > 5.0) then
+             xclicec(:,:) = xclicec(:,:) * 0.01
+             if (mypid == NROOT) &
+             write(nud,*) 'ice cover {xclicec} converted from % to fraction'
+          endif
 
-      call mpmaxval(xclicec,NHOR,14,zmax)
-      if (zmax > 5.0) then
-         xclicec(:,:) = xclicec(:,:) * 0.01
-         if (mypid == NROOT) &
-         write(nud,*) 'ice cover {xclicec} converted from % to fraction'
-      endif
+          if (zmax < 0.0) then ! xclicec was not read
+             xclicec(:,:) = 0.0
+             where (xclsst(:,:) <= TFREEZE) xclicec(:,:) = 1.0
+             if (mypid == NROOT) &
+             write(nud,*) 'ice cover {xclicec} constructed from SST'
+          endif
 
-      if (zmax < 0.0) then ! xclicec was not read
-         xclicec(:,:) = 0.0
-         where (xclsst(:,:) <= TFREEZE) xclicec(:,:) = 1.0
-         if (mypid == NROOT) &
-         write(nud,*) 'ice cover {xclicec} constructed from SST'
-      endif
-
-      if (xcliced(1,1) < 0.0) then ! xcliced was not read
-         nicec2d = 1
-         call make_ice_thickness
-         if (mypid == NROOT) &
-         write(nud,*) 'ice thickness {xcliced} computed from ice cover'
-      endif
-
+          if (xcliced(1,1) < 0.0) then ! xcliced was not read
+             nicec2d = 1
+             call make_ice_thickness
+             if (mypid == NROOT) &
+             write(nud,*) 'ice thickness {xcliced} computed from ice cover'
+          endif
 !     correct climatological ice with land-sea mask
-
-      do jm = 0 , 13
-         where (xls(:) >= 1.0)
-            xclicec(:,jm) = 0.0
-            xcliced(:,jm) = 0.0
-         endwhere
-      enddo
+          do jm = 0 , 13
+             where (xls(:) >= 1.0)
+                xclicec(:,jm) = 0.0
+                xcliced(:,jm) = 0.0
+             endwhere
+          enddo
+      else
+!     naqua > 0
+          xclicec(:,:) = 0.0
+          xcliced(:,:) = 0.0
+          xls(:) = 0.0
+      endif
       return
       end subroutine read_ice_surface
 

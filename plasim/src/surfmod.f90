@@ -424,9 +424,10 @@
          dls(:)=AMIN1(dls(:),1.)
 
       endif ! (nrestart == 0)
-
-                            call landini  ! land module
-      if (nveg > 0)         call vegini   ! vegetation module
+      if (naqua == 0) then
+          call landini  ! land module
+          if (nveg > 0)         call vegini   ! vegetation module
+      endif
       if (n_sea_points > 0) call seaini   ! sea module
 
       return
@@ -452,8 +453,10 @@
       subroutine surfstop
       use surfmod
 
-                            call landstop
-      if (nveg > 0)         call vegstop
+      if (naqua == 0) then
+          call landstop
+          if (nveg > 0)         call vegstop
+      endif
       if (n_sea_points > 0) call seastop
 
       return
