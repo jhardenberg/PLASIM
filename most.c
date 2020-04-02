@@ -411,6 +411,8 @@ int *ModeY;
 int *ModeM;
 int *ModeN;
 
+int x11flag = 1;
+
 Colormap colormap;
 
 XColor xcolor1,xcolor2;
@@ -1101,7 +1103,7 @@ void NamelistSelector(int model)
       Sel->h    = FixFontHeight + 1;
       Sel->y    = yn;
       Sel->xt   = nlpos_x;
-      Sel->yt   = Sel->y + FixFont->ascent + 1;
+      Sel->yt   = Sel->y + FixFontAscent + 1;
       if (Sel->lt > ml) ml = Sel->lt;
       if (Sel->lt > ml) ml = Sel->lt;
 
@@ -1358,15 +1360,15 @@ void InitSelections(void)
    Sel->h    = 0;
    Sel->w    = 0;
    Sel->yt   = Sel->y + BigFontAscent + 1;
-   
 
    // Number of CPUs
 
    Sel = NewSel(Sel);
    InitNextSelection(Sel,dys,"Cores");
+
    Sel->h    = FixFontHeight + 1;
    Sel->w    = FixFontHeight + 1;
-   Sel->yt   = Sel->y + FixFont->ascent + 1;
+   Sel->yt   = Sel->y + FixFontAscent + 1;
    Sel->w    = 4 * FixFontWidth + 2;
    Sel->type = SEL_INT;
    Sel->edco = 4;
@@ -1385,7 +1387,7 @@ void InitSelections(void)
       InitNextSelection(Sel,dys,"Instances");
       Sel->h    = FixFontHeight + 1;
       Sel->w    = FixFontHeight + 1;
-      Sel->yt   = Sel->y + FixFont->ascent + 1;
+      Sel->yt   = Sel->y + FixFontAscent + 1;
       Sel->w    = 4 * FixFontWidth + 2;
       Sel->type = SEL_INT;
       Sel->edco = 4;
@@ -1404,7 +1406,7 @@ void InitSelections(void)
    Sel->type = SEL_TEXT;
    Sel->h    = 0;
    Sel->w    = 0;
-   Sel->yt   = Sel->y + BigFont->ascent + 1;
+   Sel->yt   = Sel->y + BigFontAscent + 1;
 
    // Horizontal resolution
 
@@ -1413,7 +1415,7 @@ void InitSelections(void)
       Sel = NewSel(Sel);
       InitNextSelection(Sel,dys,"Latitudes #1");
       Sel->h    = FixFontHeight + 1;
-      Sel->yt   = Sel->y + FixFont->ascent + 1;
+      Sel->yt   = Sel->y + FixFontAscent + 1;
       Sel->w    = 4 * FixFontWidth + 2;
       Sel->edco = 4;
       Sel->type = SEL_INT;
@@ -1435,7 +1437,7 @@ void InitSelections(void)
       Sel->type = SEL_CHECK;
       Sel->h    = FixFontHeight + 1;
       Sel->w    = FixFontHeight + 1;
-      Sel->yt   = Sel->y + FixFont->ascent + 1;
+      Sel->yt   = Sel->y + FixFontAscent + 1;
       Sel->div  = Sel->iv   =  1;
       SelRes    = Sel;
       DimText1  = Sel->text;
@@ -1475,7 +1477,7 @@ void InitSelections(void)
    Sel->type = SEL_TEXT;
    Sel->h    = 0;
    Sel->w    = 0;
-   Sel->yt   = Sel->y + BigFont->ascent + 1;
+   Sel->yt   = Sel->y + BigFontAscent + 1;
 
    // Global debug switch
 
@@ -1484,7 +1486,7 @@ void InitSelections(void)
    Sel->type = SEL_CHECK;
    Sel->h    = FixFontHeight + 1;
    Sel->w    = FixFontHeight + 1;
-   Sel->yt   = Sel->y + FixFont->ascent + 1;
+   Sel->yt   = Sel->y + FixFontAscent + 1;
    Sel->div  = Sel->iv   =  0;
    Sel->piv  = &ndebug;
 
@@ -1501,7 +1503,7 @@ void InitSelections(void)
    Sel->type = SEL_CHECK;
    Sel->h    = FixFontHeight + 1;
    Sel->w    = FixFontHeight + 1;
-   Sel->yt   = Sel->y + FixFont->ascent + 1;
+   Sel->yt   = Sel->y + FixFontAscent + 1;
    Sel->div  = Sel->iv   =  0;
    Sel->piv  = &noutput;
 
@@ -1539,7 +1541,7 @@ void InitSelections(void)
    Sel->type = SEL_TEXT;
    Sel->h    = 0;
    Sel->w    = 0;
-   Sel->yt   = Sel->y + BigFont->ascent + 1;
+   Sel->yt   = Sel->y + BigFontAscent + 1;
 
    // Simulation Start
 
@@ -1547,7 +1549,7 @@ void InitSelections(void)
    Sel = NewSel(Sel);
    InitNextSelection(Sel,dys,"Start year");
    Sel->h    = FixFontHeight + 1;
-   Sel->yt   = Sel->y + FixFont->ascent + 1;
+   Sel->yt   = Sel->y + FixFontAscent + 1;
    Sel->w    = 4 * FixFontWidth + 2;
    Sel->edco = 4;
    Sel->type = SEL_INT;
@@ -1560,7 +1562,7 @@ void InitSelections(void)
    Sel = NewSel(Sel);
    InitNextSelection(Sel,dyn,"Years to run");
    Sel->h    = FixFontHeight + 1;
-   Sel->yt   = Sel->y + FixFont->ascent + 1;
+   Sel->yt   = Sel->y + FixFontAscent + 1;
    Sel->w    = 4 * FixFontWidth + 2;
    Sel->type = SEL_INT;
    Sel->div  = Sel->iv   = 10;
@@ -1573,7 +1575,7 @@ void InitSelections(void)
    Sel = NewSel(Sel);
    InitNextSelection(Sel,dys,"Change [gpm]");
    Sel->h    = FixFontHeight + 1;
-   Sel->yt   = Sel->y + FixFont->ascent + 1;
+   Sel->yt   = Sel->y + FixFontAscent + 1;
    Sel->w    = 6 * FixFontWidth + 2;
    Sel->type = SEL_INT;
    Sel->div  = Sel->iv   = 0;
@@ -2004,7 +2006,7 @@ int Build(int model)
    strcpy(script_backup,bld);
    strcat(script_backup,".bak");
    rename(bld,script_backup);
-
+ 
    if (model == PLASIM) WriteResmod(res);
 
    fp = fopen(bld,"w");
@@ -2065,13 +2067,13 @@ int Build(int model)
    system(command);
 
    sprintf(message,"Building %s - wait a minute!",FullModelName[Model]);
-   BlueMessage(message);
+   if (x11flag) BlueMessage(message);
    strcat(bld," ");
    strcat(bld,shomo);
    strcat(bld,"/bld");
    if (system(bld))
    {
-      RedMessage("Error in build process");
+      if (x11flag) RedMessage("Error in build process");
       sleep(5);
       return 0; // error
    }
@@ -4942,12 +4944,37 @@ int main(int argc, char *argv[])
    {
            if (!strcmp(argv[ia],"-d")) Debug = 1;
       else if (!strcmp(argv[ia],"-i")) cfg_file[0] = 0;
-      else if (!strcmp(argv[ia],"-h")) ScreenHeight = atoi(argv[++ia]);
-      else strncpy(cfg_file,argv[1],sizeof(cfg_file));
+      else if (!strcmp(argv[ia],"-c")) x11flag = 0;
+      else if (!strcmp(argv[ia],"-s")) ScreenHeight = atoi(argv[++ia]);
+      else if (!strcmp(argv[ia],"-h")) {
+         puts("Usage: most.x [Options] [config_file]");
+         puts("Options:");
+ 	 puts("-d          Debug mode");
+ 	 puts("-i          Start from defaults");
+ 	 puts("-s <height> Set screen height to <height>");
+ 	 puts("-c          Console only run (no X11), build plasim");
+ 	 puts("-h          Print this help");
+         puts("");
+ 	 puts("The old configuration is read from  most_last_used.cfg");
+         puts("unless [config_file] is specified.");
+         return 0;
+      } else strncpy(cfg_file,argv[ia],sizeof(cfg_file));
    }
    CurrentDate = time(NULL);
    BigEndian = CheckEndianess();
-   InitGUI();
-   LoopGUI();
+
+   if (!x11flag) {
+      InitSelections();
+      InitNamelist();
+      ChangeModel(PUMA);
+      NamelistSelector(PUMA);
+      ChangeModel(PLASIM);
+      NamelistSelector(PLASIM);
+      ReadSettings(cfg_file);
+      SaveExit();
+   } else {
+      InitGUI();
+      LoopGUI();
+   }
    return 0;
 }
