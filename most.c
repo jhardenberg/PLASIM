@@ -2401,7 +2401,6 @@ int CheckPlasimNamelist(void)
    if (Cores <         1) Cores =         1;
 
    if (Latitudes % Cores != 0) Cores = 1;
-
    return 0; /* Success */
 }
 
@@ -4392,6 +4391,38 @@ char *vcn[6] =
    "DirectColor"
 };
 
+void InitGUItext(void)
+{
+   FILE *xpp;
+
+   // Read name of MPI execute command
+
+   xpp = fopen("most_compiler_mpi","r"); // MPI installed ?
+   if (xpp)
+   {
+      fgets(Buffer,LINEMAX,xpp);
+      if (Buffer[strlen(Buffer)-1] == 10) Buffer[strlen(Buffer)-1] = 0;
+      if (Buffer[strlen(Buffer)-1] == 13) Buffer[strlen(Buffer)-1] = 0;
+      if (!strncmp(Buffer,"MPI_RUN=",8))  strcpy(mpirun,Buffer+8);
+      fclose(xpp);
+   }
+
+   InitSelections();
+   InitNamelist();
+   ChangeModel(CAT);
+   NamelistSelector(CAT);
+   ChangeModel(SAM);
+   NamelistSelector(SAM);
+   ChangeModel(PUMA);
+   NamelistSelector(PUMA);
+   ChangeModel(PLASIM);
+   NamelistSelector(PLASIM);
+   if (ReadSettings(cfg_file))
+   {
+      UpdateResolution();
+      UpdateSelections(&SelStart);
+   }
+}
 
 void InitGUI(void)
 {
@@ -4964,13 +4995,7 @@ int main(int argc, char *argv[])
    BigEndian = CheckEndianess();
 
    if (!x11flag) {
-      InitSelections();
-      InitNamelist();
-      ChangeModel(PUMA);
-      NamelistSelector(PUMA);
-      ChangeModel(PLASIM);
-      NamelistSelector(PLASIM);
-      ReadSettings(cfg_file);
+      InitGUItext();
       SaveExit();
    } else {
       InitGUI();
