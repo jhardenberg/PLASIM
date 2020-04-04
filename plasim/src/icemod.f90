@@ -575,39 +575,6 @@
 !
       call mkicec(zicedold,xiced,xicecc)
 !
-      if(nice == 0) then
-!
-!     climatological ice and 
-!     flux correction diagnostics
-!
-       where(xiced(:) > 0. .or. xcliced2(:) > 0.)
-        xflxice2(:)=(xiced(:)-xcliced2(:))*zrhoilfdt-xcflux(:)
-        xcflux(:)=0.                    
-        xiced(:)=xcliced2(:)
-        xicec(:)=xclicec2(:)
-       elsewhere
-        xflxice2(:)=0.
-        xicec(:)=0.
-       endwhere
-!
-!     depug print out if needed
-!
-       if (nprint==2) then
-        allocate(zprf1(NLON*NLAT))
-        allocate(zprf2(NLON*NLAT))
-        call mpgagp(zprf1,xflxice2,1)
-        call mpgagp(zprf2,xiced,1)
-        if(mypid==NROOT) then
-         write(nud,*)'diagnose flux correction:'
-         write(nud,*)'heat for correction: ',zprf1(nprhor)
-         write(nud,*)'new iced: ',zprf2(nprhor)
-        endif
-        deallocate(zprf1)
-        deallocate(zprf2)
-       endif
-!
-      else
-!
 !     a) set compactness
 !
        xicec(:)=xicecc(:)         
@@ -631,6 +598,13 @@
         call addfci
        endif
 !
+      if (nice == 0) then
+       where(xiced(:) > 0. .or. xcliced2(:) > 0.)
+        xiced(:)=xcliced2(:)
+        xicec(:)=xclicec2(:)
+       elsewhere
+        xicec(:)=0.
+       endwhere
       endif
 !
 !     correct sea ice to a maximum of xmaxd 
