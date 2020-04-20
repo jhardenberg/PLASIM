@@ -1324,7 +1324,7 @@
        xcfluxf(:)=zckap(:)*(TFREEZE-xsst(:))/(zhsnow(:)+xiced(:))
       end where
 !
-      if(nfluko > 0. .or. nice == 0) xcfluxf(:)=0.
+#      if(nfluko > 0. .or. nice == 0) xcfluxf(:)=0.
 !
 !     depug print out if needed
 !
