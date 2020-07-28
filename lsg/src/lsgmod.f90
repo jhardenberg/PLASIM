@@ -8073,8 +8073,10 @@
 !        zstar=2500.              !!FL 2800.    !!ORI 2800.
 !        lambda=4.50e-03          !!FL 4.5E-3   !!ORI 3.60e-03
 ! Parameters after the tuning in Angeloni et al. 2020
-        astar=0.8462e-04
-        arange=0.3011e-04
+        !astar=0.8462e-04
+        !arange=0.3011e-04
+        astar=0.8714e-04
+        arange=0.2843e-04
         zstar=2500.
         lambda=4.5e-03
       end if
