@@ -12,6 +12,7 @@ This version of the model contains some improvements compared to https://github.
 - *srv2nc* A complete postprocessor to transform Plasim output to compressed netcdf4 format (no afterburner is needed), based on cdo. It converts both Plasim and LSG outputs.
 - *most.x* without X11: Specifying the option "-c" to most.x, a text configuration file can be read. By default "most_last_used.cfg" is used, unless a file is specified.
 - *Small fixes*
+- *devel_planets* branch in which several changes for xoplanetary studies are being implemented.
 
 This model is a research model used in Meteorology and Earth Sciences.
 You need knowledge in Meteorology, Climatology and skills in Linux, C and FORTRAN
