@@ -6,7 +6,7 @@ rm -f *.x most_* F90_*
 # put your favourite compiler in front if you have more than one
 # WARNING: Portland Group Compiler pgf is reported to be buggy
 
-for MOST_F90 in ifort gfortran xlf sunf90 nagfor f90 f95 pgf90 g95 af90 NO_F90
+for MOST_F90 in gfortran ifort gfortran xlf sunf90 nagfor f90 f95 pgf90 g95 af90 NO_F90
 do
    `hash 2>/dev/null $MOST_F90`
    if [ $? = 0 ] ; then break ; fi
@@ -66,7 +66,10 @@ fi
 
 
 #check for Xlib
-  if [ -e "/usr/X11/lib64/libX11.so" ] ; then
+  if [ -e "/opt/X11" ] ; then
+   XLIB_PATH="/opt/X11/lib"
+   XINC_PATH="/opt/X11/include"
+elif [ -e "/usr/X11/lib64/libX11.so" ] ; then
    XLIB_PATH="/usr/X11/lib64"
    XINC_PATH="/usr/X11/lib64/include"
 elif [ -e "/usr/lib64/libX11.so" ] ; then
@@ -78,9 +81,6 @@ elif [ -e "/usr/X11/lib" ] ; then
 elif [ -e "/usr/lib/X11" ] ; then
    XLIB_PATH="/usr/lib/X11"
    XINC_PATH="/usr/lib/X11/include"
-elif [ -e "/opt/X11" ] ; then
-   XLIB_PATH="/opt/X11"
-   XINC_PATH="/opt/X11/include"
 fi
 if [ -n ${XLIB_PATH} ] ; then
    echo "Found Xlib (X11)              at: $XLIB_PATH"
@@ -180,7 +180,7 @@ if [ $MPI_F90 != "NO_F90" ] ; then
    if [ $MPI_CC != "NO_CC" ] ; then
       CC_PATH=`which $MPI_CC`
       echo >> most_compiler_mpi MOST_CC=$MPI_CC
-      echo >> most_compiler_mpi "MOST_CC_OPTS=-O3"
+      echo >> most_compiler_mpi "MOST_CC_OPTS=-O3 -I" $XINC_PATH
       echo "Found MPI C compiler          at: $CC_PATH"
    else
       echo "********************************************"
@@ -261,9 +261,9 @@ echo >> makefile "	rm -f *.o *.x F90* most_*"
 
 #create directories
 
-#mkdir -p puma/bld
-#mkdir -p puma/bin
-#mkdir -p puma/run
+mkdir -p puma/bld
+mkdir -p puma/bin
+mkdir -p puma/run
 mkdir -p plasim/bld
 mkdir -p plasim/bin
 mkdir -p plasim/run

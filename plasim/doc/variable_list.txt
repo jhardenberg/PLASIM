@@ -1,0 +1,178 @@
+-------------------------------------------------------------------------------------------------
+| PLANET output variables (time, -):                                                            |
+-------------------------------------------------------------------------------------------------
+|     Name |                                            Long Name |      Units |           Code |
+-------------------------------------------------------------------------------------------------
+|     hyai |             Hybrid A Coefficient At Layer Interfaces |         Pa |                |
+|     hybi |             Hybrid B Coefficient At Layer Interfaces |          1 |                |
+|     hyam |              Hybrid A Coefficient At Layer Midpoints |         Pa |                |
+|     hybm |              Hybrid B Coefficient At Layer Midpoints |          1 |                |
+-------------------------------------------------------------------------------------------------
+
+
+
+-------------------------------------------------------------------------------------------------
+| PLANET output variables (time, lat, lon):                                                     |
+-------------------------------------------------------------------------------------------------
+|     Name |                                            Long Name |      Units |           Code |
+-------------------------------------------------------------------------------------------------
+|      mld |                                    Mixed Layer Depth |          m |            110 |
+|       ts |                                  Surface Temperature |          K |            139 |
+|     mrso |                                         Soil Wetness |          m |            140 |
+|      snd |                                           Snow Depth |          m |            141 |
+|      prl |                            Large Scale Precipitation |        m/s |            142 |
+|      prc |                             Convective Precipitation |        m/s |            143 |
+|     prsn |                                            Snow Fall |        m/s |            144 |
+|     hfss |                           Surface Sensible Heat Flux |       W/m2 |            146 |
+|     hfls |                             Surface Latent Heat Flux |       W/m2 |            147 |
+|       u3 |                                            ustar **3 |      m3/s3 |            159 |
+|     mrro |                                       Surface Runoff |        m/s |            160 |
+|      clt |                             Total Cloud Cover (Mean) |        0-1 |            164 |
+|      tas |                                    Temperature At 2m |          K |            167 |
+|      tsa |                      Accumulated Surface Temperature |          K |            169 |
+|     tsod |                                Deep Soil Temperature |          K |            170 |
+|      lsm |                                        Land Sea Mask |        0-1 |            172 |
+|       z0 |                                    Surface Roughness |          m |            173 |
+|       as |                                       Surface Albedo |          1 |            175 |
+|      rss |                              Surface Solar Radiation |       W/m2 |            176 |
+|      rls |                            Surface Thermal Radiation |       W/m2 |            177 |
+|      rst |                                  Top Solar Radiation |       W/m2 |            178 |
+|     rlut |                                Top Thermal Radiation |       W/m2 |            179 |
+|     tauu |                                             U-Stress |         Pa |            180 |
+|     tauv |                                             V-Stress |         Pa |            181 |
+|     evap |                                          Evaporation |        m/s |            182 |
+|      tso |                                     Soil Temperature |          K |            183 |
+|   tasmax |                         Maximum Daily 2m Temperature |          K |            201 |
+|   tasmin |                         Minimum Daily 2m Temperature |          K |            202 |
+|     rsut |                           Top Solar Radiation Upward |       W/m2 |            203 |
+|     ssru |                       Surface Solar Radiation Upward |       W/m2 |            204 |
+|     sstu |                     Surface Thermal Radiation Upward |       W/m2 |            205 |
+|     tso2 |                             Soil Temperature Level 2 |          K |            207 |
+|     tso3 |                             Soil Temperature Level 3 |          K |            208 |
+|     tso4 |                             Soil Temperature Level 4 |          K |            209 |
+|      sic |                                        Sea Ice Cover |        0-1 |            210 |
+|      sit |                                    Sea Ice Thickness |          m |            211 |
+|     vegf |                                         Forest Cover |        0-1 |            212 |
+|      snm |                                            Snow Melt |        m/s |            218 |
+|     sndc |                                    Snow Depth Change |        m/s |            221 |
+|    dwmax |                                       Field Capacity |          1 |            229 |
+|      prw |              Vertically Integrated Specific Humidity |      kg/m2 |            230 |
+|    glacc |                                        Glacier Cover |        0-1 |            232 |
+-------------------------------------------------------------------------------------------------
+| PLANET output variables (time, sfc, lat, lon):                                                |
+-------------------------------------------------------------------------------------------------
+|      clw |                                 Liquid Water Content |      kg/kg |            161 |
+|       cl |                                          Cloud Cover |        0-1 |            162 |
+-------------------------------------------------------------------------------------------------
+
+
+
+-------------------------------------------------------------------------------------------------
+| PLANET output variables (time, nsp, nc2):                                                     |                                                           
+-------------------------------------------------------------------------------------------------
+|     Name |                                            Long Name |      Units |           Code |
+-------------------------------------------------------------------------------------------------
+|       sg |                       Surface Geopotential Orography |      m2/s2 |            129 |
+|       pl |                                 Log Surface Pressure |          1 |            152 |
+-------------------------------------------------------------------------------------------------
+| PLANET output variables (time, sfc, nsp, nc2):                                                |                                                           
+-------------------------------------------------------------------------------------------------
+|       ta |                                          Temperature |          K |            130 |
+|      hus |                                    Specific Humidity |      kg/kg |            133 |
+|     zeta |                                            Vorticity |        1/s |            138 |
+|        d |                                           Divergence |        1/s |            155 |
+-------------------------------------------------------------------------------------------------
+
+
+
+-------------------------------------------------------------------------------------------------
+| OCEAN output variables (time, lat, lon):                                                      |
+-------------------------------------------------------------------------------------------------
+|     Name |                                            Long Name |      Units |           Code |
+-------------------------------------------------------------------------------------------------
+|    heata |                    Heat Flux From The Atmosphere/Ice |       W/m2 |            901 |
+|   ifluxa |                               Heat Flux Into The Ice |       W/m2 |            902 |
+|    fssta |                                      Flux Correction |       W/m2 |            903 |
+|    dssta |                                   Vertical Diffusion |       m2/s |            904 |
+|     qhda |                                 Horizontal Diffusion |       m2/s |            905 |
+|    fldoa |                           Flux From Deep Ocean (LSG) |       W/m2 |            906 |
+|     icec |                                        Sea Ice Cover |        0-1 |            910 |
+|      sst |          Sea Surface Temperature (Mixed Layer Ocean) |          K |            939 |
+|       ls |                                        Land Sea Mask |          1 |            972 |
+|    clsst |               Climatological Sea Surface Temperature |          K |            990 |
+-------------------------------------------------------------------------------------------------
+
+
+
+-------------------------------------------------------------------------------------------------
+| LARGE SCALE GEOSTROPHIC ocean output variables (time, depth, south_north, west_east, y, x):   |         
+-------------------------------------------------------------------------------------------------
+|     Name |                                            Long Name |      Units |           Code |
+-------------------------------------------------------------------------------------------------
+|        t |                                Potential Temperature |          K |              2 |
+|     utot |                             Zonal Velocity Component |        m/s |              3 |
+|     vtot |                        Meridional Velocity Component |        m/s |              4 |
+|        s |                                             Salinity |       0/00 |              5 |
+|        w |                          Vertical Velocity Component |        m/s |              7 |
+|      wet |                      Land Sea Mask For Scalar Points |        0-1 |             40 |
+|   wetvec |                      Land Sea Mask For Vector Points |        0-1 |             41 |
+|   convad |                         Convective Adjustment Events |          1 |             69 |
+-------------------------------------------------------------------------------------------------
+| LARGE SCALE GEOSTROPHIC ocean output variables (time, lev, south_north, west_east, y, x):     |         
+-------------------------------------------------------------------------------------------------
+|     zeta |                                    Surface Elevation |          m |              1 |
+|     sice |                                        Ice Thickness |          m |             13 |
+|  fluxhea |                                            Heat Flux |       W/m2 |             18 |
+|      psi |                Horizontal Barotropic Stream Function |       m3/s |             27 |
+|       ub |               Zonal Component Of Barotropic Velocity |        m/s |             37 |
+|       vb |          Meridional Component Of Barotropic Velocity |        m/s |             38 |
+|     taux |                       Zonal Component Of Wind Stress |         Pa |             52 |
+|     tauy |                  Meridional Component Of Wind Stress |         Pa |             53 |
+|   fluwat |                           Net Fresh Water Flux (P-E) |        m/s |             65 |
+|  convadd |       Potential Energy Dissipation Due To Convection |      mW/m2 |             66 |
+|  flukwat |           Fresh Water Flux Due To Newtonian Coupling |        m/s |             67 |
+|  flukhea |                  Heat Flux Due To Newtonian Coupling |       W/m2 |             68 |
+|   fldsst |                         SST Differences (LSG-PLASIM) |          K |             80 |
+|   fldice |                         ICE Differences (LSG-PLASIM) |          1 |             81 |
+|   fldpme |                         PME Differences (LSG-PLASIM) |        m/s |             82 |
+|  fldtaux |                        taux Differences (LSG-PLASIM) |         Pa |             83 |
+|  fldtauy |                        tauy Differences (LSG-PLASIM) |         Pa |             84 |
+|   tbound |                                  Boundary Value of t |          K |             92 |
+|     depp |                               Depth In Scalar Points |          m |             98 |
+|     depv |                               Depth In Vector Points |          m |             99 |
+-------------------------------------------------------------------------------------------------
+
+
+
+
+-------------------------------------------------------------------------------------------------
+| ICE output variables (time, lat, lon):                                                        |
+-------------------------------------------------------------------------------------------------
+|     Name |                                            Long Name |      Units |           Code |
+-------------------------------------------------------------------------------------------------
+|    heata |                        Heat Flux From The Atmosphere |       W/m2 |            701 |
+|   ofluxa |                             Heat Flux From The Ocean |       W/m2 |            702 |
+|  tsfluxa |                      Heat Flux To Warm/Cool Ice/Snow |       W/m2 |            703 |
+|   smelta |                               Heat Flux To Melt Snow |       W/m2 |            704 |
+|   imelta |                                Heat Flux To Melt Ice |       W/m2 |            705 |
+|   cfluxa |                             Heat Flux Into The Ocean |       W/m2 |            706 |
+|   fluxca |                                 Conductive Heat Flux |       W/m2 |            707 |
+|   qmelta | Residual Flux Going Into Ice/Snow Melt (Tskin>Tmelt) |       W/m2 |            708 |
+| xflxicea |                                      Flux Correction |       W/m2 |            709 |
+|     icec |                                            Ice Cover |        0-1 |            710 |
+|     iced |                                        Ice Thickness |          m |            711 |
+|   scflxa |                     Flux From Snow -> Ice Conversion |       W/m2 |            712 |
+|  cfluxra |             Flux For Limiting Ice Thickness To xmaxd |       W/m2 |            713 |
+|  cfluxna |                   Flux Due To Negative Ice Thickness |       W/m2 |            714 |
+|       ts |                                     Skin Temperature |          K |            739 |
+|    zsnow |                                           Snow Depth |      m h2o |            741 |
+|      sst |                              Sea Surface Temperature |          K |            769 |
+|       ls |                                        Land Sea Mask |        0-1 |            772 |
+|  clicec2 |                             Climatological Ice Cover |        0-1 |            790 |
+|  cliced2 |                         Climatological Ice Thickness |          m |            791 |
+|    icecc |                    Ice Cover Computed Prognostically |      frac. |            792 |
+|    cpmea |                            Fresh Water (P-E) For LSG |        m/s |            794 |
+|   croffa |                                       Runoff For LSG |        m/s |            795 |
+|    stoia |                               Snow -> Ice Conversion |      m h2o |            796 |
+-------------------------------------------------------------------------------------------------
+
