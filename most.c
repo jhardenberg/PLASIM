@@ -649,6 +649,7 @@ void ChangeModel(int NewMo)
          strcpy(DimText1,"T21   [64x32]");
          strcpy(DimText2,"T31   [96x48]");
          strcpy(DimText3,"T42  [128x64]");
+         strcpy(DimText3,"T63  [192x96]");
       }
    }
    Model = NewMo;
@@ -1457,6 +1458,15 @@ void InitSelections(void)
       Sel->w    = FixFontHeight + 1;
       Sel->div  = Sel->iv   =  0;
       DimText3  = Sel->text;
+
+      Sel = NewSel(Sel);
+      InitNextSelection(Sel,dyn,"T63  [192x96]");
+      Sel->type = SEL_CHECK;
+      Sel->h    = FixFontHeight + 1;
+      Sel->w    = FixFontHeight + 1;
+      Sel->div  = Sel->iv   =  0;
+      DimText3  = Sel->text;
+
    }
 
    // Vertical resolution
@@ -2039,7 +2049,7 @@ int Build(int model)
    {
       putenv("OCEANCOUP=cpl_stub");
    }
-   if (Latitudes < 4) putenv("FFTMOD=fft991mod");
+   if ((Latitudes < 4)||(Latitudes == 96)) putenv("FFTMOD=fft991mod");
    if (porm > 1)
    {
       fputs("[ ! -e MPI ] && rm -f *.o *.mod *.x\n",fp);
@@ -2379,7 +2389,8 @@ int CheckPlasimNamelist(void)
 
    // Check # of latitudes for correct values (FFT requirements)
 
-        if (Latitudes >=  64) Latitudes =  64; // T42
+        if (Latitudes >=  96) Latitudes =  96; // T63
+   else if (Latitudes >=  64) Latitudes =  64; // T42
    else if (Latitudes >=  48) Latitudes =  48; // T31
    else if (Latitudes >=  32) Latitudes =  32; // T21
    else if (Latitudes >=   4) Latitudes =   4; // T2
@@ -4359,7 +4370,7 @@ void ChangeResolution(int NewRes)
    int i;
    struct SelStruct *Sel;
 
-   for (i=RES_T21 , Sel = SelRes ; i <= RES_T42; ++i , Sel = Sel->Next)
+   for (i=RES_T21 , Sel = SelRes ; i <= RES_T63; ++i , Sel = Sel->Next)
    {
       if (i == NewRes) Sel->iv = 1;
       else             Sel->iv = 0;
@@ -4374,7 +4385,7 @@ void UpdateResolution(void)
    struct SelStruct *Sel;
 
    if (SelRes)
-   for (i=RES_T21 , Sel = SelRes ; i <= RES_T42; ++i , Sel = Sel->Next)
+   for (i=RES_T21 , Sel = SelRes ; i <= RES_T63; ++i , Sel = Sel->Next)
    {
       if (Sel && Sel->iv == 1) Resolution = i;
    }
@@ -4762,7 +4773,7 @@ void OnMouseClick(void)
 
    if (SelRes)
    {
-      for (i = RES_T21 , Sel = SelRes ; i <= RES_T42 ; ++i , Sel = Sel->Next)
+      for (i = RES_T21 , Sel = SelRes ; i <= RES_T63 ; ++i , Sel = Sel->Next)
       if (HitBox(Sel))
       {
          ChangeResolution(i);
