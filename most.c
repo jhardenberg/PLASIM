@@ -1851,6 +1851,7 @@ int WriteRunScript(int model)
               ShortModelName[model],ShortModelName[model],ShortModelName[model]);
       fprintf(fp,"   [ -e %s_status ] && mv %s_status restart/$RESTNAME\n",
               ShortModelName[model],ShortModelName[model]);
+      fprintf(fp,"   [ -e mat77 ] && cp mat77 restart/mat77\n");
       fprintf(fp,"   [ -e kleiswi ] && cp kleiswi restart/kleiswi\n");
       fprintf(fp,"   [ -e kleiin1 ] && cp kleiin1 restart/$LSGRESTNAME\n");
    }
