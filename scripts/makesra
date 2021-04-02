@@ -1,0 +1,70 @@
+#!/bin/bash
+
+function help {
+  echo "Create PLASIM sra file with constant values"
+  echo "Usage: makesra [OPTIONS] const code"
+  echo "   const : the constant value"
+  echo "   code  : the code of the variable"
+  echo "Options:"
+  echo "  -m months     months to create (default 1)"
+  echo "  -g grid       grid (t21/t42, default t21)"
+  echo "  -d date       date as YYYYMMDD (default 20200101)"
+  echo "  -t time       time as HHMM (default 0000)"
+  echo "  -p lat        polar continent (set to const) up to latitude lat"
+  echo "  -e lat        equatorial continent (set to const) up to latitude lat"
+  echo "  -c const      constant for continents (default 1)"
+  echo "  -h            print this help"
+  exit 1
+}
+
+months=1
+grid="t21"
+date="20200101"
+time="-1"
+polar="-1"
+equatorial="-1"
+const=1
+while getopts "m:g:d:t:p:e:c:h" OPTION; do
+    case $OPTION in
+    m) months=$OPTARG ;;
+    d) date=$OPTARG ;;
+    t) time=$OPTARG ;;
+    g) grid=$OPTARG ;;
+    p) polar=$OPTARG ;;
+    e) equatorial=$OPTARG ;;
+    c) const=$OPTARG ;;
+    h) help ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [ $# -lt 2 ]; then
+   help
+fi
+
+if [ "$grid" = "t42" ] || [ "$grid" = "T42" ]; then
+   gr=r128x64
+else
+   gr=r64x32
+fi
+
+CONST=$1
+SETC=""
+if [ "$polar" -ne "-1" ]; then
+    SETC="-setclonlatbox,$const,-360,360,$polar,90 -setclonlatbox,$const,-360,360,-90,-$polar"
+fi
+if [ "$equatorial" -ne "-1" ]; then
+    SETC="-setclonlatbox,$const,-360,360,-$equatorial,$equatorial"
+fi
+cdo -f nc $SETC -const,$CONST,$gr const$$.nc
+
+for ((m=1; m<=$months; m++)); do
+    mm=$(printf "%02d" $m)
+    if [ "$months" -ne "1" ]; then
+       date=${date:0:4}$mm${date:6:2}    
+    fi
+    printf "       $2         0  %s        %s        64        32         0         0\n" $date $time
+    cdo outputf,"   %7.3f",8 const$$.nc 
+done
+rm const$$.nc
+ 
