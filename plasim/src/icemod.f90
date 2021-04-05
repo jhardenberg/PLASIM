@@ -332,6 +332,7 @@
          call iceget
          xiced(:)=xcliced2(:)
          xicec(:)=xclicec2(:)
+         xicecc(:)=xclicec2(:)
          where(xicec(:) >= thicec)
           xicec(:)=1.
          elsewhere
