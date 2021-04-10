@@ -15,7 +15,7 @@
 !
       integer :: nlandt   = 1     ! switch for land model (1/0 : prog./clim)
       integer :: nlandw   = 1     ! switch for soil model (1/0 : prog./clim)
-      integer :: newsurf  = 0     ! (dtcl,dwcl) 1: update from file, 2:reset 
+      integer :: newsurf  = 0     ! (dtcl,dwcl) 1: update from file, 2:reset
       integer :: nwatcini = 0     ! (0/1) initialize water content of soil
       real    :: albland  = 0.2   ! albedo for land
       real    :: albsmin  = 0.4   ! min. albedo for snow
@@ -104,7 +104,7 @@
       ispo    = NUGP - ilpo
       ilperc  = nint((100.0 * zsum) / NUGP)
       isperc  = 100 - ilperc
-  
+
       if (mypid == NROOT) then
          write(nud,'(a,i6,a,i6,a,i3,a)') &
               ' Land:',ilpo,' from',NUGP,' = ',ilperc,'%'
@@ -224,7 +224,7 @@
          call mpsurfgp('dforest' ,dforest ,NHOR,1)
          call mpsurfgp('dwmax'   ,dwmax   ,NHOR,1)
          call mpsurfgp('dtclsoil',dtclsoil,NHOR,1)
-   
+
          call mpsurfgp('dtcl',dtcl,NHOR,14)
          call mpsurfgp('dwcl',dwcl,NHOR,14)
          call mpsurfgp('dalbcl',dalbcl,NHOR,14)
@@ -271,7 +271,7 @@
 !
        if (n_sea_points > 0) call roffini
 !
-!*    get new background albedo 
+!*    get new background albedo
 !
        call getalb
 !
@@ -364,6 +364,30 @@
          dalbcl(:,:) = albland
          dwcl(:,:)   = wsmax * drhsfull * drhsland
       endif
+	  
+	  if (newsurf == 3) then ! read glacier mask, albedo e orography (also insert neworo=1 in surfmod) 
+         call mpsurfgp('dtcl',dtcl,NHOR,14)
+         call mpsurfgp('dwcl',dwcl,NHOR,14)
+         call mpsurfgp('dalbcl',dalbcl,NHOR,14)
+         call mpsurfgp('dglac',dglac,NHOR, 1)
+		 call mpsurfgp('doro',doro,NHOR, 1)
+      endif
+	  
+	   if (newsurf == 4) then !read glacier mask, albedo e orography (also insert neworo=1 in surfmod) and dwmax
+         call mpsurfgp('dtcl',dtcl,NHOR,14)
+         call mpsurfgp('dwcl',dwcl,NHOR,14)
+         call mpsurfgp('dalbcl',dalbcl,NHOR,14)
+         call mpsurfgp('dglac',dglac,NHOR, 1)
+		 call mpsurfgp('doro',doro,NHOR, 1)
+		 call mpsurfgp('dwmax'   ,dwmax   ,NHOR,     1)
+      endif
+	  
+	  if (newsurf == 5) then !read dwmax
+         call mpsurfgp('dtcl',dtcl,NHOR,14)
+         call mpsurfgp('dwcl',dwcl,NHOR,14)
+		 call mpsurfgp('dwmax'   ,dwmax   ,NHOR,     1)
+      endif
+	  
 
       return
       end subroutine landini
@@ -597,7 +621,7 @@
 !
        dts(:)=(zctop(:)*zztop(:)*dtsm(:)/deltsec+zhfla(:)               &
               +2.*zdiff1(:)*dsoilt(:,1)/zsoilz1(:))                     &
-             /(zctop(:)*zztop(:)/deltsec+2.*zdiff1(:)/zsoilz1(:)) 
+             /(zctop(:)*zztop(:)/deltsec+2.*zdiff1(:)/zsoilz1(:))
 !
 !     heat flux into the soil
 !
@@ -611,7 +635,7 @@
        dts(:)=tmelt
        zhflm(:)=AMAX1(0.,zhfla(:)                                       &
      &                  -zctop(:)*zztop(:)*(dts(:)-dtsm(:))/deltsec     &
-     &                  +2.*zdiff1(:)*(dsoilt(:,1)-dts(:))/zsoilz1(:))  
+     &                  +2.*zdiff1(:)*(dsoilt(:,1)-dts(:))/zsoilz1(:))
        zsnowz(:)=AMAX1(0.,dsnowz(:)-zhflm(:)*deltsec/((ALS-ALV)*1000.))
        zdsnowz(:)=(zsnowz(:)-dsnowz(:))/deltsec
        zhflm(:)=-zdsnowz(:)*1000.*(ALS-ALV)
@@ -654,7 +678,7 @@
 !
        dts(:)=(zctop(:)*zztop(:)*dtsm(:)/deltsec+zhfla(:)-zhflm(:)      &
      &        +2.*zdiff1(:)*dsoilt(:,1)/zsoilz1(:))                     &
-     &       /(zctop(:)*zztop(:)/deltsec+2.*zdiff1(:)/zsoilz1(:)) 
+     &       /(zctop(:)*zztop(:)/deltsec+2.*zdiff1(:)/zsoilz1(:))
 !
 !     heat flux into the soil
 !
@@ -1196,7 +1220,7 @@
          enddo
         enddo
         zvroff(1:NLON,NLAT)=0.
-!!FL        
+!!FL
 !        open(62,file='roffuv.srv',form='unformatted')
 !        write(62) 131,0,0,0,NLON,NLAT,0,0
 !        write(62) zuroff
@@ -1356,4 +1380,3 @@
       dalbclim(:)=zgw1*dalbcl(:,jm1)+zgw2*dalbcl(:,jm2)
       return
       end subroutine getalb
-

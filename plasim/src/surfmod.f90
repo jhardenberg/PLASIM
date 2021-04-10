@@ -17,7 +17,7 @@
 
       integer :: nsurf = 1
       integer :: noromax = NTRU
-
+	  integer :: neworo=0
       real :: doro(NHOR) = 0.0     ! orography
 
       end module surfmod
@@ -340,7 +340,7 @@
 !
 !     initialize surface parameter
 !
-      namelist/surfmod_nl/nspinit,nsurf,noromax
+      namelist/surfmod_nl/nspinit,nsurf,noromax,neworo
 
       if (mypid == NROOT) then
        open(11,file=surfmod_namelist)
@@ -424,9 +424,64 @@
          dls(:)=AMIN1(dls(:),1.)
 
       endif ! (nrestart == 0)
+	  
+	  if (neworo==1) then
+		call mpsurfgp('doro',doro,NHOR,1)
+         !call mpsurfgp('dls' ,dls ,NHOR,1)
+         if (npro == 1) then ! print only in single core runs
+            write(nud,'(/,"Topography read from surface file")')
+            write(nud,'("Maximum: ",f10.2," [m]")') maxval(doro) / ga
+            write(nud,'("Minimum: ",f10.2," [m]")') minval(doro) / ga
+            write(nud,'("Mean:    ",f10.2," [m]")') sum(doro) / (ga * NUGP)
+         endif
+         doro(:) = doro(:) * oroscale  ! Scale orography
 
+!        Compute spectral orography
+
+         call gp2fc(doro,NLON,NLPP)
+         call fc2sp(doro,so)
+         call mpsum(so,1)
+         if (npro == 1) then ! print only in single core runs
+            call sp2fc(so,doro)
+            call fc2gp(doro,nlon,nlpp)
+            write(nud,'(/,"Topography after spectral fitting")')
+            write(nud,'("Maximum: ",f10.2," [m]")') maxval(doro) / ga
+            write(nud,'("Minimum: ",f10.2," [m]")') minval(doro) / ga
+            write(nud,'("Mean:    ",f10.2," [m]")') sum(doro) / (ga * NUGP)
+         endif
+         if (mypid == NROOT) then
+            so(:) = so(:) / (cv*cv)
+            if (noromax < NTRU) then
+             jr=-1
+             do jm=0,NTRU
+              do jn=jm,NTRU
+               jr=jr+2
+               ji=jr+1
+               if(jn > noromax) then
+                so(jr)=0.
+                so(ji)=0.
+               endif
+              enddo
+             enddo
+            endif ! (noromax < NTRU)
+
+!           Initialize surface pressure
+
+           if (nspinit > 0) then
+              sp(:) = -so(:)*cv*cv / (gascon * tgr)
+           endif
+        endif ! (mypid == NROOT)
+        call mpscsp(sp,spm,1)
+
+!*       adjust land sea mask  (workaround)
+
+         !dls(:)=AMAX1(dls(:),0.)
+         !dls(:)=AMIN1(dls(:),1.)
+
+	  endif
                             call landini  ! land module
-      if (nveg > 0)         call vegini   ! vegetation module
+      if (nveg > 0)	call vegini   ! vegetation module
+
       if (n_sea_points > 0) call seaini   ! sea module
 
       return
