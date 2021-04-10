@@ -3,6 +3,7 @@
 # (c) 2019 Jost von Hardenberg - ISAC-CNR
 
 #set -ex
+export LC_NUMERIC="en_US.UTF-8"
 
 function help {
    echo "Convert PLASIM service output file to netcdf format"
