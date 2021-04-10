@@ -3,7 +3,7 @@ DIR=/work/users/jost/plasim/src/scripts/
 temp=$1
 sic=$2
 eq=$3
-if [ "$eq" != "" ]; then
+if [ "$eq" != "" ] &&  [ "$eq" != "0" ]; then
    CONT="-c 1 -e $eq"
 else
    CONT=""
