@@ -1325,7 +1325,7 @@ void InitSelections(void)
    Sel->piv  = &Oce;
 
    // LSG Ocean
-
+  
    if (LsgEnabled)
    {
       Sel = NewSel(Sel);
@@ -2034,10 +2034,12 @@ int Build(int model)
    if (Lsg)
    {
       fputs("cp -p ../../lsg/src/lsgmod.f90 .\n",fp);
+      putenv("OCEAN=lsgmod");
       putenv("OCEANCOUP=cpl");
    }
    else
    {
+      putenv("OCEAN=lsgmod_stub");
       putenv("OCEANCOUP=cpl_stub");
    }
    if (Latitudes < 4) putenv("FFTMOD=fft991mod");
@@ -4394,20 +4396,6 @@ char *vcn[6] =
 
 void InitGUItext(void)
 {
-   FILE *xpp;
-
-   // Read name of MPI execute command
-
-   xpp = fopen("most_compiler_mpi","r"); // MPI installed ?
-   if (xpp)
-   {
-      fgets(Buffer,LINEMAX,xpp);
-      if (Buffer[strlen(Buffer)-1] == 10) Buffer[strlen(Buffer)-1] = 0;
-      if (Buffer[strlen(Buffer)-1] == 13) Buffer[strlen(Buffer)-1] = 0;
-      if (!strncmp(Buffer,"MPI_RUN=",8))  strcpy(mpirun,Buffer+8);
-      fclose(xpp);
-   }
-
    InitSelections();
    InitNamelist();
    ChangeModel(CAT);
@@ -4422,6 +4410,74 @@ void InitGUItext(void)
    {
       UpdateResolution();
       UpdateSelections(&SelStart);
+   }
+}
+
+
+void InitFlags(void)
+{
+   FILE *xpp;
+
+   xpp = fopen("Beginner","r"); // Expert mode ?
+   if (xpp)
+   {
+      Expert = 0;
+      fclose(xpp);
+   }
+
+   xpp = fopen("SuperExpert","r"); // Expert mode ?
+   if (xpp)
+   {
+      Expert = 1;
+      SuperExpert = 1;
+      fclose(xpp);
+   }
+
+   xpp = fopen("cat","r"); // Cat enabled
+   if (xpp)
+   {
+      CatEnabled = 1;
+      fclose(xpp);
+   }
+
+   xpp = fopen("puma","r"); // Puma enabled
+   if (xpp)
+   {
+      PumaEnabled = 1;
+      fclose(xpp);
+   }
+
+   xpp = fopen("sam","r"); // Sam enabled
+   if (xpp)
+   {
+      SamEnabled = 1;
+      fclose(xpp);
+   }
+
+   xpp = fopen("lsg/src/lsgmod.f90","r"); // LSG there ?
+   if (xpp)
+   {
+      LsgEnabled = 1;
+      fclose(xpp);
+   }
+
+   xpp = fopen("puma/src/mpimod_multi.f90","r"); // Multirun module there ?
+   if (xpp)
+   {
+      MultirunEnabled = 1;
+      fclose(xpp);
+   }
+
+   // Read name of MPI execute command
+
+   xpp = fopen("most_compiler_mpi","r"); // MPI installed ?
+   if (xpp)
+   {
+      fgets(Buffer,LINEMAX,xpp);
+      if (Buffer[strlen(Buffer)-1] == 10) Buffer[strlen(Buffer)-1] = 0;
+      if (Buffer[strlen(Buffer)-1] == 13) Buffer[strlen(Buffer)-1] = 0;
+      if (!strncmp(Buffer,"MPI_RUN=",8))  strcpy(mpirun,Buffer+8);
+      fclose(xpp);
    }
 }
 
@@ -4548,68 +4604,6 @@ void InitGUI(void)
          EdiKeymap[k+1] = EdiKeymap[k];
          EdiKeymap[k]  += 0x20;
       }
-   }
-
-   xpp = fopen("Beginner","r"); // Expert mode ?
-   if (xpp)
-   {
-      Expert = 0;
-      fclose(xpp);
-   }
-
-   xpp = fopen("SuperExpert","r"); // Expert mode ?
-   if (xpp)
-   {
-      Expert = 1;
-      SuperExpert = 1;
-      fclose(xpp);
-   }
-
-   xpp = fopen("cat","r"); // Cat enabled
-   if (xpp)
-   {
-      CatEnabled = 1;
-      fclose(xpp);
-   }
-
-   xpp = fopen("puma","r"); // Puma enabled
-   if (xpp)
-   {
-      PumaEnabled = 1;
-      fclose(xpp);
-   }
-
-   xpp = fopen("sam","r"); // Sam enabled
-   if (xpp)
-   {
-      SamEnabled = 1;
-      fclose(xpp);
-   }
-
-   xpp = fopen("lsg/src/lsgmod.f90","r"); // LSG there ?
-   if (xpp)
-   {
-      LsgEnabled = 1;
-      fclose(xpp);
-   }
-
-   xpp = fopen("puma/src/mpimod_multi.f90","r"); // Multirun module there ?
-   if (xpp)
-   {
-      MultirunEnabled = 1;
-      fclose(xpp);
-   }
-
-   // Read name of MPI execute command
-
-   xpp = fopen("most_compiler_mpi","r"); // MPI installed ?
-   if (xpp)
-   {
-      fgets(Buffer,LINEMAX,xpp);
-      if (Buffer[strlen(Buffer)-1] == 10) Buffer[strlen(Buffer)-1] = 0;
-      if (Buffer[strlen(Buffer)-1] == 13) Buffer[strlen(Buffer)-1] = 0;
-      if (!strncmp(Buffer,"MPI_RUN=",8))  strcpy(mpirun,Buffer+8);
-      fclose(xpp);
    }
 
    InitLogo();
@@ -4995,6 +4989,7 @@ int main(int argc, char *argv[])
    CurrentDate = time(NULL);
    BigEndian = CheckEndianess();
 
+   InitFlags();
    if (!x11flag) {
       InitGUItext();
       SaveExit();
