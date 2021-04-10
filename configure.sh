@@ -20,7 +20,7 @@ if [ $MOST_F90 != "NO_F90" ] ; then
       DEBUG_F90_OPTS="-g -C -ftrap=common"
       echo > most_precision_options "MOST_PREC=-r8"
    elif [ $MOST_F90 = "ifort" ] ; then
-      MOST_F90_OPTS="-O"
+      MOST_F90_OPTS="-O3"
       DEBUG_F90_OPTS="-g -C -fpe0 -traceback"
       echo > most_precision_options "MOST_PREC=-r8"
    elif [ $MOST_F90 = "nagfor" ] ; then
