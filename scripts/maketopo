@@ -23,7 +23,7 @@ EOF
 
 for ((i=1; i<=608; i++)); do
    for ((j=1; j<=9; j++)); do
-       printf "%8.2f " $DEPTH
+       printf "%8.2f" $DEPTH
    done
    echo 
 done
