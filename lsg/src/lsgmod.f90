@@ -710,7 +710,8 @@
 !
 !*    1.       Initialisation.
 !     ---------------
-!
+
+
       ztold(:,:,:)=t(:,:,:)
       sice(:,:)=sice(:,:)*wet(:,:,1)
       if(nsmix < 2) sice(:,:)=0.
@@ -4138,6 +4139,133 @@
 !     ==================================================================
 !     ------------------------------------------------------------------
 !
+      subroutine inival0()
+      use lsgvar
+      implicit none
+!
+!     ------------------------------------------------------------------
+!
+!**** *inival0*.
+!
+!     Purpose.
+!     --------
+!     *inival0* gives default initial values to variables.
+!     *nt*,*u*,*v*,*zeta*,*ub*,*vb*,*t* and *s*
+!     Can be used for aquaplanet runs.
+!
+!     Output.
+!     -------
+!     /lsgfie/.
+!      t        pot temperature.
+!      s        salinity.
+!      ub,vb    barotropic velocities.   )
+!     /lsgh1/.                           )  all equal zero.
+!      u,v      baroclinic modes.        )  if abnormal
+!     /lsgsur/.                           )  startup.
+!      zeta     surface elevation.       )
+!     /lsgver/.
+!      nt0      number of timesteps computed in former runs.
+!                (integer).
+!     Interface.
+!     ----------
+!     *call* *inival0*().
+!
+!     ------------------------------------------------------------------
+!
+!     Declaration of local variables.
+!
+      integer :: i,j,k,iyy,imm,idd
+      integer :: kk,k1
+      real (kind=8) :: zero,half
+      real (kind=8) :: ho(ien,jen)
+
+      zero=0.0
+      half=.5
+!
+!     Compute current time step from PlaSim date
+!
+      iyy = 360 * (mdatim(1) - n1styear)
+      imm =  30 * (mdatim(2) -        1)
+      idd =        mdatim(3) -        1
+      nt  = (iyy + imm + idd) / dt
+      nt0 = nt
+
+      write (no6,*) 'INIVAL0: Timestep    :',nt
+
+      inorm=0
+      do k=1,ken
+        do j=1,jen
+          do i=1,ien
+            u(i,j,k)=zero
+            v(i,j,k)=zero
+            w(i,j,k)=zero
+            utot(i,j,k)=zero
+            vtot(i,j,k)=zero
+            wold(i,j,k)=zero
+            utotold(i,j,k)=zero
+            vtotold(i,j,k)=zero
+            t(i,j,k)=5.0
+            s(i,j,k)=33.5
+          end do
+        end do
+      end do
+      do j=1,jen
+        do i=1,ien
+          ub(i,j)=zero
+          vb(i,j)=zero
+          zeta(i,j)=zero
+          sice(i,j)=zero
+          stor(i,j)=stomax
+          riv(i,j)=zero
+          fluhea(i,j)=zero
+          fluwat(i,j)=zero
+          ho(i,j)=zero
+        end do
+      end do
+
+!
+!*    4.2.      Composition of the modes.
+!     -------------------------
+!
+      do k=2,ken
+        do j=1,jen
+          do i=1,ien
+            if (delta(i,j,k)>half) ho(i,j)=ho(i,j)+delta(i,j,k-1)
+          end do
+        end do
+!
+!       Contribution from the layers below.
+!
+        k1=k-1
+        do kk=1,k1
+          do j=1,jen
+            do i=1,ien
+              if (delta(i,j,kk)>half) then
+                utot(i,j,kk)=utot(i,j,kk)-u(i,j,k)/ho(i,j)
+                vtot(i,j,kk)=vtot(i,j,kk)-v(i,j,k)/ho(i,j)
+              end if
+            end do
+          end do
+        end do
+!
+!       Contribution from the layers above.
+!
+        do kk=k,ken
+          do j=1,jen
+            do i=1,ien
+              if (delta(i,j,kk)>half) then
+                utot(i,j,kk)=utot(i,j,kk)+u(i,j,k)/(depth(i,j)-ho(i,j))
+                vtot(i,j,kk)=vtot(i,j,kk)+v(i,j,k)/(depth(i,j)-ho(i,j))
+              end if
+            end do
+          end do
+        end do
+!
+      end do
+!
+      end subroutine inival0
+
+
       subroutine inival2(noread,yfile)
       use lsgvar
       implicit none
@@ -4279,6 +4407,8 @@
         write (no6,*) " mismatch in dimensions, ken=",ken,",",nddr(21)
         stop "data 5"
       end if
+  
+!      goto 3000
 !
 !     Read temperature field.
 !
@@ -4486,6 +4616,13 @@
           do i=1,ien
             u(i,j,k)=zero
             v(i,j,k)=zero
+            utot(i,j,k)=0.
+            vtot(i,j,k)=0.
+            utotold(i,j,k)=0.
+            vtotold(i,j,k)=0.
+            wold(i,j,k)=0.
+            t(i,j,k)=5.0
+            s(i,j,k)=33.5
           end do
         end do
       end do
@@ -8288,11 +8425,21 @@
         file=filauf
         write (no6,9142) idat,file,iswit
         call outback(idat,iswit,1,file)
-      else                      !   read input data ???
-        file=filauf
-        write (no6,9141) idat,file,inorm
-        call inival2(idat,file)
-        call densin
+      else                      
+!        file=filauf
+!        write (no6,9141) idat,file,inorm
+!        call inival2(idat,file)
+!        call densin
+!  In Plasim we use this for a different goal: init with fixed values
+!  First read inival2 anyway to initialize headers
+         write (no6,9141) idin,file,inorm
+         call inival2(idin,file)
+!  Init all fields with fixed values
+         call inival0()
+         write (no6,*) ' START (INIVAL0): initialize constant defaults'
+         file=filauf
+         write (no6,9142) idat,file,iswit
+         call outback(idat,iswit,1,file)
       end if
 !
 !     write (no6,*) " now in reading file ",idin," ",file," start at ",
