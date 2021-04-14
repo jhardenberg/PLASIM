@@ -577,6 +577,13 @@
 !!FL
       real (kind=8) :: tote,toted,toteu     ! sum(cp*rho*t) (diagnostics)
 !
+!     Vertical diffusion parameters
+!
+      real (kind=8) :: astar =  -1.0
+      real (kind=8) :: zstar = -1.0
+      real (kind=8) :: arange = -1.0
+      real (kind=8) :: lambda = -1.0
+
       end module lsgvar
       subroutine actdate(kdate,ktime)
       use lsgvar
@@ -3376,7 +3383,8 @@
 
       namelist /param / nsmix,nsve,nsflu,newst,ntcont,iyear,idate,      &
      &  nscoup,ntout,ntaver,ntback,grad1,phinor,dt,du,kiterm,bblthick,  &
-     &  exper,ntsurf,ndiagfl,naqua,nprint,npri,nprj,nprk
+     &  exper,ntsurf,ndiagfl,naqua,nprint,npri,nprj,nprk,               &
+     &  astar, zstar, arange, lambda
 
 !     some initial values, overwritten by input
 
@@ -8137,7 +8145,7 @@
 !
       integer :: i,j,k,kp2,kp1,km1
 
-      real (kind=8) :: ash,abh,astar,zstar,arange,lambda
+      real (kind=8) :: ash,abh
       real (kind=8) :: two,pi
       real (kind=8) :: dzt(ken)
 !
@@ -8198,10 +8206,10 @@
 
 !     recommended values according to 14C simulations
       if (ken==11) then
-        astar=1.80e-04  !1.90e-04
-        arange=1.01e-04 !1.00e-04
-        zstar=3000.
-        lambda=3.40e-03 !3.50e-03
+        if (astar < 0.0) astar=1.80e-04  !1.90e-04
+        if (arange < 0.0) arange=1.01e-04 !1.00e-04
+        if (zstar < 0.0) zstar=3000.
+        if (lambda < 0.0) lambda=3.40e-03 !3.50e-03
       else if (ken==22) then
 ! These are params from 0.8e-4 to 1.3e-4, as studied by R. Sciascia 
 ! in her master thesis
@@ -8212,10 +8220,10 @@
 ! Parameters after the tuning in Angeloni et al. 2020
         !astar=0.8462e-04
         !arange=0.3011e-04
-        astar=0.8714e-04
-        arange=0.2843e-04
-        zstar=2500.
-        lambda=4.5e-03
+        if (astar < 0.0) astar=0.8714e-04
+        if (arange < 0.0) arange=0.2843e-04
+        if (zstar < 0.0) zstar=2500.
+        if (lambda < 0.0) lambda=4.5e-03
       end if
 
       do k=1,ken
