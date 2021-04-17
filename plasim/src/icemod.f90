@@ -292,7 +292,7 @@
          open(11,file=icemod_namelist)
          read(11,icemod_nl)
          close(11)
-         write(nud,'(/," *********************************************")')
+        write(nud,'(/," *********************************************")')
          write(nud,'(" * ICEMOD ",a34," *")') trim(version)
          write(nud,'(" *********************************************")')
          write(nud,'(" * Namelist ICEMOD_NL from <",a15,"> *")') trim(icemod_namelist)
@@ -746,12 +746,12 @@
 !
 !     correct fresh water flux into ocean due to ice/snow changes
 !
-!     where(xls(:) < 0.5) 
-!      xpme(:)=xpme(:)                                                  &
-!    &        -(xsnow(:)-zsnowold(:))/xdt                               &
-!    &        -(xiced(:)-zicedold(:))/xdt*CRHOI/1.E3
-!     endwhere
-!
+     where(xls(:) < 0.5) 
+        xpme(:)=xpme(:)                                                &
+     &        -(xsnow(:)-zsnowold(:))/xdt                              &
+     &        -(xiced(:)-zicedold(:))/xdt*CRHOI/1.E3
+     end where
+
 !     output
 !
 !     accumulate
