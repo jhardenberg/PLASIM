@@ -28,9 +28,10 @@ if [ $MOST_F90 != "NO_F90" ] ; then
       DEBUG_F90_OPTS="-g -C -fpe0 -traceback -kind=byte"
    elif [ $MOST_F90 = "gfortran" ] ; then
       # get major and minor version number
-      GFMAJ=`gfortran -dumpversion | head -1 | sed -e 's/.*)//' | awk 'BEGIN {FS="."}{print $1}'`
-      GFMIN=`gfortran -dumpversion | head -1 | sed -e 's/.*)//' | awk 'BEGIN {FS="."}{print $2}'`
-      GFVER=`expr 100 '*' $GFMAJ + $GFMIN`
+      GFVERSION=$(gfortran --version | head -1 | sed -r 's/GNU Fortran \(.*\) //g')
+      GFMAJ=`echo $GFVERSION | sed -e 's/.*)//' | awk 'BEGIN {FS="."}{print $1}'`
+      GFMIN=`echo $GFVERSION | sed -e 's/.*)//' | awk 'BEGIN {FS="."}{print $2}'`
+      GFVER=$((GFMAJ * 100 + GFMIN))
       echo "gfortran version " $GFMAJ.$GFMIN
       # flags for gfortran version >= 4.9 [ -ffpe-summary ]
       if [ "$GFVER" -ge "409" ] ; then
