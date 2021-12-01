@@ -251,7 +251,9 @@
 !
 !**   1) read and print version & namelist parameters
 !
-      iyrbp = 1950 - n_start_year
+      
+      call ntomin(nstep,imin,ihou,iday,imon,iyea)
+      iyrbp = 1950 - iyea
 
       if (mypid==NROOT) then
          open(11,file=radmod_namelist)
