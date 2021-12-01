@@ -1553,7 +1553,7 @@ void InitSelections(void)
    Sel->w    = 4 * FixFontWidth + 2;
    Sel->edco = 4;
    Sel->type = SEL_INT;
-   Sel->div  = Sel->iv = 1;
+   Sel->div  = Sel->iv = 2000;
    Sel->piv  = &SimStart;
    SelSYear  = Sel;
 
