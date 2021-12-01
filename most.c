@@ -1004,7 +1004,7 @@ void InitNamelist(void)
    NL_p("OBLIQ" , obliq_vec);
    NL_p("GSOL0" , gsol0_vec);
 
-   NL_i(PLASIM,"planet" ,"NFIXORB" ,  0);
+   NL_i(PLASIM,"planet" ,"NFIXORB" ,  1);  // Changed default 11/2021 JvH
    NL_r(PLASIM,"radmod" ,"CO2"     ,360.0);
    NL_i(PLASIM,"plasim" ,"KICK"    ,  1);
    NL_i(PLASIM,"plasim" ,"MPSTEP"  ,  0);
