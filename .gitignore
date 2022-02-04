@@ -1,0 +1,20 @@
+## .gitignore for PLASIM repository
+
+# Files created by configure.sh
+F90_*
+most_*
+makefile
+
+# Config files
+*.cfg
+
+# Binaries, config files, etc.
+*.x
+*.mod
+*.o
+*.so
+
+# Directories
+plasim/bin
+plasim/bld
+plasim/run
