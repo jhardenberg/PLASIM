@@ -39,7 +39,7 @@
       integer :: ntskin     = 1    ! compute skin temperature (0=clim.)
       integer :: ntspd      = 32   ! number of time steps per day
       integer :: noutput    = 1    ! master switch for output
-      integer :: nout       = 32   ! output each nout timesteps
+      integer :: nout       = 0    ! output each nout timesteps
       integer :: nfluko     = 0    ! switch for flux correction
                                    ! (0 = none, 1 = heat-budget, 2 = newtonian)
       integer :: ncpl_ice_ocean = 1! coupling intervall ice - ocean
@@ -269,6 +269,10 @@
       solar_day = psolday
       deglat(:) = pdeglat(:)
 
+      if (nout <= 0) then
+          nout = ntspd
+      endif
+
 !     compute grids properties
 !
       if(mypid == NROOT) then
@@ -329,6 +333,7 @@
          call iceget
          xiced(:)=xcliced2(:)
          xicec(:)=xclicec2(:)
+         xicecc(:)=xclicec2(:)
          where(xicec(:) >= thicec)
           xicec(:)=1.
          elsewhere

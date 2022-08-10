@@ -1,0 +1,92 @@
+#!/bin/bash
+
+function readlines () {
+    local N="$1"
+    local line
+    local rc="1"
+
+    # Read at most N lines
+    for i in $(seq 1 $N)
+    do
+        # Try reading a single line
+        read line
+        if [ $? -eq 0 ]
+        then
+            # Output line
+            echo $line
+            rc="0"
+        else
+            break
+        fi
+    done
+
+    # Return 1 if no lines where read
+    return $rc
+}
+
+if [ $# -lt 2 ]; then
+  echo "Convert PLASIM sra file to netcdf format"
+  echo "Usage: sra2nc infile.sra outfile.nc"
+  exit 1
+fi
+
+nl=$(fmt -1 $1|wc|xargs|cut -f 1 -d" ")
+
+case $nl in
+2056) 
+  mm=1
+  gr=t21
+  np=2048
+  np8=2056
+  gr=r64x32
+  ;;
+28784)
+  mm=12
+  gr=t21
+  np=2048
+  np8=2056
+  gr=r64x32
+  ;;
+8200)
+  mm=1
+  gr=t42
+  np=8192
+  np8=8200
+  gr=r128x64
+  ;;
+114800)
+  mm=12
+  gr=t42
+  np=8192
+  np8=8200
+  gr=r128x64
+  ;;
+*)
+  echo "Format not recognized"
+  exit 1
+  ;;
+esac
+
+fmt -1 $1 > infile$$
+
+m=0
+rm -f $2
+while chunk=$(readlines $np8)
+do
+  m=$((m + 1))
+  mm=$(printf "%02d" $m)
+  echo $chunk|fmt -1|tail -n +9 > tmp$$
+  code=$(echo $chunk|fmt -1|head -n 1)
+  date=$(echo $chunk|fmt -1|head -n 3|tail -1)
+  time=$(echo $chunk|fmt -1|head -n 4|tail -1|printf "%04d")
+  if [ "$time" = "-001" ]; then
+     time="0000"
+  fi
+  cdo -s -f nc input,$gr out$$ < tmp$$
+  cdo -s  -settime,${time:0:2}:${time:2:2} -setdate,${date:0:4}-${date:4:2}-${date:6:2} -setname,var$code out$$ out_${mm}_$$
+done < infile$$
+cdo -s cat out_??_$$ outn$$
+cdo invertlat outn$$ outi$$
+cdo griddes outi$$ > grid$$
+cdo setgrid,grid$$ outn$$ $2
+rm tmp$$ out$$ infile$$ out_??_$$ outi$$ grid$$ outn$$

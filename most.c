@@ -343,6 +343,7 @@ int Preprocessed;
 int SAMindex;
 int ScreenHeight;
 int Expert = 1;
+int SuperExpert = 0;
 int PumaEnabled;
 int CatEnabled;
 int SamEnabled;
@@ -409,6 +410,8 @@ int *ModeX;
 int *ModeY;
 int *ModeM;
 int *ModeN;
+
+int x11flag = 1;
 
 Colormap colormap;
 
@@ -620,7 +623,7 @@ void ChangeModel(int NewMo)
           for (i=0 ; i < PLANETS ; ++i) SelPlanet[i]->no = 0;
        }
    }
-   if (Expert)
+   if (SuperExpert)
    {
       if (NewMo == CAT)
       {
@@ -1100,7 +1103,7 @@ void NamelistSelector(int model)
       Sel->h    = FixFontHeight + 1;
       Sel->y    = yn;
       Sel->xt   = nlpos_x;
-      Sel->yt   = Sel->y + FixFont->ascent + 1;
+      Sel->yt   = Sel->y + FixFontAscent + 1;
       if (Sel->lt > ml) ml = Sel->lt;
       if (Sel->lt > ml) ml = Sel->lt;
 
@@ -1316,13 +1319,13 @@ void InitSelections(void)
    Sel->h    = FixFontHeight + 1;
    Sel->w    = FixFontHeight + 1;
    Sel->yt   = Sel->y + FixFontAscent + 1;
-   Sel->div  = Sel->iv   =  0;
+   Sel->div  = Sel->iv   =  1;
    Sel->no   = 1;
    SelOce    = Sel;
    Sel->piv  = &Oce;
 
    // LSG Ocean
-
+  
    if (LsgEnabled)
    {
       Sel = NewSel(Sel);
@@ -1357,15 +1360,15 @@ void InitSelections(void)
    Sel->h    = 0;
    Sel->w    = 0;
    Sel->yt   = Sel->y + BigFontAscent + 1;
-   
 
    // Number of CPUs
 
    Sel = NewSel(Sel);
    InitNextSelection(Sel,dys,"Cores");
+
    Sel->h    = FixFontHeight + 1;
    Sel->w    = FixFontHeight + 1;
-   Sel->yt   = Sel->y + FixFont->ascent + 1;
+   Sel->yt   = Sel->y + FixFontAscent + 1;
    Sel->w    = 4 * FixFontWidth + 2;
    Sel->type = SEL_INT;
    Sel->edco = 4;
@@ -1384,7 +1387,7 @@ void InitSelections(void)
       InitNextSelection(Sel,dys,"Instances");
       Sel->h    = FixFontHeight + 1;
       Sel->w    = FixFontHeight + 1;
-      Sel->yt   = Sel->y + FixFont->ascent + 1;
+      Sel->yt   = Sel->y + FixFontAscent + 1;
       Sel->w    = 4 * FixFontWidth + 2;
       Sel->type = SEL_INT;
       Sel->edco = 4;
@@ -1403,16 +1406,16 @@ void InitSelections(void)
    Sel->type = SEL_TEXT;
    Sel->h    = 0;
    Sel->w    = 0;
-   Sel->yt   = Sel->y + BigFont->ascent + 1;
+   Sel->yt   = Sel->y + BigFontAscent + 1;
 
    // Horizontal resolution
 
-   if (Expert)
+   if (SuperExpert)
    {
       Sel = NewSel(Sel);
       InitNextSelection(Sel,dys,"Latitudes #1");
       Sel->h    = FixFontHeight + 1;
-      Sel->yt   = Sel->y + FixFont->ascent + 1;
+      Sel->yt   = Sel->y + FixFontAscent + 1;
       Sel->w    = 4 * FixFontWidth + 2;
       Sel->edco = 4;
       Sel->type = SEL_INT;
@@ -1434,7 +1437,7 @@ void InitSelections(void)
       Sel->type = SEL_CHECK;
       Sel->h    = FixFontHeight + 1;
       Sel->w    = FixFontHeight + 1;
-      Sel->yt   = Sel->y + FixFont->ascent + 1;
+      Sel->yt   = Sel->y + FixFontAscent + 1;
       Sel->div  = Sel->iv   =  1;
       SelRes    = Sel;
       DimText1  = Sel->text;
@@ -1474,7 +1477,7 @@ void InitSelections(void)
    Sel->type = SEL_TEXT;
    Sel->h    = 0;
    Sel->w    = 0;
-   Sel->yt   = Sel->y + BigFont->ascent + 1;
+   Sel->yt   = Sel->y + BigFontAscent + 1;
 
    // Global debug switch
 
@@ -1483,7 +1486,7 @@ void InitSelections(void)
    Sel->type = SEL_CHECK;
    Sel->h    = FixFontHeight + 1;
    Sel->w    = FixFontHeight + 1;
-   Sel->yt   = Sel->y + FixFont->ascent + 1;
+   Sel->yt   = Sel->y + FixFontAscent + 1;
    Sel->div  = Sel->iv   =  0;
    Sel->piv  = &ndebug;
 
@@ -1500,7 +1503,7 @@ void InitSelections(void)
    Sel->type = SEL_CHECK;
    Sel->h    = FixFontHeight + 1;
    Sel->w    = FixFontHeight + 1;
-   Sel->yt   = Sel->y + FixFont->ascent + 1;
+   Sel->yt   = Sel->y + FixFontAscent + 1;
    Sel->div  = Sel->iv   =  0;
    Sel->piv  = &noutput;
 
@@ -1538,7 +1541,7 @@ void InitSelections(void)
    Sel->type = SEL_TEXT;
    Sel->h    = 0;
    Sel->w    = 0;
-   Sel->yt   = Sel->y + BigFont->ascent + 1;
+   Sel->yt   = Sel->y + BigFontAscent + 1;
 
    // Simulation Start
 
@@ -1546,7 +1549,7 @@ void InitSelections(void)
    Sel = NewSel(Sel);
    InitNextSelection(Sel,dys,"Start year");
    Sel->h    = FixFontHeight + 1;
-   Sel->yt   = Sel->y + FixFont->ascent + 1;
+   Sel->yt   = Sel->y + FixFontAscent + 1;
    Sel->w    = 4 * FixFontWidth + 2;
    Sel->edco = 4;
    Sel->type = SEL_INT;
@@ -1559,7 +1562,7 @@ void InitSelections(void)
    Sel = NewSel(Sel);
    InitNextSelection(Sel,dyn,"Years to run");
    Sel->h    = FixFontHeight + 1;
-   Sel->yt   = Sel->y + FixFont->ascent + 1;
+   Sel->yt   = Sel->y + FixFontAscent + 1;
    Sel->w    = 4 * FixFontWidth + 2;
    Sel->type = SEL_INT;
    Sel->div  = Sel->iv   = 10;
@@ -1572,7 +1575,7 @@ void InitSelections(void)
    Sel = NewSel(Sel);
    InitNextSelection(Sel,dys,"Change [gpm]");
    Sel->h    = FixFontHeight + 1;
-   Sel->yt   = Sel->y + FixFont->ascent + 1;
+   Sel->yt   = Sel->y + FixFontAscent + 1;
    Sel->w    = 6 * FixFontWidth + 2;
    Sel->type = SEL_INT;
    Sel->div  = Sel->iv   = 0;
@@ -1745,6 +1748,7 @@ int WriteRunScript(int model)
    int porm;
    FILE *fp;
    char command[256];
+   char cwd[256];
    char run[256];
 
    strcpy(exec_nam2,exec_name); // Duplicate exec name
@@ -1783,21 +1787,28 @@ int WriteRunScript(int model)
    fputs("#!/bin/bash\n",fp);
    fprintf(fp,"# run-script generated by Most %s",ctime(&CurrentDate));
    fputs("EXP=MOST    # Name your experiment here\n",fp);
+   fputs("YEAR1=1\n",fp);
+   if (ngui) {
+      fputs("YEAR2=1\n",fp);
+    } else {
+      fprintf(fp,"YEAR2=%d\n",SimYears);
+    }
+   fputs("average=\"-m\"  # Comment this line if you do not want monthly averaging\n", fp);
+   getcwd(cwd, sizeof(cwd));
+   fprintf(fp,"srv2nc=%s/scripts/srv2nc\n", cwd);
    fprintf(fp,"[ $# == 1 ] && cd $1\n");
    fprintf(fp,"rm -f %s_restart\n",ShortModelName[model]);
    fputs("rm -f Abort_Message\n",fp);
-   fputs("YEAR=0\n",fp);
-   fprintf(fp,"YEARS=%d\n",SimYears);
-   if (Multirun > 1) fprintf(fp,"INSTANCES=%d\n",Multirun);
-   if (ngui) fputs("# Remove '#' from 'while' and 'end' lines for restart loop\n",fp);
-   if (ngui) fputs("# ",fp); /* deactivate loop for GUI case */
-   fputs("while [ $YEAR -lt $YEARS ]\n",fp);
-   if (ngui) fputs("# ",fp); /* deactivate loop for GUI case */
-   fputs("do\n",fp);
-   fputs("   YEAR=`expr $YEAR + 1`\n",fp);
-   fputs("   DATANAME=`printf '%s.%03d' $EXP $YEAR`\n",fp);
-   fputs("   DIAGNAME=`printf '%s_DIAG.%03d' $EXP $YEAR`\n",fp);
-   fputs("   RESTNAME=`printf '%s_REST.%03d' $EXP $YEAR`\n",fp);
+   fprintf(fp,"mkdir -p output\n");
+   fprintf(fp,"mkdir -p restart\n");
+   fputs("for ((YEAR=$YEAR1; YEAR<=$YEAR2; YEAR++)); do \n",fp);
+   fputs("   DATANAME=`printf '%s_PLA.%04d.nc' $EXP $YEAR`\n",fp);
+   fputs("   OCENAME=`printf '%s_OCE.%04d.nc' $EXP $YEAR`\n",fp);
+   fputs("   ICENAME=`printf '%s_ICE.%04d.nc' $EXP $YEAR`\n",fp);
+   fputs("   LSGNAME=`printf '%s_LSG.%04d.nc' $EXP $YEAR`\n",fp);
+   fputs("   DIAGNAME=`printf '%s_DIAG.%04d.txt' $EXP $YEAR`\n",fp);
+   fputs("   RESTNAME=`printf '%s_REST.%04d' $EXP $YEAR`\n",fp);
+   fputs("   LSGRESTNAME=`printf '%s_LSGREST.%04d' $EXP $YEAR`\n",fp);
    if (porm < 2)
    {
       fprintf(fp,"   ./%s\n",exec_name);
@@ -1831,14 +1842,19 @@ int WriteRunScript(int model)
    }
    else
    {
-      fprintf(fp,"   [ -e %s ] && mv %s $DATANAME\n",outp_name,outp_name);
-      fprintf(fp,"   [ -e %s ] && mv %s $DIAGNAME\n",diag_name,diag_name);
+      fprintf(fp,"   [ -e %s ] && mv %s output/$DIAGNAME\n",diag_name,diag_name);
+      fprintf(fp,"   [ -e %s ] && $srv2nc $average %s output/$DATANAME\n",outp_name,outp_name);
+      fprintf(fp,"   [ -e ocean_output ] && $srv2nc $average ocean_output output/$OCENAME\n");
+      fprintf(fp,"   [ -e ice_output ] && $srv2nc $average ice_output output/$ICENAME\n");
+      fprintf(fp,"   [ -e lsg_output ] && $srv2nc lsg_output output/$LSGNAME\n");
       fprintf(fp,"   [ -e %s_status ] && cp %s_status %s_restart\n",
               ShortModelName[model],ShortModelName[model],ShortModelName[model]);
-      fprintf(fp,"   [ -e %s_status ] && mv %s_status $RESTNAME\n",
+      fprintf(fp,"   [ -e %s_status ] && mv %s_status restart/$RESTNAME\n",
               ShortModelName[model],ShortModelName[model]);
+      fprintf(fp,"   [ -e mat77 ] && cp mat77 restart/mat77\n");
+      fprintf(fp,"   [ -e kleiswi ] && cp kleiswi restart/kleiswi\n");
+      fprintf(fp,"   [ -e kleiin1 ] && cp kleiin1 restart/$LSGRESTNAME\n");
    }
-   if (ngui) fputs("# ",fp); /* deactivate loop for GUI case */
    fputs("done\n",fp);
    fclose(fp);
    sprintf(command,"chmod a+x %s",run);
@@ -1991,7 +2007,7 @@ int Build(int model)
    strcpy(script_backup,bld);
    strcat(script_backup,".bak");
    rename(bld,script_backup);
-
+ 
    if (model == PLASIM) WriteResmod(res);
 
    fp = fopen(bld,"w");
@@ -2018,10 +2034,12 @@ int Build(int model)
    if (Lsg)
    {
       fputs("cp -p ../../lsg/src/lsgmod.f90 .\n",fp);
+      putenv("OCEAN=lsgmod");
       putenv("OCEANCOUP=cpl");
    }
    else
    {
+      putenv("OCEAN=lsgmod_stub");
       putenv("OCEANCOUP=cpl_stub");
    }
    if (Latitudes < 4) putenv("FFTMOD=fft991mod");
@@ -2052,13 +2070,13 @@ int Build(int model)
    system(command);
 
    sprintf(message,"Building %s - wait a minute!",FullModelName[Model]);
-   BlueMessage(message);
+   if (x11flag) BlueMessage(message);
    strcat(bld," ");
    strcat(bld,shomo);
    strcat(bld,"/bld");
    if (system(bld))
    {
-      RedMessage("Error in build process");
+      if (x11flag) RedMessage("Error in build process");
       sleep(5);
       return 0; // error
    }
@@ -2356,11 +2374,11 @@ int CheckPlasimNamelist(void)
 
    // LSG works currently only with T21 PlaSim
    
-   if (Lsg)
-   {
-       Resolution = RES_T21;
-       Latitudes = ResLat[RES_T21];
-   }
+//   if (Lsg)
+//   {
+//       Resolution = RES_T21;
+//       Latitudes = ResLat[RES_T21];
+//  }
 
    // Check # of latitudes for correct values (FFT requirements)
 
@@ -2386,7 +2404,6 @@ int CheckPlasimNamelist(void)
    if (Cores <         1) Cores =         1;
 
    if (Latitudes % Cores != 0) Cores = 1;
-
    return 0; /* Success */
 }
 
@@ -3387,6 +3404,18 @@ void WriteNamelistFile(char *nl,  int instance)
    {
       fprintf(fp," %-12s=%6d\n","NOCEAN",Oce);
       fprintf(fp," %-12s=%6d\n","NLSG"  ,Lsg);
+      if ( Lsg == 0) {
+         fprintf(fp," %-12s=%6d\n","NHDIFF"  , 1);
+         fprintf(fp," %-12s=%6d\n","NSHDIFF" , 1);
+         fprintf(fp," %-12s= %5.1e\n","HDIFFK"  , 1.e5);
+         if ( Latitudes == 32) { // T21
+            fprintf(fp," %-12s= %5.1e\n","HDIFFK2"  , 1.e4);
+	 } else { // T42
+            fprintf(fp," %-12s= %5.1e\n","HDIFFK2"  , 3.e4);
+         }
+      } else {
+         fprintf(fp," %-12s=%6d\n","NHDIFF"  , 0);
+      }
    }
    if (!strcmp(nl,"plasim"))
    {
@@ -4365,6 +4394,92 @@ char *vcn[6] =
    "DirectColor"
 };
 
+void InitGUItext(void)
+{
+   InitSelections();
+   InitNamelist();
+   ChangeModel(CAT);
+   NamelistSelector(CAT);
+   ChangeModel(SAM);
+   NamelistSelector(SAM);
+   ChangeModel(PUMA);
+   NamelistSelector(PUMA);
+   ChangeModel(PLASIM);
+   NamelistSelector(PLASIM);
+   if (ReadSettings(cfg_file))
+   {
+      UpdateResolution();
+      UpdateSelections(&SelStart);
+   }
+}
+
+
+void InitFlags(void)
+{
+   FILE *xpp;
+
+   xpp = fopen("Beginner","r"); // Expert mode ?
+   if (xpp)
+   {
+      Expert = 0;
+      fclose(xpp);
+   }
+
+   xpp = fopen("SuperExpert","r"); // Expert mode ?
+   if (xpp)
+   {
+      Expert = 1;
+      SuperExpert = 1;
+      fclose(xpp);
+   }
+
+   xpp = fopen("cat","r"); // Cat enabled
+   if (xpp)
+   {
+      CatEnabled = 1;
+      fclose(xpp);
+   }
+
+   xpp = fopen("puma","r"); // Puma enabled
+   if (xpp)
+   {
+      PumaEnabled = 1;
+      fclose(xpp);
+   }
+
+   xpp = fopen("sam","r"); // Sam enabled
+   if (xpp)
+   {
+      SamEnabled = 1;
+      fclose(xpp);
+   }
+
+   xpp = fopen("lsg/src/lsgmod.f90","r"); // LSG there ?
+   if (xpp)
+   {
+      LsgEnabled = 1;
+      fclose(xpp);
+   }
+
+   xpp = fopen("puma/src/mpimod_multi.f90","r"); // Multirun module there ?
+   if (xpp)
+   {
+      MultirunEnabled = 1;
+      fclose(xpp);
+   }
+
+   // Read name of MPI execute command
+
+   xpp = fopen("most_compiler_mpi","r"); // MPI installed ?
+   if (xpp)
+   {
+      fgets(Buffer,LINEMAX,xpp);
+      if (Buffer[strlen(Buffer)-1] == 10) Buffer[strlen(Buffer)-1] = 0;
+      if (Buffer[strlen(Buffer)-1] == 13) Buffer[strlen(Buffer)-1] = 0;
+      if (!strncmp(Buffer,"MPI_RUN=",8))  strcpy(mpirun,Buffer+8);
+      fclose(xpp);
+   }
+}
 
 void InitGUI(void)
 {
@@ -4491,60 +4606,6 @@ void InitGUI(void)
       }
    }
 
-   xpp = fopen("Beginner","r"); // Expert mode ?
-   if (xpp)
-   {
-      Expert = 0;
-      fclose(xpp);
-   }
-
-   xpp = fopen("cat","r"); // Cat enabled
-   if (xpp)
-   {
-      CatEnabled = 1;
-      fclose(xpp);
-   }
-
-   xpp = fopen("puma","r"); // Puma enabled
-   if (xpp)
-   {
-      PumaEnabled = 1;
-      fclose(xpp);
-   }
-
-   xpp = fopen("sam","r"); // Sam enabled
-   if (xpp)
-   {
-      SamEnabled = 1;
-      fclose(xpp);
-   }
-
-   xpp = fopen("lsg/src/lsgmod.f90","r"); // LSG there ?
-   if (xpp)
-   {
-      LsgEnabled = 1;
-      fclose(xpp);
-   }
-
-   xpp = fopen("puma/src/mpimod_multi.f90","r"); // Multirun module there ?
-   if (xpp)
-   {
-      MultirunEnabled = 1;
-      fclose(xpp);
-   }
-
-   // Read name of MPI execute command
-
-   xpp = fopen("most_compiler_mpi","r"); // MPI installed ?
-   if (xpp)
-   {
-      fgets(Buffer,LINEMAX,xpp);
-      if (Buffer[strlen(Buffer)-1] == 10) Buffer[strlen(Buffer)-1] = 0;
-      if (Buffer[strlen(Buffer)-1] == 13) Buffer[strlen(Buffer)-1] = 0;
-      if (!strncmp(Buffer,"MPI_RUN=",8))  strcpy(mpirun,Buffer+8);
-      fclose(xpp);
-   }
-
    InitLogo();
    ReadLogo(0,"images/KC-Logo_RGB.bmp");
    ReadLogo(1,"images/puma.bmp");
@@ -4559,14 +4620,14 @@ void InitGUI(void)
 
    InitNamelist();
    
-   ChangeModel(PLASIM);
-   NamelistSelector(PLASIM);
    ChangeModel(CAT);
    NamelistSelector(CAT);
    ChangeModel(SAM);
    NamelistSelector(SAM);
    ChangeModel(PUMA);
    NamelistSelector(PUMA);
+   ChangeModel(PLASIM);
+   NamelistSelector(PLASIM);
 
    if (ReadSettings(cfg_file))
    {
@@ -4909,12 +4970,32 @@ int main(int argc, char *argv[])
    {
            if (!strcmp(argv[ia],"-d")) Debug = 1;
       else if (!strcmp(argv[ia],"-i")) cfg_file[0] = 0;
-      else if (!strcmp(argv[ia],"-h")) ScreenHeight = atoi(argv[++ia]);
-      else strncpy(cfg_file,argv[1],sizeof(cfg_file));
+      else if (!strcmp(argv[ia],"-c")) x11flag = 0;
+      else if (!strcmp(argv[ia],"-s")) ScreenHeight = atoi(argv[++ia]);
+      else if (!strcmp(argv[ia],"-h")) {
+         puts("Usage: most.x [Options] [config_file]");
+         puts("Options:");
+ 	 puts("-d          Debug mode");
+ 	 puts("-i          Start from defaults");
+ 	 puts("-s <height> Set screen height to <height>");
+ 	 puts("-c          Console only run (no X11), build plasim");
+ 	 puts("-h          Print this help");
+         puts("");
+ 	 puts("The old configuration is read from  most_last_used.cfg");
+         puts("unless [config_file] is specified.");
+         return 0;
+      } else strncpy(cfg_file,argv[ia],sizeof(cfg_file));
    }
    CurrentDate = time(NULL);
    BigEndian = CheckEndianess();
-   InitGUI();
-   LoopGUI();
+
+   InitFlags();
+   if (!x11flag) {
+      InitGUItext();
+      SaveExit();
+   } else {
+      InitGUI();
+      LoopGUI();
+   }
    return 0;
 }

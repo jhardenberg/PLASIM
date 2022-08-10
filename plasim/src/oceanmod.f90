@@ -31,7 +31,7 @@
                                         ! (0=none,1=heat-budget,2=newtonian)
       integer :: ndiag            = 480 ! diagnostics each ndiag timesteps
       integer :: noutput          = 1   ! master switch for output: 0= no output
-      integer :: nout             = 32  ! afterburner output each nout timesteps
+      integer :: nout             = 0   ! afterburner output each nout timesteps
       integer :: nocean           = 1   ! compute ocean yes/no
       integer :: newsurf          = 0   ! update surface arrays at restart
       integer :: ntspd            = 32  ! ocean timesteps per day
@@ -188,6 +188,10 @@
       ngui      = kgui
       ntspd     = ktspd
       solar_day = psolday
+
+      if (nout <= 0) then
+          nout = ntspd
+      endif
 !
 !     read and print namelist and distribute it
 !
