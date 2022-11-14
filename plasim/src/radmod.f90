@@ -325,7 +325,7 @@
 !
 !                        zcross1 + zcross2          zg1 + zg2
 !           = zsolar1 x ------------------- x ---------------------
-!                               z1             zgcross1 + 
+!                               z1             zgcross1 + zgcross2
 !                       
         zdenom1 = 0.01/z1
         zdenom2 = 0.01/z2
@@ -756,7 +756,7 @@
       if (nstarfile > 0) then
         lstarfile = .true.
         call solarini
-        nstartemp = 1
+        nstartemp = 1   ! needed so that SWR routine later uses correct spectral calculation
         call mpbci(nstartemp)
       else if (nstartemp > 0) then
         call solarini
@@ -863,7 +863,8 @@
       real, allocatable :: zprf11(:,:)
       real, allocatable :: zprf12(:,:)
       real, allocatable :: zcc(:,:)
-      real, allocatable :: zalb(:)
+      real, allocatable :: zalb1(:)
+      real, allocatable :: zalb2(:)
       real, allocatable :: zdtdte(:,:)
 !
 !     cpu time estimates
@@ -897,9 +898,11 @@
 
       if(ndiagcf > 0) then
        allocate(zcc(NHOR,NLEP))
-       allocate(zalb(NHOR))
+       allocate(zalb1(NHOR))
+       allocate(zalb2(NHOR))
        zcc(:,:)=dcc(:,:)
-       zalb(:)=dalb(:)
+       zalb1(:) = dsalb(1,:)
+       zalb2(:) = dsalb(2,:)
        dcc(:,:)=0.
        if(nswr==1) call swr
        dclforc(:,1)=dswfl(:,NLEP)
@@ -907,8 +910,10 @@
        dclforc(:,5)=dfu(:,1)
        dclforc(:,6)=dfu(:,NLEP)
        dcc(:,:)=zcc(:,:)
-       dalb(:)=zalb(:)
-       deallocate(zalb)
+       dsalb(1,:) = zalb1(:)
+       dsalb(2,:) = zalb2(:)
+       deallocate(zalb1)
+       deallocate(zalb2)
       end if
 
 !
@@ -1169,6 +1174,8 @@
 !     no PUMA *subs* are used
 !
 !     no PUMA variables are used
+
+      call mpputgp('zsolars',zsolars,2,1)
 !
       if(mypid == NROOT .and. ntime == 1) then
        write(nud,*)'******************************************'
@@ -1384,6 +1391,7 @@
 !     dsigma(NLEV)     : delta sigma (half level)  (used)
 !     dp(NHOR)         : surface pressure (Pa) (used)
 !     dalb(NHOR)       : surface albedo (used)
+!     dsalb(2,NHOR)    : band-specific surface albedo (used)
 !     dq(NHOR,NLEP)    : specific humidity (kg/kg) (used)
 !     dql(NHOR,NLEP)   : cloud liquid water content (kg/kg) (used)
 !     dcc(NHOR,NLEP)   : cloud cover (frac.) (used)
@@ -1768,6 +1776,30 @@
      &        +(1.-dls(:))*(1.-dicec(:))*AMIN1(0.05/(zmu0(:)+0.15),0.15)
        zra1(:)=dalb(:)
        zra2(:)=dalb(:)
+
+! Currently: we use the same albedo for both spectral ranges.
+
+       zra1s(:)=dalb(:)*(1-nstartemp) + dsalb(1,:)*nstartemp
+       zra2s(:)=dalb(:)*(1-nstartemp) + dsalb(2,:)*nstartemp      
+!
+!      set albedo for the direct beam (for ocean use ECHAM3 param unless necham=0)
+       dsalb(1,:)=dls(:)*dsalb(1,:)   +   (1.-dls(:)) * dicec(:)*dsalb(1,:)      &
+     &           + (1.-dls(:)) * (1.-dicec(:)) * AMIN1(0.05/(zmu0(:)+0.15),0.15) !&
+!     &  *(0.026/(zmu0(:)**1.7+0.065)+0.15*(zmu0(:)-1)*(zmu0(:)-0.5)*(zmu0(:)-0.1)+0.0082) 
+       dsalb(2,:)=dls(:)*dsalb(2,:)   +   (1.-dls(:)) * dicec(:)*dsalb(2,:)      &
+     &           + (1.-dls(:)) * (1.-dicec(:)) * AMIN1(0.05/(zmu0(:)+0.15),0.15) !&
+!     &  *(0.026/(zmu0(:)**1.7+0.065)+0.15*(zmu0(:)-1)*(zmu0(:)-0.5)*(zmu0(:)-0.1)+0.0082) 
+       
+       dalb(:) = (zsolars(1)*dsalb(1,:) + zsolars(2)*dsalb(2,:))*nstartemp       &
+     &           + ( dls(:)*dalb(:)      + (1.-dls(:)) * dicec(:)*dalb(:)         &
+     &           + (1.-dls(:)) * (1.-dicec(:)) * AMIN1(0.05/(zmu0(:)+0.15),0.15) ) &
+!     &  *(0.026/(zmu0(:)**1.7+0.065)+0.15*(zmu0(:)-1)*(zmu0(:)-0.5)*(zmu0(:)-0.1)+0.0082)   ! XXX What is this?
+&                *(1-nstartemp)
+       zra1(:)=dsalb(1,:)*nstartemp + dalb(:)*(1-nstartemp)
+       zra2(:)=dsalb(2,:)*nstartemp + dalb(:)*(1-nstartemp)
+         
+! Ice-free ocean albedo is min(0.05/(phi+0.15), 0.15)--reflection and scattering is higher at low phi
+
       endwhere
       do jlev=NLEV,1,-1
        where(losun(:))

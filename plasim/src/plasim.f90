@@ -414,6 +414,28 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 
       call surfini
 
+      if (mypid==NROOT) then
+            write(nud,*) "==========Finalized Albedos=========="
+            write(nud,*) "-----For lambda < 0.75 microns------ "
+            write(nud,*) "Ground:",dgroundalb(1)
+            write(nud,*) "Ocean:",doceanalb(1) 
+            write(nud,*) "Snow:",dsnowalb(1)
+            write(nud,*) "Snow max:",dsnowalbmx(1)
+            write(nud,*) "Snow min:",dsnowalbmn(1)
+            write(nud,*) "Sea ice max:",dicealbmx(1) 
+            write(nud,*) "Sea ice min:",dicealbmn(1) 
+            write(nud,*) "Glacier min:",dglacalbmn(1)
+            write(nud,*) "-----For lambda > 0.75 microns------ "
+            write(nud,*) "Ground:",dgroundalb(2)
+            write(nud,*) "Ocean:;",doceanalb(2) 
+            write(nud,*) "Snow:",dsnowalb(2)
+            write(nud,*) "Snow max:",dsnowalbmx(2)
+            write(nud,*) "Snow min:",dsnowalbmn(2)
+            write(nud,*) "Sea ice max:",dicealbmx(2) 
+            write(nud,*) "Sea ice min:",dicealbmn(2) 
+            write(nud,*) "Glacier min:",dglacalbmn(2)
+         endif      
+     
 !
 !*    reset psurf according to orography
 !
@@ -664,6 +686,8 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       call mpputgp('dls'    ,dls    ,NHOR,1)
       call mpputgp('drhs'   ,drhs   ,NHOR,1)
       call mpputgp('dalb'   ,dalb   ,NHOR,1)
+      call mpputgp('dsalb1',dsalb(1,:),NHOR,1)
+      call mpputgp('dsalb2',dsalb(2,:),NHOR,1)
       call mpputgp('dz0'    ,dz0    ,NHOR,1)
       call mpputgp('dicec'  ,dicec  ,NHOR,1)
       call mpputgp('diced'  ,diced  ,NHOR,1)
@@ -839,6 +863,8 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       call mpgetgp('dls'    ,dls    ,NHOR,   1)
       call mpgetgp('drhs'   ,drhs   ,NHOR,   1)
       call mpgetgp('dalb'   ,dalb   ,NHOR,   1)
+      call mpgetgp('dsalb1' ,dsalb(1,:),NHOR,1)
+      call mpgetgp('dsalb2' ,dsalb(2,:),NHOR,1)
       call mpgetgp('dz0'    ,dz0    ,NHOR,   1)
       call mpgetgp('dicec'  ,dicec  ,NHOR,   1)
       call mpgetgp('diced'  ,diced  ,NHOR,   1)
