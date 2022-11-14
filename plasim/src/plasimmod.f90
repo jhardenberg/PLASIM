@@ -311,6 +311,19 @@
 !     * Radiation *
 !     *************
 
+!     Exoplasim
+      real :: dsalb(2,NHOR)               ! spectral weighted albedo
+      real :: dsnowalb(2)           = 0.6  ! spectral weighted snow albedo
+      real :: dgroundalb(2)         = 0.2  ! spectral weighted ground albedo
+      real :: doceanalb(2)          = 0.069  ! spectral weighted ocean albedo
+      real :: dsnowalbmx(2)         = 0.8
+      real :: dsnowalbmn(2)         = 0.4
+      real :: dicealbmx(2)          = 0.7
+      real :: dicealbmn(2)          = 0.5
+      real :: dglacalbmn(2)         = 0.6
+
+!
+
       real :: dalb(NHOR)               ! albedo
       real :: dswfl(NHOR,NLEP)         ! net solar radiation
       real :: dlwfl(NHOR,NLEP)         ! net thermal radiation
