@@ -145,18 +145,17 @@
       parameter(const = 0.0143877735383)    !hc/k
       !parameter(chig0 = 11.234333860319996) !spectrum-weighted optical depth coefficient for 5772K
       
-      real :: wv1(1024) !Wavelengths in meters up to 0.75 microns
-      real :: wv2(1024) !Wavelength in meters starting at 0.75 microns
-      real :: wvm1(1024) !Wavelengths in microns up to 0.75 microns
-      real :: wvm2(1024) !Wavelength in microns starting at 0.75 microns
-      real :: bb1(1024) !Planck function for x<0.75 microns
-      real :: bb2(1024) !Planck function for x>0.75 microns
-      real :: bbg1(1024) !Planck function for x<0.75 microns
-      real :: bbg2(1024) !Planck function for x>0.75 microns
-      real :: bb3(965) !Planck function for albedo wavelengths
-      real :: kdata(2048,2)
-      real :: kdata2(965,2)
-      
+      real*8 :: wv1(1024) !Wavelengths in meters up to 0.75 microns
+      real*8 :: wv2(1024) !Wavelength in meters starting at 0.75 microns
+      real*8 :: wvm1(1024) !Wavelengths in microns up to 0.75 microns
+      real*8 :: wvm2(1024) !Wavelength in microns starting at 0.75 microns
+      real*8 :: bb1(1024) !Planck function for x<0.75 microns
+      real*8 :: bb2(1024) !Planck function for x>0.75 microns
+      real*8 :: bbg1(1024) !Planck function for x<0.75 microns
+      real*8 :: bbg2(1024) !Planck function for x>0.75 microns
+      real*8 :: bb3(965) !Planck function for albedo wavelengths
+      real*8 :: kdata(2048,2)
+      real*8 :: kdata2(965,2)
       
       real dl1,dl2,hinge,const1,const2,z1,z2,znet,wmin,lwmin,w1,w2,f1,f2,x
       integer k,nw,j
@@ -166,18 +165,19 @@
         constg = const/5772.0 !G star
         
         !wmin = const/(starbbtemp*36.841361) !Wavelength where exponential term is <=1.0e-16
-        wmin = minwavel ! Set minimum wavelength to 316 nm; we don't include UV. 
+        wmin = minwavel*1e-9 ! Set minimum wavelength to 316 nm; we don't include UV. 
                           ! This produces zsolar1=0.517 at Teff=5772 K.
         lwmin = log10(wmin)
         
         hinge = log10(7.5e-7) !We care about amounts above and below 0.75 microns
         dl1 = (hinge-lwmin)/1024.0
         dl2 = (-4-hinge)/1024.0
-        
+
         do k=1,1024
           wv1(k) = 10**(lwmin+(k-1)*dl1)
           wv2(k) = 10**(hinge+(k-1)*dl2)
         enddo
+        
         do k=1,1024
           wvm1(k) = (1.0e6 * wv1(k))**5
           wvm2(k) = (1.0e6 * wv2(k))**5
@@ -195,7 +195,7 @@
            wv2(:) = kdata(1025:2048,1)*1.0e-6
            bb2(:) = kdata(1025:2048,2)
            do k=1,1024
-              if (wv1(k) .lt. minwavel) bb1(k)=0. !Remove flux at wavelengths below 316 nm.
+              if (wv1(k) .lt. wmin) bb1(k)=0. !Remove flux at wavelengths below 316 nm.
            enddo
            
            ! Scan through high-res wavelengths and re-sample to bb3 wavelengths
@@ -218,7 +218,7 @@
            do k=1,965 !Compute the Planck function for the wavelengths at which we have albedo data
              bb3(k) = 1.0/(wavelengths(k))**5 * 1.0/(exp(1.0e6*const2/wavelengths(k))-1)
            enddo
-           
+
         endif
         a1 = 0.0
         a2 = 0.0
@@ -234,7 +234,7 @@
             a2 = a2 + 0.5*(bb3(k)*iceblend(k)+bb3(k+1)*iceblend(k+1))* &
        &              1.0e-6*(wavelengths(k+1)-wavelengths(k))
         enddo
-        
+
         z1 = 0.0
         z2 = 0.0
         
@@ -246,10 +246,11 @@
         
         zgcross1 = 0.0
         zgcross2 = 0.0
-        
+
         do k=1,1023    !Do a trapezoidal integration above and below 0.75 microns
           z1 = z1 + 0.5*(bb1(k)+bb1(k+1))*(wv1(k+1)-wv1(k))
           z2 = z2 + 0.5*(bb2(k)+bb2(k+1))*(wv2(k+1)-wv2(k))
+
           zg1 = zg1 + 0.5*(bbg1(k)+bbg1(k+1))*(wv1(k+1)-wv1(k))
           zg2 = zg2 + 0.5*(bbg2(k)+bbg2(k+1))*(wv2(k+1)-wv2(k))
           zcross1 = zcross1 + 0.5*(bb1(k)/((wv1(k)*1.0e6)**4)+bb1(k+1)/((wv1(k+1)*1.0e6)**4)) &
@@ -261,6 +262,7 @@
           zgcross2 = zgcross2+0.5*(bbg2(k)/((wv2(k)*1.0e6)**4)+bbg2(k+1)/((wv2(k+1)*1.0e6)**4)) &
      &                         *(wv2(k+1)-wv2(k))
         enddo
+        
         z1 = z1 + 0.5*(bb1(1024)+bb2(1))*(wv2(1)-wv1(1024))
         zcross1 = zcross1+0.5*(bb1(1024)/((wv1(1024)*1.0e6)**4)+bb2(1)/((wv2(1)*1.0e6)**4)) &
      &                         *(wv2(1)-wv1(1024))
@@ -323,7 +325,7 @@
 !
 !                        zcross1 + zcross2          zg1 + zg2
 !           = zsolar1 x ------------------- x ---------------------
-!                               z1             zgcross1 + zgcross2
+!                               z1             zgcross1 + 
 !                       
         zdenom1 = 0.01/z1
         zdenom2 = 0.01/z2
@@ -578,7 +580,9 @@
      &               ,iyrbp,nswr,nlwr                                   &
      &               ,a0o3,a1o3,aco3,bo3,co3,toffo3,o3scale             &
      &               ,nsol,nswrcl,nrscat,rcl1,rcl2,acl2,clgray,tpofmt   &
-     &               ,acllwr,tswr1,tswr2,tswr3,th2oc,dawn,tswr1mod
+     &               ,acllwr,tswr1,tswr2,tswr3,th2oc,dawn,tswr1mod      &
+     &               ,starbbtemp,nstartemp,nsimplealbedo,nstarfile      & 
+     &               ,starfile,starfilehr,minwavel
 !
 !     namelist parameter:
 !
@@ -738,6 +742,38 @@
       call mpbci(nswrcl)
       call mpbcrn(tswr1mod,NLEV)
 
+!     Exoplasim
+
+      call mpbcr(starbbtemp)
+      call mpbci(nstartemp)
+      call mpbci(nsimplealbedo)
+      call mpbci(nstarfile)
+      call mpbcr(minwavel)
+
+!      
+!     determine stellar parameters      
+!
+      if (nstarfile > 0) then
+        lstarfile = .true.
+        call solarini
+        nstartemp = 1
+        call mpbci(nstartemp)
+      else if (nstartemp > 0) then
+        call solarini
+      else
+        call mpbcr(zsolar1)
+        call mpbcr(zsolar2)
+        call mpbcr(rcoeff)
+        call mpbcrn(dsnowalb,2)
+        call mpbcrn(dsnowalbmn,2)
+        call mpbcrn(dsnowalbmx,2)
+        call mpbcrn(dglacalbmn,2)
+        call mpbcrn(dicealbmn,2)
+        call mpbcrn(dicealbmx,2)
+        call mpbcrn(dgroundalb,2)
+        call mpbcrn(doceanalb,2)
+      endif
+      
 !
 !     determine orbital parameters
 !
