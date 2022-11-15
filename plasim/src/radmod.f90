@@ -1435,6 +1435,7 @@
 !
       real zmu0(NHOR)              ! zenit angle
       real zmu1(NHOR)              ! zenit angle
+      real zscf(NHOR)              ! Pressure scale factor
       real zcs(NHOR)               ! clear sky part
       real zm(NHOR)                ! magnification factor
       real zo3(NHOR)               ! ozon amount
@@ -1651,9 +1652,23 @@
 !
 !     clear sky scattering (Rayleigh scatterin lower most level only)
 !
-       zrcs(:,NLEV)=(0.219/(1.+0.816*zmu0(:))*zcs(:)                    &
-     &              +0.144*(1.-zcs(:)-dcc(:,NLEV)))*nrscat
-       zrcsu(:,NLEV)=0.144*(1.-dcc(:,NLEV))*nrscat
+!       zrcs(:,NLEV)=(0.219/(1.+0.816*zmu0(:))*zcs(:)                    &
+!     &              +0.144*(1.-zcs(:)-dcc(:,NLEV)))*nrscat
+!       zrcsu(:,NLEV)=0.144*(1.-dcc(:,NLEV))*nrscat
+      
+!      From exoplasim
+!
+!      R = 1 - e^((ps/p0)*ln(T0))
+!
+! XXX check: similar not identical
+       zscf(:) = rcoeff*dp(:)/101100.0*9.80665/ga
+       zrcs(:,NLEV)= zrcs(:,NLEV) + (1.0-exp(zscf(:)*log(1.0-(0.219/(1.+0.816*zmu0(:))))))&
+     &                              * zcs(:)*nrscat                    &
+     &                            + (1.0-exp(zscf(:)*log(1.0-0.144)))*(1.-zcs(:)-dcc(:,NLEV))&
+     &                              * nrscat
+       zrcsu(:,NLEV)=zrcsu(:,NLEV) + (1.0-exp(zscf(:)*log(1.0-0.144))) &
+     &                               *nrscat*(1-dcc(:,NLEV))
+   
       endwhere
 !
       do jlev=1,NLEV
