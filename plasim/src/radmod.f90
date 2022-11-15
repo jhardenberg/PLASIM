@@ -1784,15 +1784,17 @@
 !
 !     make upward R
 !
-       zra1s(:)=dalb(:)
-       zra2s(:)=dalb(:)
+
+!      original
+!       zra1s(:)=dalb(:)
+!       zra2s(:)=dalb(:)
 !
 !      set albedo for the direct beam (for ocean use ECHAM3 param)
 !
-       dalb(:)=dls(:)*dalb(:)+(1.-dls(:))*dicec(:)*dalb(:)              &
-     &        +(1.-dls(:))*(1.-dicec(:))*AMIN1(0.05/(zmu0(:)+0.15),0.15)
-       zra1(:)=dalb(:)
-       zra2(:)=dalb(:)
+!       dalb(:)=dls(:)*dalb(:)+(1.-dls(:))*dicec(:)*dalb(:)              &
+!     &        +(1.-dls(:))*(1.-dicec(:))*AMIN1(0.05/(zmu0(:)+0.15),0.15)
+!       zra1(:)=dalb(:)
+!       zra2(:)=dalb(:)
 
 ! Currently: we use the same albedo for both spectral ranges.
 
@@ -1800,20 +1802,15 @@
        zra2s(:)=dalb(:)*(1-nstartemp) + dsalb(2,:)*nstartemp      
 !
 !      set albedo for the direct beam (for ocean use ECHAM3 param unless necham=0)
-       dsalb(1,:)=dls(:)*dsalb(1,:)   +   (1.-dls(:)) * dicec(:)*dsalb(1,:)      &
-     &           + (1.-dls(:)) * (1.-dicec(:)) * AMIN1(0.05/(zmu0(:)+0.15),0.15) !&
-!     &  *(0.026/(zmu0(:)**1.7+0.065)+0.15*(zmu0(:)-1)*(zmu0(:)-0.5)*(zmu0(:)-0.1)+0.0082) 
-       dsalb(2,:)=dls(:)*dsalb(2,:)   +   (1.-dls(:)) * dicec(:)*dsalb(2,:)      &
-     &           + (1.-dls(:)) * (1.-dicec(:)) * AMIN1(0.05/(zmu0(:)+0.15),0.15) !&
-!     &  *(0.026/(zmu0(:)**1.7+0.065)+0.15*(zmu0(:)-1)*(zmu0(:)-0.5)*(zmu0(:)-0.1)+0.0082) 
-       
-       dalb(:) = (zsolars(1)*dsalb(1,:) + zsolars(2)*dsalb(2,:))*nstartemp       &
-     &           + ( dls(:)*dalb(:)      + (1.-dls(:)) * dicec(:)*dalb(:)         &
-     &           + (1.-dls(:)) * (1.-dicec(:)) * AMIN1(0.05/(zmu0(:)+0.15),0.15) ) &
-!     &  *(0.026/(zmu0(:)**1.7+0.065)+0.15*(zmu0(:)-1)*(zmu0(:)-0.5)*(zmu0(:)-0.1)+0.0082)   ! XXX What is this?
-&                *(1-nstartemp)
-       zra1(:)=dsalb(1,:)*nstartemp + dalb(:)*(1-nstartemp)
-       zra2(:)=dsalb(2,:)*nstartemp + dalb(:)*(1-nstartemp)
+       dsalb(1,:)=dls(:)*dsalb(1,:) + (1.-dls(:)) * dicec(:) * dsalb(1,:)      &
+     &           + (1.-dls(:)) * (1.-dicec(:)) * AMIN1(0.05/(zmu0(:)+0.15),0.15) 
+       dsalb(2,:)=dls(:)*dsalb(2,:) + (1.-dls(:)) * dicec(:) * dsalb(2,:)      &
+     &           + (1.-dls(:)) * (1.-dicec(:)) * AMIN1(0.05/(zmu0(:)+0.15),0.15) 
+       dalb(:) = dls(:)*dalb(:) + (1.-dls(:)) * dicec(:) * dalb(:)         &
+     &           + (1.-dls(:)) * (1.-dicec(:)) * AMIN1(0.05/(zmu0(:)+0.15),0.15) 
+
+       zra1(:)=dalb(:)*(1-nstartemp) + dsalb(1,:)*nstartemp
+       zra2(:)=dalb(:)*(1-nstartemp) + dsalb(2,:)*nstartemp
          
 ! Ice-free ocean albedo is min(0.05/(phi+0.15), 0.15)--reflection and scattering is higher at low phi
 
