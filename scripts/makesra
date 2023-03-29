@@ -56,7 +56,7 @@ fi
 if [ "$equatorial" -ne "-1" ]; then
     SETC="-setclonlatbox,$const,-360,360,-$equatorial,$equatorial"
 fi
-cdo -f nc $SETC -const,$CONST,$gr const$$.nc
+cdo -s -f nc $SETC -const,$CONST,$gr const$$.nc
 
 for ((m=1; m<=$months; m++)); do
     mm=$(printf "%02d" $m)
@@ -64,7 +64,7 @@ for ((m=1; m<=$months; m++)); do
        date=${date:0:4}$mm${date:6:2}    
     fi
     printf "       $2         0  %s        %s        64        32         0         0\n" $date $time
-    cdo outputf,"   %7.3f",8 const$$.nc 
+    cdo -s outputf,"   %7.3f",8 const$$.nc 
 done
 rm const$$.nc
  
