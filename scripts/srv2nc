@@ -13,6 +13,8 @@ function help {
    echo "  -m            perform monthly means"
    echo "  -y            perform yearly means"
    echo "  -p            compute sea-level pressure"
+   echo "  -u            compute u and v velocities (instead of divergence and vorticity)"
+   echo "  -s            convert spectral to grid-point"
    echo "  -d codelist   remove a comma-separated list of codes from the output"
    echo "  -f format     output format (default is zipped netcdf4 (HDF5))"
    echo "                Alternatives: nc, nc1, nc4, nc4c, nc5"
@@ -23,13 +25,16 @@ function help {
 fmonth=""
 fyear=""
 format="nc4 -z zip"
-while getopts "d:ypmhf:" OPTION; do
+dv2uv=""
+while getopts "d:ypusmhf:" OPTION; do
     case $OPTION in
     d) delcodes=$OPTARG ;;
     m) fmonth="-monmean" ;;
     y) fyear="-yearmean" ;;
     p) psl=1 ;;
     f) format=$OPTARG ;;
+    u) dv2uv="-dv2uv" ;;
+    s) sp2gp="-sp2gp" ;;
     h) help ;;
     esac
 done
@@ -315,13 +320,13 @@ if [ -z "$flsg" ]; then
 if [ ! -z "$fsp" ]; then
   $cdo splitgrid ${infile} grid_$$_
   if [ ! -z "$psl" ]; then
-     $cdonctab $fixzgrid -setgrid,$spgrid grid_$$_02.srv spectral$$.nc
+     $cdonctab $dv2uv $fixzgrid -setgrid,$spgrid grid_$$_02.srv spectral$$.nc
      $cdonctab $fixzgrid $delcode333 -setgrid,$gpgrid grid_$$_01.srv gaussian$$.nc
      $cdonctab merge spectral$$.nc gaussian$$.nc tempfile0$$.nc
      $cdonctab sealevelpressure -sp2gp tempfile0$$.nc press$$.nc
-     $cdozip $fmonth $fyear -merge tempfile0$$.nc press$$.nc tempfile$$.nc 
+     $cdozip $sp2gp $fmonth $fyear -merge tempfile0$$.nc press$$.nc tempfile$$.nc 
   else
-     $cdonctab $fmonth $fyear $fixzgrid -setgrid,$spgrid grid_$$_02.srv spectral$$.nc
+     $cdonctab $sp2gp $dv2uv $fmonth $fyear $fixzgrid -setgrid,$spgrid grid_$$_02.srv spectral$$.nc
      $cdonctab $fmonth $fyear $fixzgrid $delcode333 -setgrid,$gpgrid grid_$$_01.srv gaussian$$.nc
      $cdozip merge spectral$$.nc gaussian$$.nc tempfile$$.nc
   fi
