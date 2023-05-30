@@ -17,6 +17,7 @@
       real    :: drhssea  = 1.    ! wetness factor sea
       real    :: drhsice  = 1.    !  "         "   ice
       real    :: charnock = 0.018 ! albedo for free ocean
+      
 !
 !     global arrays
 !
@@ -65,7 +66,7 @@
       use seamod
 !
       namelist/seamod_nl/albsea,albice,dz0sea,dz0ice,drhssea,drhsice       &
-     &               ,ncpl_atmos_ice,charnock
+     &               ,ncpl_atmos_ice,charnock,doceanalb,dicealbmn,dicealbmx
 !
 !     read namelist
 !
@@ -90,6 +91,9 @@
       call mpbcr(drhsice)
       call mpbci(ncpl_atmos_ice)
       call mpbcr(charnock)
+      call mpbcrn(doceanalb,2)
+      call mpbcrn(dicealbmn,2)
+      call mpbcrn(dicealbmx,2)
 !
 !     initialize ice (and ocean)
 !
@@ -141,6 +145,10 @@
        drhs(:)=drhssea*(1.-dicec(:))+drhsice*dicec(:)
        dalb(:)=albsea*(1.-dicec(:))   &
      &         +dicec(:)*AMIN1(albice,0.5+0.025*(273.-dts(:)))
+       dsalb(1,:)=doceanalb(1)*(1.-dicec(:))   &
+     &         +dicec(:)*AMIN1(dicealbmx(1),dicealbmn(1)+0.025*(273.-dts(:)))
+       dsalb(2,:)=doceanalb(2)*(1.-dicec(:))   &
+     &         +dicec(:)*AMIN1(dicealbmx(2),dicealbmn(2)+0.025*(273.-dts(:)))
        dz0(:)=dz0sea*(1.-dicec(:))+dz0ice*dicec(:)
       endwhere
       endif
@@ -249,6 +257,10 @@
        drhs(:)=drhssea*(1.-dicec(:))+drhsice*dicec(:)
        dalb(:)=albsea*(1.-dicec(:))                                     &
      &           +dicec(:)*AMIN1(albice,0.5+0.025*(273.-dts(:)))
+       dsalb(1,:)=doceanalb(1)*(1.-dicec(:))                                     &
+     &           +dicec(:)*AMIN1(dicealbmx(1),dicealbmn(1)+0.025*(273.-dts(:)))
+       dsalb(2,:)=doceanalb(2)*(1.-dicec(:))                                     &
+     &           +dicec(:)*AMIN1(dicealbmx(2),dicealbmn(2)+0.025*(273.-dts(:)))
        dz0(:)=zz0(:)*(1.-dicec(:))+dz0ice*dicec(:)
       endwhere
 !
