@@ -1001,7 +1001,6 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
                    , syncstr , synctime                                 &
                    , dtep    , dtns    , dtrop   , dttrp                &
                    , tdissd  , tdissz  , tdisst  , tdissq  , tgr        &
-                   , psurf                                              &
                    , restim  , t0      , tfrc                           &
                    , sigh    , nenergy , nener3d , nsponge , dampsp
 !
