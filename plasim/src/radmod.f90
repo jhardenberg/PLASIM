@@ -632,7 +632,7 @@
            jtune=1
           endif
          endif 
-        elseif(NLEV==10) then
+        elseif(NLEV>=10) then
          if(NDCYCLE==1) then
           jtune=0
          else
@@ -648,7 +648,7 @@
          endif 
         endif
        elseif(NTRU==31) then
-        if(NLEV==10) then
+        if(NLEV>=10) then
          if(NDCYCLE==1) then
           jtune=0
          else
@@ -664,7 +664,7 @@
          endif
         endif
        elseif(NTRU==42) then
-        if(NLEV==10) then
+        if(NLEV>=10) then
          if(NDCYCLE==1) then
           jtune=0
          else
@@ -1646,7 +1646,7 @@
      &           +1.082*zo3(:)/((1.+138.6*zo3(:))**0.805)               &
      &           +0.0658*zo3(:)/(1.+(103.6*zo3(:))**3))/zsolar1
        ztwvt(:)=1.
-       zwv(:)=zywvt(:)+zbetta*zwvt(:)
+       zwv(:)=zywvt(:)+zbetta*zwvt(:)       
        ztwvtu(:)=1.-2.9*zwv(:)/((1.+141.5*zwv(:))**0.635+5.925*zwv(:))  &
      &            /zsolar2
 !

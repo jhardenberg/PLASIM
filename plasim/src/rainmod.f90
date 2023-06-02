@@ -75,7 +75,7 @@
       if(NTRU==21 .and. NLEV==5) then
        nshallow=0
       endif 
-      if(NTRU==42 .and. NLEV==10) then
+      if(NTRU==42 .and. NLEV>=10) then
        gamma=0.007
       endif    
 !

@@ -1006,7 +1006,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 !
 !     preset namelist parameter according to model set up
 !
-      if (NLEV==10) then
+      if (NLEV>=10) then
          tfrc(1)      =  20.0 * earth_solar_day ! expressed in EARTH days
          tfrc(2)      = 100.0 * earth_solar_day
          tfrc(3:NLEV) =   0.0 * earth_solar_day
