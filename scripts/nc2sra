@@ -1,0 +1,76 @@
+#!/bin/bash
+
+function help {
+  echo "Create PLASIM sra file from a netcdf"
+  echo "Usage: nc2sra [OPTIONS] input.sra output.nc code"
+  echo "   input.nc : input netcdf file"
+  echo "   output.sra : output sra file"
+  echo "   code  : the code of the variable"
+  echo "Options:"
+  echo "  -d date       date as YYYYMMDD (default 20200101)"
+  echo "  -t time       time as HHMM (default 0000)"
+  echo "  -h            print this help"
+  exit 1
+}
+
+months=1
+date=""
+time=""
+while getopts "m:g:d:t:p:e:c:h" OPTION; do
+    case $OPTION in
+    d) date=$OPTARG ;;
+    t) time=$OPTARG ;;
+    h) help ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [ $# -lt 2 ]; then
+   help
+fi
+
+if [ -z "$3" ]; then
+    echo "Error: You must specify a code."
+    echo
+    help
+    exit 1
+fi
+
+input=$1
+output=$2
+
+gridsize=$(cdo griddes $input|grep gridsize -|cut -d= -f2 |tr -d ' ')
+
+if gridsize=2048; then
+    grid=t21
+    nx=64
+    ny=32
+elif gridsize=4608; then
+    grid=t31
+    nx=96
+    ny=48
+elif gridsize=8192; then
+    grid=t42
+    nx=128
+    ny=64
+else
+    echo "Unknown grid size"
+    exit 1
+fi
+
+ntime=$(cdo ntime $1)
+
+rm $output
+touch $output
+for ((m=1; m<=$ntime; m++)); do
+    if [ -z "$date" ]; then
+        date=$(cdo showdate -seltimestep,$m $1|tr -d ' ')
+        date=${date//-/}
+    fi
+    if [ -z "$time" ]; then
+        time=$(cdo showtime -seltimestep,$m $1|cut -d":" -f1|tr -d ' ')
+    fi
+    printf "       $3        0  %s        %s        %d        %d         0         0\n" $date $time $nx $ny >> $output
+    cdo -s outputf,%14.6E,8 -seltimestep,$m $input >> $output
+done
+ 
