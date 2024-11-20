@@ -2,10 +2,10 @@
 
 function help {
   echo "Create PLASIM sra file from a netcdf"
-  echo "Usage: nc2sra [OPTIONS] input.sra output.nc code"
-  echo "   input.nc : input netcdf file"
+  echo "Usage: nc2sra [OPTIONS] input.nc output.sra code"
+  echo "   input.nc   : input netcdf file"
   echo "   output.sra : output sra file"
-  echo "   code  : the code of the variable"
+  echo "   code       : the code of the variable"
   echo "Options:"
   echo "  -d date       date as YYYYMMDD (default 20200101)"
   echo "  -t time       time as HHMM (default 0000)"
