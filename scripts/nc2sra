@@ -39,7 +39,7 @@ fi
 input=$1
 output=$2
 
-gridsize=$(cdo griddes $input|grep gridsize -|cut -d= -f2 |tr -d ' ')
+gridsize=$(cdo -s griddes $input|grep gridsize -|cut -d= -f2 |tr -d ' ')
 
 if gridsize=2048; then
     grid=t21
@@ -58,17 +58,17 @@ else
     exit 1
 fi
 
-ntime=$(cdo ntime $1)
+ntime=$(cdo -s ntime $1)
 
 rm $output
 touch $output
 for ((m=1; m<=$ntime; m++)); do
     if [ -z "$date" ]; then
-        date=$(cdo showdate -seltimestep,$m $1|tr -d ' ')
+        date=$(cdo -s showdate -seltimestep,$m $1|tr -d ' ')
         date=${date//-/}
     fi
     if [ -z "$time" ]; then
-        time=$(cdo showtime -seltimestep,$m $1|cut -d":" -f1|tr -d ' ')
+        time=$(cdo -s showtime -seltimestep,$m $1|cut -d":" -f1|tr -d ' ')
     fi
     printf "       $3        0  %s        %s        %d        %d         0         0\n" $date $time $nx $ny >> $output
     cdo -s outputf,%14.6E,8 -seltimestep,$m $input >> $output
