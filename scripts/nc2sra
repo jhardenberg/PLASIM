@@ -60,7 +60,7 @@ fi
 
 ntime=$(cdo -s ntime $1)
 
-rm $output
+rm -f $output
 touch $output
 for ((m=1; m<=$ntime; m++)); do
     if [ -z "$date" ]; then
