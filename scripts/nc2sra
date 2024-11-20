@@ -43,14 +43,17 @@ gridsize=$(cdo -s griddes $input|grep gridsize -|cut -d= -f2 |tr -d ' ')
 
 if gridsize=2048; then
     grid=t21
+    gridout=F16
     nx=64
     ny=32
 elif gridsize=4608; then
     grid=t31
+    gridout=F24
     nx=96
     ny=48
 elif gridsize=8192; then
     grid=t42
+    gridout=F32
     nx=128
     ny=64
 else
@@ -71,6 +74,6 @@ for ((m=1; m<=$ntime; m++)); do
         time=$(cdo -s showtime -seltimestep,$m $1|cut -d":" -f1|tr -d ' ')
     fi
     printf "       $3        0  %s        %s        %d        %d         0         0\n" $date $time $nx $ny >> $output
-    cdo -s outputf,%14.6E,8 -seltimestep,$m $input >> $output
+    cdo -s outputf,%14.6E,8 -remapnn,$gridout -seltimestep,$m $input >> $output
 done
  
