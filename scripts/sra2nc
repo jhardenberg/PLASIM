@@ -38,28 +38,28 @@ case $nl in
   gr=t21
   np=2048
   np8=2056
-  gr=r64x32
+  gr=F16
   ;;
 28784)
   mm=12
   gr=t21
   np=2048
   np8=2056
-  gr=r64x32
+  gr=F16
   ;;
 8200)
   mm=1
   gr=t42
   np=8192
   np8=8200
-  gr=r128x64
+  gr=F32
   ;;
 114800)
   mm=12
   gr=t42
   np=8192
   np8=8200
-  gr=r128x64
+  gr=F32
   ;;
 *)
   echo "Format not recognized"
