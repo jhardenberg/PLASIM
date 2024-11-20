@@ -85,8 +85,8 @@ do
   cdo -s -f nc input,$gr out$$ < tmp$$
   cdo -s  -settime,${time:0:2}:${time:2:2} -setdate,${date:0:4}-${date:4:2}-${date:6:2} -setname,var$code out$$ out_${mm}_$$
 done < infile$$
-cdo -s cat out_??_$$ outn$$
-cdo invertlat outn$$ outi$$
-cdo griddes outi$$ > grid$$
-cdo setgrid,grid$$ outn$$ $2
-rm tmp$$ out$$ infile$$ out_??_$$ outi$$ grid$$ outn$$
+cdo -s cat out_??_$$ $2
+# cdo invertlat outn$$ outi$$
+# cdo griddes outi$$ > grid$$
+# cdo setgrid,grid$$ outn$$ $2
+rm -f tmp$$ out$$ infile$$ out_??_$$ outi$$ grid$$
