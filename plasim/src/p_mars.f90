@@ -11,15 +11,14 @@ logical :: lex
 
 namelist /planet_nl/ nfixorb, eccen, mvelp, obliq  &
                 , rotspd, sidereal_day, solar_day  &
-                , sidereal_year, tropical_year     &
+!                , sidereal_year, tropical_year     &
                 , akap, alr, gascon, ra1, ra2, ra4 &
-                , pnu, ga, plarad &
+                , pnu, ga, plarad, psurf &
                 , gsol0 &
-                , yplanet
+                , yplanet,p_wsmax,tl_substellar,ltidally_locked
 
 yplanet = "Mars"     ! Planet name
-nplanet = 4          ! Planet index
-mars    = 1          ! Switch
+!nplanet = 4          ! Planet index
 
 ! *********
 ! Astronomy
@@ -32,9 +31,10 @@ obliq         =    25.19       ! Obliquity [deg] (AMIP-II)
 rotspd        =     1.0        ! Rotation speed (factor)
 sidereal_day  = 88642.663      ! 24h 37m 22s
 solar_day     = 88775.24409    ! 24h 39m 35s
-sidereal_year = 59355072.0     ! 687d (Earth days)
-tropical_year = 59355048.3     ! 686d (Earth days)
-
+!sidereal_year = 59355072.0     ! 687d (Earth days)
+!tropical_year = 59355048.3     ! 686d (Earth days)
+ltidally_locked = .false.
+tl_substellar = 180.0
 
 ! **********
 ! Atmosphere
@@ -76,7 +76,13 @@ plarad        = 3396200.0  ! Radius
 ! *********
 
 gsol0         =  595.0     ! Solar constant
-no3           =    0.0     ! No ozone
+no3           =    0       ! No ozone
+
+! *********
+! Land
+! *********
+
+p_wsmax = 0.   ! Maximum field capacity (m)
 
 ! ********
 ! Namelist
@@ -103,20 +109,20 @@ end
 subroutine print_planet
 use radmod
 
-p_mass        =    0.6419  ! [10^24 kg]
-p_volume      =   16.318   ! [10^10 km3]
-p_radius_eq   = 3393.0     ! Equatorial radius
-p_radius_po   = 3373.0     ! Polar radius
-p_radius_me   = 3390.0     ! Mean radius
-p_ellipticity =    0.0065  ! Ellipticity
-p_density     = 3933.0     ! [kg/m3]
-p_albedo      =    0.16    ! Bond albedo
-p_blackt      =  216.6     ! Black body temperature
-p_sidrot      =   24.6229  ! Sidereal rotation period
-p_inclination =   23.98    ! Equatorial inclination
-p_perihelion  =  206.6     ! Perihelion [10^6 km]
-p_aphelion    =  249.2     ! Aphelion [10^6 km]
-p_sidorbit    =  sidereal_year / sidereal_day ! Sidereal orbit period
+!p_mass        =    0.6419  ! [10^24 kg]
+!p_volume      =   16.318   ! [10^10 km3]
+!p_radius_eq   = 3393.0     ! Equatorial radius
+!p_radius_po   = 3373.0     ! Polar radius
+!p_radius_me   = 3390.0     ! Mean radius
+!p_ellipticity =    0.0065  ! Ellipticity
+!p_density     = 3933.0     ! [kg/m3]
+!p_albedo      =    0.16    ! Bond albedo
+!p_blackt      =  216.6     ! Black body temperature
+!p_sidrot      =   24.6229  ! Sidereal rotation period
+!p_inclination =   23.98    ! Equatorial inclination
+!p_perihelion  =  206.6     ! Perihelion [10^6 km]
+!p_aphelion    =  249.2     ! Aphelion [10^6 km]
+!p_sidorbit    =  sidereal_year / sidereal_day ! Sidereal orbit period
 
 write(nud,4000)
 write(nud,1000)
@@ -124,34 +130,45 @@ write(nud,1100) 'Simulating:',yplanet
 write(nud,1000)
 write(nud,2000) 'Parameter','Units','Value'
 write(nud,1000)
-write(nud,3000) 'Mass'             ,'[10^24 kg]'  ,p_mass
-write(nud,3000) 'Volume'           ,'[10^10 km3]' ,p_volume
-write(nud,3000) 'Equatorial radius','[km]'        ,p_radius_eq
-write(nud,3000) 'Polar radius'     ,'[km]'        ,p_radius_po
-write(nud,3000) 'Mean radius'      ,'[km]'        ,p_radius_me
-write(nud,3000) 'Ellipticity'      ,' '           ,p_ellipticity
-write(nud,3000) 'Mean density'     ,'[kg/m3]'     ,p_density
+!write(nud,3000) 'Mass'             ,'[10^24 kg]'  ,p_mass
+!write(nud,3000) 'Volume'           ,'[10^10 km3]' ,p_volume
+!write(nud,3000) 'Equatorial radius','[km]'        ,p_radius_eq
+!write(nud,3000) 'Polar radius'     ,'[km]'        ,p_radius_po
+write(nud,3000) 'Mean radius'      ,'[km]'        ,plarad/1000.0
+!write(nud,3000) 'Ellipticity'      ,' '           ,p_ellipticity
+!write(nud,3000) 'Mean density'     ,'[kg/m3]'     ,p_density
 write(nud,3000) 'Surface gravity'  ,'[m/s2]'      ,ga
-write(nud,3000) 'Bond albedo'      ,' '           ,p_albedo
+!write(nud,3000) 'Bond albedo'      ,' '           ,p_albedo
 write(nud,3000) 'Solar irradiance' ,'[W/m2]'      ,gsol0
-write(nud,3000) 'Black-body temperature','[K]'    ,p_blackt
-write(nud,3000) 'Sidereal orbit period' ,'[days]' ,p_sidorbit
-write(nud,3000) 'Sidereal rotation period','[hrs]',p_sidrot
-write(nud,3000) 'Equatorial inclination'  ,'[deg]',p_inclination
-write(nud,3000) 'Perihelion'       ,'[10^6 km]'   ,p_perihelion
-write(nud,3000) 'Aphelion'         ,'[10^6 km]'   ,p_aphelion
-write(nud,3000) 'Orbit eccentricity'    ,' '      ,eccen
-write(nud,3000) 'Gas constant'          ,' '      ,gascon
-write(nud,3000) 'Mean surface pressure' ,'[Pa]'   ,psurf 
+!write(nud,3000) 'Black-body temperature','[K]'    ,p_blackt
+!write(nud,3000) 'Sidereal orbit period' ,'[days]' ,p_sidorbit
+write(nud,3000) 'Sidereal rotation period','[h]'  ,sidereal_day/3600.0
+!write(nud,3000) 'Perihelion'       ,'[10^6 km]'   ,p_perihelion
+!write(nud,3000) 'Aphelion'         ,'[10^6 km]'   ,p_aphelion
+write(nud,3000) 'Mean surface pressure' ,'[Pa]'   ,psurf
 write(nud,1000)
 write(nud,4000)
 
+if (nfixorb /= 0) then
+   write(nud,3010) 'Using fixed orbit'       ,' '
+   write(nud,3000) 'Longitude of perihelion' ,'[deg]' ,mvelp
+   write(nud,3000) 'Equatorial inclination'  ,'[deg]' ,obliq
+   write(nud,3000) 'Orbit eccentricity'      ,' '     ,eccen
+else
+   write(nud,3010) 'Using Berger orbit' ,'nfixorb=0'
+endif
+
+write(nud,3000) 'Rotation factor'       ,' '      ,rotspd
+write(nud,3000) 'Gas constant'          ,' '      ,gascon
+write(nud,1000)
+write(nud,4000)
 return
 
  1000 format(50('*'))
  1100 format('* ',a24,1x,a21,' *')
  2000 format('* ',a24,1x,a11,a10,' *')
  3000 format('* ',a24,1x,a11,f10.4,' *')
+ 3010 format('* ',a24,1x,a11,10x  ,' *')
  4000 format(/)
       end  
 

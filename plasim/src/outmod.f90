@@ -27,6 +27,10 @@
       zsig(:)      = 0.0       ! initialize
       zsig(1:NLEV) = sigmah(:) ! vertical coordinate table
       zsig(NLEV+1) = n_days_per_year
+      zsig(NLEV+2) = plarad
+      zsig(NLEV+3) = ga
+      zsig(NLEV+4) = gascon
+      zsig(NLEV+5) = alr
 
       open  (40,file=plasim_output,form='unformatted')
       write (40) ihead(:)
