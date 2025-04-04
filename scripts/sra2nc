@@ -38,28 +38,28 @@ case $nl in
   gr=t21
   np=2048
   np8=2056
-  gr=r64x32
+  gr=F16
   ;;
 28784)
   mm=12
   gr=t21
   np=2048
   np8=2056
-  gr=r64x32
+  gr=F16
   ;;
 8200)
   mm=1
   gr=t42
   np=8192
   np8=8200
-  gr=r128x64
+  gr=F32
   ;;
 114800)
   mm=12
   gr=t42
   np=8192
   np8=8200
-  gr=r128x64
+  gr=F32
   ;;
 *)
   echo "Format not recognized"
@@ -85,8 +85,8 @@ do
   cdo -s -f nc input,$gr out$$ < tmp$$
   cdo -s  -settime,${time:0:2}:${time:2:2} -setdate,${date:0:4}-${date:4:2}-${date:6:2} -setname,var$code out$$ out_${mm}_$$
 done < infile$$
-cdo -s cat out_??_$$ outn$$
-cdo invertlat outn$$ outi$$
-cdo griddes outi$$ > grid$$
-cdo setgrid,grid$$ outn$$ $2
-rm tmp$$ out$$ infile$$ out_??_$$ outi$$ grid$$ outn$$
+cdo -s cat out_??_$$ $2
+# cdo invertlat outn$$ outi$$
+# cdo griddes outi$$ > grid$$
+# cdo setgrid,grid$$ outn$$ $2
+rm -f tmp$$ out$$ infile$$ out_??_$$ outi$$ grid$$
