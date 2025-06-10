@@ -3367,7 +3367,7 @@
 !                  (if surface compensation), 0 = ignored (e.g. land)
 !
       open (55,file="hosmask",access="sequential",form="formatted")
-      write(6,*) "INIHOS: Hosing module switched on, reading mask from hosmask."
+      write(6,*) "INIHOS: Water hosing, reading mask from hosmask."
 !
       nt=nt0
       rewind 55
@@ -3410,7 +3410,7 @@
       write(6,*) "INIHOS: Hosing area: ", hosarea
       write(6,*) "INIHOS: Surface compensation area: ", comparea
 !
-!     Hosing, rescaled to 1 Sv (to be multiplied by the hosing strength later)
+!     Hosing, rescaled to 1 Sv
 !
       hosf(:,:) = 0.
       do j=1,jen
@@ -3422,7 +3422,16 @@
           end if
         end do
       end do
-      write(6,*) hosf
+!
+!     set undefined ramp parameters (TODO)
+!
+      if (nhosing==2) then
+        if (hosyini==-1) then
+          ! hosyini must be set
+          write(no6,*) 'ERROR: hosyini must be set for nhosing==2'
+          stop
+        endif
+      endif
 !
       end subroutine inihos
 !     ==================================================================
@@ -5908,6 +5917,7 @@
       real (kind=8) :: ztbound
 !
       real (kind=8) :: hoscurr, hostot, voltot, hoscorr
+      integer :: hosyear
       real (kind=8) :: vsfhos(ien,jen) ! OM
 !
 !     diagnostics
@@ -6006,12 +6016,42 @@
       end do
 !
 !     apply hosing as virtual salt flux ! OM
-!     (after sea level calculations because this shouldn't interfere with SSH)
+!     (after sea level calculations)
 !
       if (nhosing>0) then
-        hoscurr = hosini ! current hosing strength in Sv. TODO: time-dependent for nhosing=2
-        write(6,*) "Hosing: Current hosing strength", hoscurr
-        !write(6,*) "Hosing: Top layer thickness ", ddu(1)
+!
+!       calculate hosing flux from current year and ramp settings
+!       for ramp: dates refer to January 1st of each year
+!
+        hosyear = mdatim(1)
+        if (nhosing==1) then
+          if (((hosyear.gt.hosyini) .or. (hosyini==-1)) .and.           &
+     &        ((hosyear.le.hosyend) .or. (hosyend==-1))) then
+            hoscurr = hosini
+          else
+            hoscurr = 0.
+          endif
+        else if (nhosing==2) then
+          if (hosyear.lt.hosyini) then
+            hoscurr = 0.
+          else if (hosyear.le.hosyendup) then
+            hoscurr = hosrate/1000.*(hosyear-hosyini+1)
+          else if ((hosyear.gt.hosyendup) .and. (hosyear.le.hosyenddown)) then
+            hoscurr = hosrate/1000.*((hosyendup-hosyini+1)              &
+     &                -(hosyear-hosyendup))
+          else if ((hosyear.gt.hosyenddown) .and. (hosyear.le.hosyend)) then
+            hoscurr = hosrate/1000.*((hosyendup-hosyini+1)              &
+     &                -(hosyenddown-hosyendup)+(hosyear-hosyenddown))
+          else
+            hoscurr = 0.
+          endif
+          hoscurr=hoscurr+hosini ! add initial value
+        else
+          if (nhosing.ne.0) write(6,*) "Warning: nhosing=", nhosing,   &
+     &                       "is not supported, no hosing applied."
+          hoscurr = 0.
+        endif
+        write(6,*) "Hosing: Year =", hosyear, "Current hosing strength =", hoscurr
 !
 !       Calculate virtual salt flux and add to top-layer salinity
 !
@@ -6020,7 +6060,6 @@
           do i=1,ien
             if (wet(i,j,1)<0.5) cycle
             vsfhos(i,j) = -hoscurr*hosf(i,j)*s(i,j,1)/ddu(1) ! psu/s ! TODO check units: need to multiply by rho0?
-            if (hosf(i,j)>0.) write(6,*) "vsfhos value at", i, j, ":", vsfhos(i,j)
             ! TODO: take into account SSH or is dz=const?
             s(i,j,1) = s(i,j,1)+vsfhos(i,j)
           end do
