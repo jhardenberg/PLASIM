@@ -3401,7 +3401,7 @@
         do i=1,ien
           if (hosin(i,j)==1) then
             hosarea = hosarea+dphi*dlh(i,j)
-          else if (hosin(i,j)==2.and.nhoscomp==1) then
+          else if (hosin(i,j)==2 .and. nhoscomp==1) then
             comparea = comparea+dphi*dlh(i,j)
           end if
         end do
@@ -3409,7 +3409,6 @@
 !
       write(6,*) "INIHOS: Hosing area: ", hosarea
       write(6,*) "INIHOS: Surface compensation area: ", comparea
-!     TODO: calculate total ocean volume (constant, so can be done here once)
 !
 !     Hosing, rescaled to 1 Sv (to be multiplied by the hosing strength later)
 !
@@ -3417,12 +3416,13 @@
       do j=1,jen
         do i=1,ien
           if (hosin(i,j)==1) then
-            hosf(i,j) = 1.0e-6/hosarea*2. ! m^3 / s / m^2 = m/s ! * 2 is temp-fix
-          else if (hosin(i,j)==2.and.nhoscomp==1) then
-            hosf(i,j) = -1.0e-6/comparea*2.
+            hosf(i,j) = 1.0e6/hosarea*2. ! m^3 / s / m^2 = m/s ! * 2 is temp-fix
+          else if (hosin(i,j)==2 .and. nhoscomp==1) then
+            hosf(i,j) = -1.0e6/comparea*2.
           end if
         end do
       end do
+      write(6,*) hosf
 !
       end subroutine inihos
 !     ==================================================================
@@ -5907,7 +5907,7 @@
       real (kind=8) :: flumean, fluarea
       real (kind=8) :: ztbound
 !
-      real (kind=8) :: hoscurr ! OM
+      real (kind=8) :: hoscurr, hostot, voltot, hoscorr
       real (kind=8) :: vsfhos(ien,jen) ! OM
 !
 !     diagnostics
@@ -6013,24 +6013,60 @@
         write(6,*) "Hosing: Current hosing strength", hoscurr
         !write(6,*) "Hosing: Top layer thickness ", ddu(1)
 !
+!       Calculate virtual salt flux and add to top-layer salinity
+!
         vsfhos(:,:) = 0.0
         do j=3,jen-2 ! TODO: not sure if correct
           do i=1,ien
-!
-!           calculate virtual salt flux and add to top-layer salinity
-!
-            vsfhos(i,j) = -1*hoscurr*hosf(i,j)*s(i,j,1)/ddu(1) ! psu/s
-            !if (nhoscomp==2) ! TODO: calculate total salt flux added
+            if (wet(i,j,1)<0.5) cycle
+            vsfhos(i,j) = -hoscurr*hosf(i,j)*s(i,j,1)/ddu(1) ! psu/s ! TODO check units: need to multiply by rho0?
+            if (hosf(i,j)>0.) write(6,*) "vsfhos value at", i, j, ":", vsfhos(i,j)
+            ! TODO: take into account SSH or is dz=const?
             s(i,j,1) = s(i,j,1)+vsfhos(i,j)
-!
-!           TODO: apply volume compensation
-!
-            !if (nhoscomp==2) then
-            !  continue
-            !endif
           end do
         end do
-      endif
+!
+!       Calculate and apply volume compensation
+!
+        if (nhoscomp==2) then
+!         Total ocean volume (taking into account SSH)
+          voltot = 0.0
+          do k=1,ken
+            do j=3,jen-2
+              do i=1,ien
+                if (wet(i,j,k)<0.5) cycle
+                if (k==1) then
+                  voltot=voltot+(zeta(i,j)+ddz(i,j,k))*dlh(i,j)*dphi
+                else
+                  voltot=voltot+ddz(i,j,k)*dlh(i,j)*dphi
+                endif
+              end do
+            end do
+          end do
+!         Total surface salt flux due to hosing (already multiplied by -1 for compensation)
+!         hostot = glob_sum(r1_rau0 * hosf(:,:)* tsn(:,:,1,jp_sal)*e1t(:,:)*e2t(:,:))
+          hostot = 0.0
+          do j=3,jen-2
+            do i=1,ien
+              if (wet(i,j,1)<0.5) cycle
+              hostot=hostot-vsfhos(i,j)*ddu(1)*dlh(i,j)*dphi
+            end do
+          end do
+!         Add hosing compensation
+          hoscorr = hostot/voltot ! flux per unit volume
+          write(6,*) "Hosing: Total ocean volume:", voltot
+          write(6,*) "        Total salt flux:", hostot
+          write(6,*) "        Compensation:", hoscorr
+          do k=1,ken
+            do j=3,jen-2
+              do i=1,ien
+                if (wet(i,j,k)<0.5) cycle
+                s(i,j,k) = s(i,j,k) + hoscorr
+              end do
+            end do
+          end do
+        endif
+      endif ! end hosing block
 !
 !     diagnostics
 !
