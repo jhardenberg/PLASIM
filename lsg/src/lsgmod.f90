@@ -583,6 +583,24 @@
       real (kind=8) :: zstar = -1.0
       real (kind=8) :: arange = -1.0
       real (kind=8) :: lambda = -1.0
+!
+!     Hosing parameters ! OM
+!     
+      integer :: nhosing       = 0         ! switch for water hosing
+                                           ! 0 = no hosing, 1 = constant, 2 = ramp
+      integer :: nhoscomp      = 1         ! hosing compensation
+                                           ! 1 = surface (as defined by map)
+                                           ! 2 = volume (global)
+      real (kind=8) :: hosini  = 0.0       ! constant hosing or initial hosing (in Sv)
+      real (kind=8) :: hosrate = 0.0       ! ramping rate (in Sv/kyr) for nhosing=2
+      integer :: hosyini = -1              ! first year of hosing
+      integer :: hosyend = -1              ! last year of hosing
+      integer :: hosyendup = -1            ! year at which ramp-up ends (nhosing=2)
+      integer :: hosyenddown = -1          ! year at which ramp-down ends (nhosing=2)
+!
+!     Hosing variables
+!
+      real (kind=8) :: hosf(ien,jen)
 
       end module lsgvar
       subroutine actdate(kdate,ktime)
@@ -3314,6 +3332,102 @@
 !     ==================================================================
 !     ------------------------------------------------------------------
 !
+      subroutine inihos
+      use lsgvar
+      implicit none
+!
+!     ------------------------------------------------------------------
+!
+!     by O. Mehling (UU), last modified 06/2025
+!
+!     Purpose.
+!     --------
+!     *inihos* reads the hosing masks and initializes hosing fields.
+!
+!**   Input.
+!     ------
+!     File "hosmask"
+!
+!     Output.
+!     -------
+!     hosf     2D hosing mask to be multiplied with hosing strength
+!
+!     Interface.
+!     ----------
+!     *call* *inihos*
+!
+!     Input parameters via namelist param.
+!     ------------------------------------
+      integer :: i,j
+      integer :: hosin(ien,jen) = 0.
+      real (kind=8) :: hosarea, comparea
+!
+!     1. Read hosing mask from file "hosmask"
+!     Conventions: 1 = hosing area, 2 = compensation area
+!                  (if surface compensation), 0 = ignored (e.g. land)
+!
+      open (55,file="hosmask",access="sequential",form="formatted")
+      write(6,*) "INIHOS: Hosing module switched on, reading mask from hosmask."
+!
+      nt=nt0
+      rewind 55
+      do j=1,jen
+        do i=1,ien
+          hosin(i,j)=0
+        end do
+      end do
+      rewind 55
+      if (ien==72) then
+        read (55,"(1x,72i1)") ((hosin(i,j),i=1,ien),j=3,jen-2)
+      else if (ien==64) then
+        read (55,"(1x,64i1)") ((hosin(i,j),i=1,ien),j=3,jen-2)
+      else
+        read (55,"(1x,128i1)") ((hosin(i,j),i=1,ien),j=3,jen-2)
+      end if
+!
+!     mask land points in hosing mask, if any
+!
+      do j=1,jen
+        do i=1,ien
+          if (wet(i,j,1)<0.5) hosin(i,j)=0
+        end do
+      end do
+!
+!     calculate hosing and compensation area
+!
+      hosarea = 0.0
+      comparea = 0.0
+      do j=1,jen
+        do i=1,ien
+          if (hosin(i,j)==1) then
+            hosarea = hosarea+dphi*dlh(i,j)
+          else if (hosin(i,j)==2.and.nhoscomp==1) then
+            comparea = comparea+dphi*dlh(i,j)
+          end if
+        end do
+      end do
+!
+      write(6,*) "INIHOS: Hosing area: ", hosarea
+      write(6,*) "INIHOS: Surface compensation area: ", comparea
+!     TODO: calculate total ocean volume (constant, so can be done here once)
+!
+!     Hosing, rescaled to 1 Sv (to be multiplied by the hosing strength later)
+!
+      hosf(:,:) = 0.
+      do j=1,jen
+        do i=1,ien
+          if (hosin(i,j)==1) then
+            hosf(i,j) = 1.0e-6/hosarea*2. ! m^3 / s / m^2 = m/s ! * 2 is temp-fix
+          else if (hosin(i,j)==2.and.nhoscomp==1) then
+            hosf(i,j) = -1.0e-6/comparea*2.
+          end if
+        end do
+      end do
+!
+      end subroutine inihos
+!     ==================================================================
+!     -----------------------------------------------------------------
+!
       subroutine inipar
       use lsgvar
       implicit none
@@ -3384,7 +3498,8 @@
       namelist /param / nsmix,nsve,nsflu,newst,ntcont,iyear,idate,      &
      &  nscoup,ntout,ntaver,ntback,grad1,phinor,dt,du,kiterm,bblthick,  &
      &  exper,ntsurf,ndiagfl,naqua,nprint,npri,nprj,nprk,               &
-     &  astar, zstar, arange, lambda
+     &  astar,zstar,arange,lambda,nhosing,nhoscomp,hosini,hosrate,      &
+     &  hosyini,hosyend,hosyendup,hosyenddown
 
 !     some initial values, overwritten by input
 
@@ -5792,6 +5907,9 @@
       real (kind=8) :: flumean, fluarea
       real (kind=8) :: ztbound
 !
+      real (kind=8) :: hoscurr ! OM
+      real (kind=8) :: vsfhos(ien,jen) ! OM
+!
 !     diagnostics
 !
       real (kind=8) :: ztold(ien,jen,ken)
@@ -5886,6 +6004,33 @@
         flukwat(i,j)=fluwat(i,j)
        end do
       end do
+!
+!     apply hosing as virtual salt flux ! OM
+!     (after sea level calculations because this shouldn't interfere with SSH)
+!
+      if (nhosing>0) then
+        hoscurr = hosini ! current hosing strength in Sv. TODO: time-dependent for nhosing=2
+        write(6,*) "Hosing: Current hosing strength", hoscurr
+        !write(6,*) "Hosing: Top layer thickness ", ddu(1)
+!
+        vsfhos(:,:) = 0.0
+        do j=3,jen-2 ! TODO: not sure if correct
+          do i=1,ien
+!
+!           calculate virtual salt flux and add to top-layer salinity
+!
+            vsfhos(i,j) = -1*hoscurr*hosf(i,j)*s(i,j,1)/ddu(1) ! psu/s
+            !if (nhoscomp==2) ! TODO: calculate total salt flux added
+            s(i,j,1) = s(i,j,1)+vsfhos(i,j)
+!
+!           TODO: apply volume compensation
+!
+            !if (nhoscomp==2) then
+            !  continue
+            !endif
+          end do
+        end do
+      endif
 !
 !     diagnostics
 !
@@ -8388,6 +8533,10 @@
 !*    1. Input of start data.
 !     
       call inp    ! controls initial input
+!
+!     hosing initialization
+!
+      if (nhosing>0) call inihos
 !
 !     Decides, from which file the start data must be read.
 !
