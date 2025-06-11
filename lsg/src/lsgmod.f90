@@ -6051,17 +6051,16 @@
      &                       "is not supported, no hosing applied."
           hoscurr = 0.
         endif
-        write(6,*) "Hosing: Year =", hosyear, "Current hosing strength =", hoscurr
+        write(6,*) "Hosing: Year =", hosyear, "hosing (Sv) =", hoscurr
 !
 !       Calculate virtual salt flux and add to top-layer salinity
 !
         vsfhos(:,:) = 0.0
-        do j=3,jen-2 ! TODO: not sure if correct
+        do j=3,jen-2
           do i=1,ien
             if (wet(i,j,1)<0.5) cycle
-            vsfhos(i,j) = -hoscurr*hosf(i,j)*s(i,j,1)/ddu(1) ! psu/s ! TODO check units: need to multiply by rho0?
-            ! TODO: take into account SSH or is dz=const?
-            s(i,j,1) = s(i,j,1)+vsfhos(i,j)
+            vsfhos(i,j) = -hoscurr*hosf(i,j)*s(i,j,1)/(ddu(1)+zeta(i,j)) ! psu
+            s(i,j,1) = s(i,j,1)+vsfhos(i,j)*dt
           end do
         end do
 !
@@ -6100,7 +6099,7 @@
             do j=3,jen-2
               do i=1,ien
                 if (wet(i,j,k)<0.5) cycle
-                s(i,j,k) = s(i,j,k) + hoscorr
+                s(i,j,k) = s(i,j,k) + hoscorr*dt
               end do
             end do
           end do
