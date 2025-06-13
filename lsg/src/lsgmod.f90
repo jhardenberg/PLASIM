@@ -3394,15 +3394,16 @@
       end do
 !
 !     calculate hosing and compensation area
+!     (factor 0.5 is from layout of the E-grid)
 !
       hosarea = 0.0
       comparea = 0.0
       do j=1,jen
         do i=1,ien
           if (hosin(i,j)==1) then
-            hosarea = hosarea+dphi*dlh(i,j)
+            hosarea = hosarea+dphi*dlh(i,j)*0.5
           else if (hosin(i,j)==2 .and. nhoscomp==1) then
-            comparea = comparea+dphi*dlh(i,j)
+            comparea = comparea+dphi*dlh(i,j)*0.5
           end if
         end do
       end do
@@ -3416,9 +3417,9 @@
       do j=1,jen
         do i=1,ien
           if (hosin(i,j)==1) then
-            hosf(i,j) = 1.0e6/hosarea*2. ! m^3 / s / m^2 = m/s ! * 2 is temp-fix
+            hosf(i,j) = 1.0e6/hosarea ! m^3 / s / m^2 = m/s
           else if (hosin(i,j)==2 .and. nhoscomp==1) then
-            hosf(i,j) = -1.0e6/comparea*2.
+            hosf(i,j) = -1.0e6/comparea
           end if
         end do
       end do
@@ -6074,20 +6075,19 @@
               do i=1,ien
                 if (wet(i,j,k)<0.5) cycle
                 if (k==1) then
-                  voltot=voltot+(zeta(i,j)+ddz(i,j,k))*dlh(i,j)*dphi
+                  voltot=voltot+(zeta(i,j)+ddz(i,j,k))*dlh(i,j)*dphi*0.5
                 else
-                  voltot=voltot+ddz(i,j,k)*dlh(i,j)*dphi
+                  voltot=voltot+ddz(i,j,k)*dlh(i,j)*dphi*0.5
                 endif
               end do
             end do
           end do
 !         Total surface salt flux due to hosing (already multiplied by -1 for compensation)
-!         hostot = glob_sum(r1_rau0 * hosf(:,:)* tsn(:,:,1,jp_sal)*e1t(:,:)*e2t(:,:))
           hostot = 0.0
           do j=3,jen-2
             do i=1,ien
               if (wet(i,j,1)<0.5) cycle
-              hostot=hostot-vsfhos(i,j)*ddu(1)*dlh(i,j)*dphi
+              hostot=hostot-vsfhos(i,j)*(ddu(1)+zeta(i,j))*dlh(i,j)*dphi*0.5
             end do
           end do
 !         Add hosing compensation
