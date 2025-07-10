@@ -44,8 +44,12 @@ fi
 
 if [ "$grid" = "t42" ] || [ "$grid" = "T42" ]; then
    gr=r128x64
+   nx=128
+   ny=64
 else
    gr=r64x32
+   nx=64
+   ny=32
 fi
 
 CONST=$1
@@ -63,7 +67,7 @@ for ((m=1; m<=$months; m++)); do
     if [ "$months" -ne "1" ]; then
        date=${date:0:4}$mm${date:6:2}    
     fi
-    printf "       $2         0  %s        %s        64        32         0         0\n" $date $time
+    printf "       $2         0  %s        %s        $nx        $ny         0         0\n" $date $time
     cdo -s outputf,"   %7.3f",8 const$$.nc 
 done
 rm const$$.nc
