@@ -1,0 +1,99 @@
+#!/bin/bash
+#set -exv
+if [ $# -lt 1 ] ; then
+        cat << END
+ Usage: nc2txt infile [options]
+
+ Converts gridded netcdf files to text
+ Written by: Jost von Hardenberg ISAC-CNR <j.vonhardenberg@isac.cnr.it> 2012
+
+ Options [default in brackets]:
+ -var string		variable to extract [first one]
+ -outputf string	output format in C style [%16.7g]
+ -head			create header with lon and lat information 
+ -hour			include hour of day
+ -yearonly 		include only year (no month, day or hour)
+ -ncol 	int		print ncol values per line
+ -zon                   perform zonal mean
+END
+	exit 1
+fi
+
+INFILE=$1
+OUTPUTF="%16.7g"
+HOUR=0
+YEARONLY=0
+NOUT=1
+ZON=""
+shift 1
+while [ $# -gt 0 ] ; do
+        case $1 in
+                -var) NCVAR=$2 ; shift 2 ;;
+                -outputf) OUTPUTF=$2 ; shift 2 ;;
+                -head) HEAD=1 ; shift 1 ;;
+                -hour) HOUR=1 ; shift 1 ;;
+                -yearonly) YEARONLY=1 ; shift 1 ;;
+                -zon) ZON="-zonmean" ; shift 1 ;;
+                -ncol) NOUT=$2 ; shift 2 ;;
+                *) shift 1 ;;
+        esac
+done
+
+rm -f gridinfo.txt
+printf "%%lon: " > head$$_1.txt
+printf "%%lat: " > head$$_2.txt
+for y in `ncdump -f fortran -v lat $INFILE | grep "// lat("|cut -d, -f 1|cut -d";" -f 1|cut -d= -f 2`
+do
+for x in `ncdump -f fortran -v lon $INFILE | grep "// lon("|cut -d, -f 1|cut -d";" -f 1|cut -d= -f 2`
+do
+printf "%9.6f %9.6f\n" $x $y >> gridinfo.txt
+printf "%9.6f " $x >> head$$_1.txt
+printf "%9.6f " $y >> head$$_2.txt
+done
+done
+printf "\n" >> head$$_1.txt
+printf "\n" >> head$$_2.txt
+
+if [ ! -n "$HEAD" ]; then
+    rm -f t$$.txt dates$$.txt
+else
+    cat head$$_1.txt head$$_2.txt >t$$.txt   
+    printf "\n\n" > dates$$.txt
+fi
+
+OUTFILE=${INFILE%.nc}.txt
+
+if [ ! -n "$NCVAR" ]; then
+    NCVAR=`cdo -s showname $INFILE`
+    NCVAR=(${NCVAR// / })
+fi
+
+rm -f in$$.nc
+cdo -s selname,$NCVAR $INFILE  in$$.nc 
+
+printf '%s\n' `cdo -s showdate in$$.nc` > date$$.txt
+#printf '%s\n' `cdo infov in$$.nc |grep snow -| cut -c10-19` > date$$.txt
+
+cut -d- -f1 date$$.txt > years$$.txt
+cut -d- -f2 date$$.txt > months$$.txt
+cut -d- -f3 date$$.txt > days$$.txt
+if [ $HOUR == 1 ]; then
+   printf '%s\n' `cdo -s showtime in$$.nc` > hour1$$.txt
+   cut -d: -f1 hour1$$.txt > hour$$.txt
+   paste years$$.txt months$$.txt days$$.txt hour$$.txt >> dates$$.txt
+elif [ $YEARONLY == 1 ]; then 
+   paste years$$.txt  >> dates$$.txt
+else
+   paste years$$.txt months$$.txt  days$$.txt >> dates$$.txt
+fi
+
+SIZE=`cdo -s infov -seltimestep,1 in$$.nc|tail -1|cut -c48-55`
+SIZE=(${SIZE// / })
+
+#cdo -s outputf,"$OUTPUTF",$SIZE in$$.nc >> t$$.txt
+# XXX Why???
+cdo -s outputf,"$OUTPUTF",$NOUT $ZON in$$.nc >> t$$.txt
+paste dates$$.txt t$$.txt > $OUTFILE
+
+rm -f in$$.nc date$$.txt months$$.txt days$$.txt years$$.txt t$$.txt rm head$$_1.txt head$$_2.txt dates$$.txt hour$$.txt hour1$$.txt
+

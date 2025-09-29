@@ -22,7 +22,6 @@
       parameter(CPS=4180.)              ! Specific heat of sea water (J/kg*K)
       parameter(CLFI  = 3.28E5)         ! Heat of fusion of ice (J/kg)
       parameter(TFREEZE=271.25)         ! Freezing point (K)
-      parameter(PLARAD=6.371E6)         ! Earth radius (m)
       parameter(PI = 3.14159265359D0)   ! PI
 !
 !     namelist parameter
@@ -65,6 +64,7 @@
 !
       real :: dtmix                     ! time step (s)
       real :: solar_day    = 86400.0    ! 24 * 60 * 60 (for Earth)
+      real :: earth_solar_day    = 86400.0    ! 24 * 60 * 60 (for Earth)
 !
       real :: dlam                      ! delta longitude
       real :: dphi(NLAT)                ! delta latitude
@@ -246,7 +246,7 @@
 !
 !     compute taunc in s
 !
-      taunc = solar_day  * taunc
+      taunc = earth_solar_day  * taunc ! expressed in EARTH days
 !
       if (nrestart == 0) then ! new start (read start file)
          call mpsurfgp('yls',yls,NHOR,1)
@@ -1295,6 +1295,8 @@
 
       subroutine hdiffo(psst)
       use oceanmod
+      use pumamod, only: plarad
+
       parameter(nsub=100)
 !
       real(kind=8) :: psst(NHOR,NLEV_OCE)

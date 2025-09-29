@@ -6,7 +6,7 @@ VERSION=v1.0
 
 #set -ex
 BURNER=/work/users/jost/plasim/postprocessor/burn7.x
-BURNER=/Users/jost/plasim/plasimnew/postprocessor/burn7.x
+BURNER=/home/jost/work/plasim/planets/postprocessor/burn7.x
 PLEVS="20,30,50,70,100,150,200,250,300,400,500,600,700,850,925,1000"
 VARS3D="wap wa zeta stf psi d zg hur ta ua va hus clw cl spd psl"
 GACC=9.80665
@@ -66,7 +66,7 @@ function makevar {
 		"rst")     invar="rst";    standard_name="toa_net_shortwave_flux" ;long_name="TOA Net Shortwave Radiation"; units="W m-2"; expr="rst=rst";;
 		"rss")     invar="rss";    standard_name="surface_net_shortwave_flux_in_air" ;long_name="Surface Net Shortwave Radiation"; units="W m-2"; expr="rss=rss";;
 		"rls")     invar="rls";    standard_name="surface_net_longwave_flux_in_air" ;long_name="Surface Net Longwave Radiation"; units="W m-2"; expr="rls=rls";;
-		"alb")     invar="alb";    standard_name="surface_albedo" ;long_name="Surface Albedo"; units="1"; expr="alb=alb";;
+		"alb")     invar="ssru rss";    standard_name="surface_albedo" ;long_name="Surface Albedo"; units="1"; expr="alb=-ssru/(rss-ssru)";;
 		"prl")     invar="prl";    standard_name="large_scale_precipitation_flux" ;long_name="Large Scale Precipitation"; units="kg m-2 s-1"; expr="prl=prl*1000";;
 		"sndc")     invar="sndc";    standard_name="surface_snow_depth_change" ;long_name="Surface Snow Depth Change"; units="m s-1"; expr="sndc=sndc";;
 		"stf")     invar="stf";    standard_name="stream_function" ;long_name="Stream Function"; units="m"; expr="stf=stf";;

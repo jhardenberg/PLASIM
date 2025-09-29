@@ -116,7 +116,7 @@
       parameter(TWOPI  = PI + PI)          ! 2 Pi
       parameter(RV     = 461.51)           ! Gas constant for water vapour
       parameter(ACPV   = 1870.)            ! Specific heat for water vapour
-      parameter(TMELT_CO2 = 148.0)         ! Melting point (CO2) - for Mars
+!      parameter(TMELT_CO2 = 148.0)         ! Melting point (CO2) - for Mars
 
 !     ***************
 !     * Date & Time *
@@ -148,7 +148,6 @@
 !     **************************
 
       integer :: kick     =  1  ! add noise for kick > 0
-      integer :: mars     =  0  ! global switch for planet mars
       integer :: noutput  =  1  ! master switch for output: 0=no output
       integer :: nafter   =  0  ! write data interval: 0 = once per day
       integer :: naqua    =  0  ! 1: switch to aqua planet mode
@@ -311,6 +310,19 @@
 !     *************
 !     * Radiation *
 !     *************
+
+!     Exoplasim
+      real :: dsalb(2,NHOR)               ! spectral weighted albedo
+      real :: dsnowalb(2)           = 0.6  ! spectral weighted snow albedo
+      real :: dgroundalb(2)         = 0.2  ! spectral weighted ground albedo
+      real :: doceanalb(2)          = 0.069  ! spectral weighted ocean albedo
+      real :: dsnowalbmx(2)         = 0.8
+      real :: dsnowalbmn(2)         = 0.4
+      real :: dicealbmx(2)          = 0.7
+      real :: dicealbmn(2)          = 0.5
+      real :: dglacalbmn(2)         = 0.6
+
+!
 
       real :: dalb(NHOR)               ! albedo
       real :: dswfl(NHOR,NLEP)         ! net solar radiation
@@ -517,8 +529,9 @@
       real :: pnu    = 0.0             ! Time filter
       real :: sidereal_day  = 0.0      ! Length of sidereal day [sec]
       real :: solar_day     = 0.0      ! Length of solar day [sec]
-      real :: sidereal_year = 0.0      ! Length of sidereal year [sec]
-      real :: tropical_year = 0.0      ! Length of tropical year [sec]
+      real :: earth_solar_day     = 86400.0      ! Length of solar day [sec]
+!      real :: sidereal_year = 0.0      ! Length of sidereal year [sec]
+!      real :: tropical_year = 0.0      ! Length of tropical year [sec]
       real :: ww     = 0.0             ! Omega used for scaling
       real :: oroscale = 1.0           ! Orography scaling
       real :: ra1    = 0.0             !
@@ -534,6 +547,11 @@
       real :: eccen  = 0.0             ! Eccentricity of Orbit
       real :: obliq  = 0.0             ! Obliquity of Orbit
       real :: mvelp  = 0.0             ! Longitude of moving vernal equinox
+
+      real :: p_wsmax  = 0.0           ! Planet max field capacity of soil water (m) (0.5 Earth, 0. Mars)
+
+      real :: tl_substellar = 180.0    ! Position of substellar point in degrees (0-360)
+      logical :: ltidally_locked = .false.  ! tidally locked planet or not (used in radmod)
 
 !     ******************************************
 !     * GUI (Graphical User Interface for X11) *
