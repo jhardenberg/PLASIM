@@ -1,0 +1,16 @@
+Installing PlaSim-LSG on Lorenz at IMAU
+
+Last edited: 2025-10-25, Reyk Boerner
+
+Steps to compile PlaSim-LSG
+1. cd PLASIM (the current directory)
+2. module load tbb compiler-rt oclfpga
+3. module load compiler/2024.0.0
+4. module load netCDF/GCC/4.7.0
+5. module load cdo/1
+6. ./configure.sh
+7. ./most.x -c
+
+After modifying the source code:
+- Recompile
+- copy the most_plasim_t21_l10_p1.x file from PLASIM/plasim/run/ to the desired run folder.
