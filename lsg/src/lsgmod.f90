@@ -583,6 +583,24 @@
       real (kind=8) :: zstar = -1.0
       real (kind=8) :: arange = -1.0
       real (kind=8) :: lambda = -1.0
+!
+!     Hosing parameters ! OM
+!     
+      integer :: nhosing       = 0         ! switch for water hosing
+                                           ! 0 = no hosing, 1 = constant, 2 = ramp
+      integer :: nhoscomp      = 1         ! hosing compensation
+                                           ! 1 = surface (as defined by map)
+                                           ! 2 = volume (global)
+      real (kind=8) :: hosini  = 0.0       ! constant hosing or initial hosing (in Sv)
+      real (kind=8) :: hosrate = 0.0       ! ramping rate (in Sv/kyr) for nhosing=2
+      integer :: hosyini = -1              ! first year of hosing
+      integer :: hosyend = -1              ! last year of hosing
+      integer :: hosyendup = -1            ! year at which ramp-up ends (nhosing=2)
+      integer :: hosyenddown = -1          ! year at which ramp-down ends (nhosing=2)
+!
+!     Hosing variables
+!
+      real (kind=8) :: hosf(ien,jen)
 
       end module lsgvar
       subroutine actdate(kdate,ktime)
@@ -3314,6 +3332,112 @@
 !     ==================================================================
 !     ------------------------------------------------------------------
 !
+      subroutine inihos
+      use lsgvar
+      implicit none
+!
+!     ------------------------------------------------------------------
+!
+!     by O. Mehling (UU), last modified 06/2025
+!
+!     Purpose.
+!     --------
+!     *inihos* reads the hosing masks and initializes hosing fields.
+!
+!**   Input.
+!     ------
+!     File "hosmask"
+!
+!     Output.
+!     -------
+!     hosf     2D hosing mask to be multiplied with hosing strength
+!
+!     Interface.
+!     ----------
+!     *call* *inihos*
+!
+!     Input parameters via namelist param.
+!     ------------------------------------
+      integer :: i,j
+      integer :: hosin(ien,jen) = 0.
+      real (kind=8) :: hosarea, comparea
+!
+!     1. Read hosing mask from file "hosmask"
+!     Conventions: 1 = hosing area, 2 = compensation area
+!                  (if surface compensation), 0 = ignored (e.g. land)
+!
+      open (55,file="hosmask",access="sequential",form="formatted")
+      write(6,*) "INIHOS: Water hosing, reading mask from hosmask."
+!
+      nt=nt0
+      rewind 55
+      do j=1,jen
+        do i=1,ien
+          hosin(i,j)=0
+        end do
+      end do
+      rewind 55
+      if (ien==72) then
+        read (55,"(1x,72i1)") ((hosin(i,j),i=1,ien),j=3,jen-2)
+      else if (ien==64) then
+        read (55,"(1x,64i1)") ((hosin(i,j),i=1,ien),j=3,jen-2)
+      else
+        read (55,"(1x,128i1)") ((hosin(i,j),i=1,ien),j=3,jen-2)
+      end if
+!
+!     mask land points in hosing mask, if any
+!
+      do j=1,jen
+        do i=1,ien
+          if (wet(i,j,1)<0.5) hosin(i,j)=0
+        end do
+      end do
+!
+!     calculate hosing and compensation area
+!     (factor 0.5 is from layout of the E-grid)
+!
+      hosarea = 0.0
+      comparea = 0.0
+      do j=1,jen
+        do i=1,ien
+          if (hosin(i,j)==1) then
+            hosarea = hosarea+dphi*dlh(i,j)*0.5
+          else if (hosin(i,j)==2 .and. nhoscomp==1) then
+            comparea = comparea+dphi*dlh(i,j)*0.5
+          end if
+        end do
+      end do
+!
+      write(6,*) "INIHOS: Hosing area: ", hosarea
+      write(6,*) "INIHOS: Surface compensation area: ", comparea
+!
+!     Hosing, rescaled to 1 Sv
+!
+      hosf(:,:) = 0.
+      do j=1,jen
+        do i=1,ien
+          if (hosin(i,j)==1) then
+            hosf(i,j) = 1.0e6/hosarea ! m^3 / s / m^2 = m/s
+          else if (hosin(i,j)==2 .and. nhoscomp==1) then
+            hosf(i,j) = -1.0e6/comparea
+          end if
+        end do
+      end do
+!
+!     set undefined ramp parameters (TODO)
+!
+      if (nhosing==2) then
+        if (hosyini==-1) then
+          ! hosyini must be set
+          write(no6,*) 'ERROR: hosyini must be set for nhosing==2'
+          stop
+        endif
+      endif
+!
+      end subroutine inihos
+!     ==================================================================
+!     -----------------------------------------------------------------
+!
       subroutine inipar
       use lsgvar
       implicit none
@@ -3384,7 +3508,8 @@
       namelist /param / nsmix,nsve,nsflu,newst,ntcont,iyear,idate,      &
      &  nscoup,ntout,ntaver,ntback,grad1,phinor,dt,du,kiterm,bblthick,  &
      &  exper,ntsurf,ndiagfl,naqua,nprint,npri,nprj,nprk,               &
-     &  astar, zstar, arange, lambda
+     &  astar,zstar,arange,lambda,nhosing,nhoscomp,hosini,hosrate,      &
+     &  hosyini,hosyend,hosyendup,hosyenddown
 
 !     some initial values, overwritten by input
 
@@ -5792,6 +5917,10 @@
       real (kind=8) :: flumean, fluarea
       real (kind=8) :: ztbound
 !
+      real (kind=8) :: hoscurr, hostot, voltot, hoscorr
+      integer :: hosyear
+      real (kind=8) :: vsfhos(ien,jen) ! OM
+!
 !     diagnostics
 !
       real (kind=8) :: ztold(ien,jen,ken)
@@ -5886,6 +6015,96 @@
         flukwat(i,j)=fluwat(i,j)
        end do
       end do
+!
+!     apply hosing as virtual salt flux ! OM
+!     (after sea level calculations)
+!
+      if (nhosing>0) then
+!
+!       calculate hosing flux from current year and ramp settings
+!       for ramp: dates refer to January 1st of each year
+!
+        hosyear = mdatim(1)
+        if (nhosing==1) then
+          if (((hosyear.gt.hosyini) .or. (hosyini==-1)) .and.           &
+     &        ((hosyear.le.hosyend) .or. (hosyend==-1))) then
+            hoscurr = hosini
+          else
+            hoscurr = 0.
+          endif
+        else if (nhosing==2) then
+          if (hosyear.lt.hosyini) then
+            hoscurr = 0.
+          else if (hosyear.le.hosyendup) then
+            hoscurr = hosrate/1000.*(hosyear-hosyini+1)
+          else if ((hosyear.gt.hosyendup) .and. (hosyear.le.hosyenddown)) then
+            hoscurr = hosrate/1000.*((hosyendup-hosyini+1)              &
+     &                -(hosyear-hosyendup))
+          else if ((hosyear.gt.hosyenddown) .and. (hosyear.le.hosyend)) then
+            hoscurr = hosrate/1000.*((hosyendup-hosyini+1)              &
+     &                -(hosyenddown-hosyendup)+(hosyear-hosyenddown))
+          else
+            hoscurr = 0.
+          endif
+          hoscurr=hoscurr+hosini ! add initial value
+        else
+          if (nhosing.ne.0) write(6,*) "Warning: nhosing=", nhosing,   &
+     &                       "is not supported, no hosing applied."
+          hoscurr = 0.
+        endif
+        write(6,*) "Hosing: Year =", hosyear, "hosing (Sv) =", hoscurr
+!
+!       Calculate virtual salt flux and add to top-layer salinity
+!
+        vsfhos(:,:) = 0.0
+        do j=3,jen-2
+          do i=1,ien
+            if (wet(i,j,1)<0.5) cycle
+            vsfhos(i,j) = -hoscurr*hosf(i,j)*s(i,j,1)/(ddu(1)+zeta(i,j)) ! psu
+            s(i,j,1) = s(i,j,1)+vsfhos(i,j)*dt
+          end do
+        end do
+!
+!       Calculate and apply volume compensation
+!
+        if (nhoscomp==2) then
+!         Total ocean volume (taking into account SSH)
+          voltot = 0.0
+          do k=1,ken
+            do j=3,jen-2
+              do i=1,ien
+                if (wet(i,j,k)<0.5) cycle
+                if (k==1) then
+                  voltot=voltot+(zeta(i,j)+ddz(i,j,k))*dlh(i,j)*dphi*0.5
+                else
+                  voltot=voltot+ddz(i,j,k)*dlh(i,j)*dphi*0.5
+                endif
+              end do
+            end do
+          end do
+!         Total surface salt flux due to hosing (already multiplied by -1 for compensation)
+          hostot = 0.0
+          do j=3,jen-2
+            do i=1,ien
+              if (wet(i,j,1)<0.5) cycle
+              hostot=hostot-vsfhos(i,j)*(ddu(1)+zeta(i,j))*dlh(i,j)*dphi*0.5
+            end do
+          end do
+!         Add hosing compensation
+          hoscorr = hostot/voltot ! flux per unit volume
+          write(6,*) "Hosing: Total ocean volume:", voltot
+          write(6,*) "        Total salt flux:", hostot
+          write(6,*) "        Compensation:", hoscorr
+          do k=1,ken
+            do j=3,jen-2
+              do i=1,ien
+                if (wet(i,j,k)<0.5) cycle
+                s(i,j,k) = s(i,j,k) + hoscorr*dt
+              end do
+            end do
+          end do
+        endif
+      endif ! end hosing block
 !
 !     diagnostics
 !
@@ -8388,6 +8607,10 @@
 !*    1. Input of start data.
 !     
       call inp    ! controls initial input
+!
+!     hosing initialization
+!
+      if (nhosing>0) call inihos
 !
 !     Decides, from which file the start data must be read.
 !

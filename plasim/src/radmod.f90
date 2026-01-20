@@ -50,6 +50,7 @@
                                   ! on the whole planet (0/1)=(off/on)
       integer :: iyrbp   = -50    ! Year before present (1950 AD)
                                   ! default = 2000 AD
+      integer :: nradmask = 0     ! switch for TOA solar radiation mask (0=off, 1=on)
 
       real :: rcl1(3)=(/0.15,0.30,0.60/) ! cloud albedos spectral range 1
       real :: rcl2(3)=(/0.15,0.30,0.60/) ! cloud albedos spectral range 2
@@ -65,6 +66,7 @@
       real :: dqco2(NHOR,NLEV)       = 0.0 ! co2 concentration (ppmv)
       real :: dtdtlwr(NHOR,NLEV)           ! lwr temperature tendencies
       real :: dtdtswr(NHOR,NLEV)           ! swr temperature tendencies
+      real :: radmask(NHOR)          = 1.0 ! downward TOA swr mask ! RB, 10/2025
 
       real, allocatable :: dqo3cl(:,:,:)   ! climatological O3 (used if NO3=2)
 
@@ -142,7 +144,7 @@
      &               ,iyrbp,nswr,nlwr                                   &
      &               ,a0o3,a1o3,aco3,bo3,co3,toffo3,o3scale             &
      &               ,nsol,nswrcl,nrscat,rcl1,rcl2,acl2,clgray,tpofmt   &
-     &               ,acllwr,tswr1,tswr2,tswr3,th2oc,dawn
+     &               ,acllwr,tswr1,tswr2,tswr3,th2oc,dawn,nradmask
 !
 !     namelist parameter:
 !
@@ -170,6 +172,7 @@
 !     tswr3   ! tuning of cloud s. scattering alb. range2
 !     th2oc   ! absorption coefficient for h2o continuum
 !     dawn    : zenith angle threshhold for night
+!     nradmask: swith for TOA solar radiation mask (0=off, 1=on) ! RB, 10/2025
 !
 !     following parameters are read from the planet module
 !
@@ -263,6 +266,7 @@
          write(nud,'(" * Namelist RADMOD_NL from <radmod_namelist> *")')
          write(nud,'(" *********************************************")')
          write(nud,radmod_nl)
+         write(nud,*) "This version supports a TOA radiation mask."
       endif ! (mypid==NROOT)
 !
 !     broadcast namelist parameter
@@ -298,6 +302,7 @@
       call mpbci(nsol)
       call mpbci(nrscat)
       call mpbci(nswrcl)
+      call mpbci(nradmask)
 
 !
 !     determine orbital parameters
@@ -892,6 +897,10 @@
 !     by S. Bakan (Max-Planck Institut fuer Meteorologie)
 !     (unfortunately neither published nor finished)
 !
+!     This version also supports a lat-lon TOA solar radiation mask (radmask)
+!     that can be read from a file and locally scales the solar constant.
+!     Added by Reyk Boerner, 10/2025.
+!
 !     no PUMA *subs* are used
 !
 !     the following PUMA variables are used/modified:
@@ -974,6 +983,11 @@
       real zexp(NHOR),zu(NHOR),zb1(NHOR)
 !
       logical losun(NHOR)         ! flag for gridpoints with insolation
+
+!     Radiation mask
+      integer :: mlon, mlat
+      real :: radmask2D(NLON, NLAT)
+
 !
 !     cosine of zenith angle
 !
@@ -1002,6 +1016,27 @@
 !
       zftop1(:) = zsolar1 * gsol0 * gdist2 * zmu1(:)
       zftop2(:) = zsolar2 * gsol0 * gdist2 * zmu1(:)
+
+!     read and apply TOA solar radiation mask
+
+      if (nradmask == 1) then
+            open(42,file="radmask.txt", &
+                  status="old",access="sequential",form="formatted",action="read")
+
+            do mlon = 1, NLON
+                  read(42,*) radmask2D(mlon, :)
+            end do
+            close(42)
+
+            radmask = reshape(radmask2D, [NHOR])
+
+            write(nud,*) "TOA radiation mask"
+            write(nud,*) "Minimum", minval(radmask)
+            write(nud,*) "Maximum", maxval(radmask)
+
+            zftop1(:) = zftop1(:) * radmask(:)
+            zftop2(:) = zftop2(:) * radmask(:)
+      end if
 
 !     from this point on, all computations are made only for
 !     points with solar insolation > zero
