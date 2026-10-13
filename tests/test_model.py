@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gzip
 import math
 import os
 from pathlib import Path
@@ -15,6 +16,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "plasim" / "src"
 BOUNDARY_DATA = ROOT / "plasim" / "dat" / "T21"
+LEGACY_RESTART = ROOT / "tests" / "fixtures" / "earth_t21_l10_day1_360.restart.gz"
 NAMELISTS = (
     "fluxmod", "icemod", "landmod", "miscmod", "oceanmod", "planet",
     "radmod", "rainmod", "seamod", "surfmod", "vegmod",
@@ -98,6 +100,8 @@ class PlaSimTests(unittest.TestCase):
 
         cls.continuous = cls.prepare_run("continuous", days=2)
         cls.run_model(cls.continuous)
+        cls.legacy_status = cls.work / "legacy_status"
+        cls.legacy_status.write_bytes(gzip.decompress(LEGACY_RESTART.read_bytes()))
 
     @classmethod
     def prepare_run(cls, name: str, *, days: int) -> Path:
@@ -155,6 +159,63 @@ class PlaSimTests(unittest.TestCase):
             (split / "plasim_status").read_bytes(),
             (self.continuous / "plasim_status").read_bytes(),
         )
+
+    def test_classic_earth_state_matches_master(self) -> None:
+        """Compare every value in key Earth fields with the master fixture."""
+        run = self.prepare_run("classic-earth", days=1)
+        self.run_model(run)
+        actual = records(run / "plasim_status")
+        expected = records(self.legacy_status)
+        self.assertEqual(struct.unpack("=i", actual["nstep"])[0], 11552)
+        for field in ("dt", "dq", "dalb", "dls", "sz", "sd", "st", "sq", "sp"):
+            with self.subTest(field=field):
+                reference = doubles(expected[field])
+                values = doubles(actual[field])
+                self.assertEqual(len(values), len(reference))
+                self.assertTrue(all(map(math.isfinite, values)))
+                differences = [abs(a - b) for a, b in zip(values, reference)]
+                limits = [1e-6 + 1e-6 * abs(b) for b in reference]
+                worst = max(range(len(values)), key=lambda i: differences[i] / limits[i])
+                self.assertLessEqual(
+                    differences[worst], limits[worst],
+                    f"{field}[{worst}] differs from master: "
+                    f"{values[worst]} vs {reference[worst]}",
+                )
+
+    def test_master_restart_can_continue(self) -> None:
+        run = self.prepare_run("master-restart", days=1)
+        (run / "plasim_restart").write_bytes(self.legacy_status.read_bytes())
+        self.run_model(run)
+        state = records(run / "plasim_status")
+        self.assertEqual(struct.unpack("=i", state["nstep"])[0], 11584)
+        self.assertTrue(all(map(math.isfinite, doubles(state["dt"]))))
+        self.assertEqual(state["dls"], records(self.continuous / "plasim_status")["dls"])
+
+    def test_classic_namelist_options(self) -> None:
+        legacy_options = (
+            ("surface-pressure", "plasim_namelist", "psurf=101100.0"),
+            ("snow-albedo", "landmod_namelist", "albsmin=0.4"),
+            ("orbital-periods", "planet_namelist",
+             "sidereal_year=31558149.0, tropical_year=31556956.0"),
+        )
+        for name, filename, option in legacy_options:
+            with self.subTest(option=name):
+                run = self.prepare_run(f"namelist-{name}", days=0)
+                (run / "plasim_namelist").write_text(
+                    "&plasim_nl\n n_run_steps=1, kick=0, ngui=0, seed=1\n/\n",
+                    encoding="ascii",
+                )
+                namelist = run / filename
+                contents = namelist.read_text(encoding="ascii")
+                if filename == "plasim_namelist":
+                    contents = contents.replace("&plasim_nl\n",
+                                                f"&plasim_nl\n {option},\n")
+                else:
+                    contents = contents.replace("/\n", f" {option}\n/\n")
+                namelist.write_text(
+                    contents, encoding="ascii"
+                )
+                self.run_model(run)
 
 
 class CalendarTests(unittest.TestCase):
