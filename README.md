@@ -5,7 +5,9 @@ PLASIM
 ======
 
 *General Circulation Models Planet Simulator (PlaSim)*
-(Streamlined fork of https://github.com/HartmutBorth/PLASIM)
+
+Originally a streamlined fork of https://github.com/HartmutBorth/PLASIM
+Now an independent repository (as of October 2026).
 
 This repository has all necessary components to run the model.
 
