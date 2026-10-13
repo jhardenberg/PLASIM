@@ -6,6 +6,11 @@ Run from the repository root:
 python3 -m unittest discover -s tests -v
 ```
 
+GitHub Actions runs this command on pushes to `master` or `main`. It can also
+be started manually from the Actions tab once the workflow is on the default
+branch. On pull requests targeting either branch, add the exact `run tests`
+label to start a run; later commits rerun the tests while the label remains.
+
 The tests need Python 3, `gfortran`, `cc`, and `make`. They build a headless,
 serial T21/L10 PlaSim in a temporary directory using the repository's existing
 `make_plasim` build rules. No generated files are written into the checkout.
