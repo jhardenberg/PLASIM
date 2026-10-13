@@ -194,7 +194,7 @@ class PlaSimTests(unittest.TestCase):
     def test_classic_namelist_options(self) -> None:
         legacy_options = (
             ("surface-pressure", "plasim_namelist", "psurf=101100.0"),
-            ("snow-albedo", "landmod_namelist", "albsmin=0.4"),
+            ("snow-albedo", "landmod_namelist", "albsmin=0.5"),
             ("orbital-periods", "planet_namelist",
              "sidereal_year=31558149.0, tropical_year=31556956.0"),
         )

@@ -146,7 +146,7 @@
 !     initialize land surface
 !
       namelist/landmod_nl/nlandt,nlandw,albland,dz0land,drhsland        &
-     &                ,dsnowalbmn,dsnowalbmx,dglacalbmn,dsnowalb        &
+     &                ,albsmin,dsnowalbmn,dsnowalbmx,dglacalbmn,dsnowalb &
      &                ,dsmax,wsmax,drhsfull,dzglac,dztop,dsoilz         &
      &                ,rlue,co2conv,tau_veg,tau_soil                    &
      &                ,rnbiocats,soilcap                               &
