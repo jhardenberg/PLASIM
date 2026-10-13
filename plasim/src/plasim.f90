@@ -1186,7 +1186,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       subroutine initpm
       use pumamod
 
-      real (kind=8) radea,zakk
+      real (kind=8) radea, zakk, norm_day
 
 !     *************************************************************
 !     * carries out all initialisation of model prior to running. *
@@ -1239,15 +1239,20 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       ! Normalization_day is set to solar_day or sidereal_day based on the planet.
       ! This is done for compatibility with 'classic plasim' where 
       ! the solar day was used as default for earth. 
+      if (normalization_day == "solar") then
+         norm_day = sidereal_day
+      else
+         norm_day = sidereal_day 
+      endif
 
       where (restim > 0.0)
-         damp = normalization_day / (TWOPI * restim) ! this is a dynamic param, should be based on sidereal day not solar
+         damp = norm_day / (TWOPI * restim) ! this is a dynamic param, should be based on sidereal day not solar
       elsewhere
          damp = 0.0
       endwhere
          
       where (tfrc > 0.0)
-          tfrc = normalization_day / (TWOPI * tfrc)
+          tfrc = norm_day / (TWOPI * tfrc)
       elsewhere
           tfrc = 0.0
       endwhere
@@ -1257,22 +1262,22 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       do jlev=1,NLEV
        jdel = ndel(jlev)
        if (tdissd(jlev) > 0.0) then
-        tdissd(jlev) = normalization_day/(TWOPI*tdissd(jlev))
+        tdissd(jlev) = norm_day/(TWOPI*tdissd(jlev))
        else
         tdissd(jlev)=0.
        endif
        if (tdissz(jlev) > 0.0) then
-        tdissz(jlev) = normalization_day/(TWOPI*tdissz(jlev))
+        tdissz(jlev) = norm_day/(TWOPI*tdissz(jlev))
        else
         tdissz(jlev)=0.
        endif
        if (tdisst(jlev) > 0.0) then
-        tdisst(jlev) = normalization_day/(TWOPI*tdisst(jlev))
+        tdisst(jlev) = norm_day/(TWOPI*tdisst(jlev))
        else
         tdisst(jlev) = 0.
        endif
        if (tdissq(jlev) > 0.0) then
-        tdissq(jlev) = normalization_day/(TWOPI*tdissq(jlev))
+        tdissq(jlev) = norm_day/(TWOPI*tdissq(jlev))
        else
         tdissq(jlev)=0.
        endif
