@@ -11,6 +11,7 @@ logical :: lex
 
 namelist /planet_nl/ nfixorb, eccen, mvelp, obliq  &
                 , rotspd, sidereal_day, solar_day  &
+                , normalization_day &
 !                , sidereal_year, tropical_year     &
                 , akap, alr, gascon, ra1, ra2, ra4 &
                 , pnu, ga, plarad, psurf &
@@ -31,6 +32,7 @@ obliq         =    25.19       ! Obliquity [deg] (AMIP-II)
 rotspd        =     1.0        ! Rotation speed (factor)
 sidereal_day  = 88642.663      ! 24h 37m 22s
 solar_day     = 88775.24409    ! 24h 39m 35s
+normalization_day = sidereal_day  ! For Earth we used the solar day by default for consistency with previous versions (JJ)
 !sidereal_year = 59355072.0     ! 687d (Earth days)
 !tropical_year = 59355048.3     ! 686d (Earth days)
 ltidally_locked = .false.
