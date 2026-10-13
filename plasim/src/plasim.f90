@@ -1236,17 +1236,15 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       call dayseccheck(tdisst,"tdisst")
       call dayseccheck(tdissq,"tdissq")
 
-      ! Normalization_day is set to solar_day or sidereal_day based on the planet.
-      ! This is done for compatibility with 'classic plasim' where 
-      ! the solar day was used as default for earth. 
+      ! Select the day used for normalization. Classic Earth uses the solar day.
       if (normalization_day == "solar") then
-         norm_day = sidereal_day
+         norm_day = solar_day
       else
          norm_day = sidereal_day 
       endif
 
       where (restim > 0.0)
-         damp = norm_day / (TWOPI * restim) ! this is a dynamic param, should be based on sidereal day not solar
+         damp = norm_day / (TWOPI * restim)
       elsewhere
          damp = 0.0
       endwhere
