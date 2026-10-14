@@ -1,0 +1,50 @@
+# Changelog
+
+Notable changes in the `master` branch are summarized here in a format inspired by [Keep a Changelog](https://keepachangelog.com/). This history starts with the [2014 source import](https://github.com/jhardenberg/PLASIM/commit/71bfcbf), covers the release tagged [`1.0`](https://github.com/jhardenberg/PLASIM/releases/tag/1.0), and describes the current `master` as the planned v1.1 release. The bullets highlight changes relevant to users; the comparison links provide the full commit history.
+
+## [v1.1](https://github.com/jhardenberg/PLASIM/compare/1.0...3cddd4e) — planned
+
+Changes on `master` since the `1.0` tag, through commit `3cddd4e` (2026-10-14).
+
+### Main changes
+
+- Added short, reproducible T21/L10 PlaSim tests and a GitHub Actions workflow for manual runs, labeled pull requests, and pushes to `master` ([#23](https://github.com/jhardenberg/PLASIM/pull/23)).
+- Added classic Earth numerical, legacy restart, and namelist compatibility checks ([#24](https://github.com/jhardenberg/PLASIM/pull/24)).
+- Expanded LSG ocean setup and vertical diffusion controls, and added scripts for boundary data preparation and conversion ([2021 changes](https://github.com/jhardenberg/PLASIM/compare/1.0...6514261)).
+- Added NetCDF/Service-format conversion tools and corrected latitude and grid handling ([#17](https://github.com/jhardenberg/PLASIM/pull/17), [#18](https://github.com/jhardenberg/PLASIM/pull/18), [#19](https://github.com/jhardenberg/PLASIM/pull/19)).
+
+### Detailed changes
+
+- **Model and coupling:** Added configurable LSG vertical diffusion parameters (`astar`, `zstar`, `arange`, `lambda`), improved initialization when `inorm=1`, added fixed bathymetry and topography helpers, and initialized sea ice from climatology ([`25cb792`](https://github.com/jhardenberg/PLASIM/commit/25cb792), [`fa6d9a5`](https://github.com/jhardenberg/PLASIM/commit/fa6d9a5), [`117c772`](https://github.com/jhardenberg/PLASIM/commit/117c772), [`ffed5aa`](https://github.com/jhardenberg/PLASIM/commit/ffed5aa), [`df6ff48`](https://github.com/jhardenberg/PLASIM/commit/df6ff48)).
+- **Model and coupling:** Added an initial-surface-condition script, Service-format boundary data scripts, and configuration-file support for LSG; preserved an additional `mat77` field ([`30f73a7`](https://github.com/jhardenberg/PLASIM/commit/30f73a7), [`7451769`](https://github.com/jhardenberg/PLASIM/commit/7451769), [`ef2b170`](https://github.com/jhardenberg/PLASIM/commit/ef2b170), [`66fdcce`](https://github.com/jhardenberg/PLASIM/commit/66fdcce)).
+- **Postprocessing:** Added sea-level-pressure computation and later added wind and spectral-to-grid conversion to `srv2nc` ([`6514261`](https://github.com/jhardenberg/PLASIM/commit/6514261), [`bf8f230`](https://github.com/jhardenberg/PLASIM/commit/bf8f230)).
+- **Data conversion:** Added `nc2sra` and `sra2nc`, fixed the Gaussian output grid and latitude orientation, and improved their documentation and command behavior ([#17](https://github.com/jhardenberg/PLASIM/pull/17), [#18](https://github.com/jhardenberg/PLASIM/pull/18), [#19](https://github.com/jhardenberg/PLASIM/pull/19)).
+- **Tests and CI:** Added calendar, deterministic two-day, and restart-consistency tests; then added a saved master Earth state fixture and checks for legacy restart and namelist inputs. CI runs on pushes, by manual dispatch, or on pull requests carrying the `run tests` label ([#23](https://github.com/jhardenberg/PLASIM/pull/23), [#24](https://github.com/jhardenberg/PLASIM/pull/24)).
+- **Maintenance:** Updated README guidance for this standalone repository and made configuration more robust to locale-specific numeric formats ([`8e7e672`](https://github.com/jhardenberg/PLASIM/commit/8e7e672), [`27ab3a9`](https://github.com/jhardenberg/PLASIM/commit/27ab3a9)).
+
+## [v1.0](https://github.com/jhardenberg/PLASIM/releases/tag/1.0) — 2020-09-18
+
+Changes from the [original source import](https://github.com/jhardenberg/PLASIM/commit/71bfcbf) to the `1.0` tag. The original import included the version 16 model suite; the tag contains the streamlined PlaSim-focused repository and version 17 features.
+
+### Main changes
+
+- Introduced version 17 model-starter features: configurable planet setup, consistent namelist names, generated Bash run scripts, a redesigned GUI, and the `burn7` postprocessor ([version 17 notes](https://github.com/jhardenberg/PLASIM/blob/1.0/NEW_IN_VERSION_17)).
+- Developed PlaSim physics and diagnostics, including a separate SIMBA vegetation module, radiation and surface-parameter fixes, and additional energy and entropy diagnostics.
+- Streamlined the repository around PlaSim in 2017, while retaining its coupled LSG ocean and postprocessing workflows ([`2d1008e`](https://github.com/jhardenberg/PLASIM/commit/2d1008e)).
+- Improved coupled-ocean physics, MPI portability, and data processing through the `1.0` release.
+
+### Detailed changes
+
+- **Planet and surface setup:** Added the Exo planet option to MoSt/PlaSim and moved vegetation initialization, namelist, and restart handling into SIMBA ([`1e29731`](https://github.com/jhardenberg/PLASIM/commit/1e29731), [`1e86243`](https://github.com/jhardenberg/PLASIM/commit/1e86243)).
+- **Physics:** Corrected ozone absorption and CO₂/water-vapour band overlap, tuned radiation and land parameters, and fixed land, ice heat-flux, and artificial snow-melt behavior ([`4e4d4bf`](https://github.com/jhardenberg/PLASIM/commit/4e4d4bf), [`03cc392`](https://github.com/jhardenberg/PLASIM/commit/03cc392), [`893455c`](https://github.com/jhardenberg/PLASIM/commit/893455c), [`471f838`](https://github.com/jhardenberg/PLASIM/commit/471f838), [`dfb3411`](https://github.com/jhardenberg/PLASIM/commit/dfb3411)).
+- **Physics and diagnostics:** Added automatic PlaSim timestep selection and three-dimensional energy and entropy diagnostics; fixed an entropy diagnostic initialization case ([`8992d36`](https://github.com/jhardenberg/PLASIM/commit/8992d36), [`23cf675`](https://github.com/jhardenberg/PLASIM/commit/23cf675), [`ea4d2d8`](https://github.com/jhardenberg/PLASIM/commit/ea4d2d8)).
+- **Ocean coupling:** Adjusted LSG vertical diffusivity, fixed MPI gather/scatter buffer overlap, retained LSG restart files, and updated vertical diffusion and ocean/ice output defaults ([`7923ad2`](https://github.com/jhardenberg/PLASIM/commit/7923ad2), [`a475905`](https://github.com/jhardenberg/PLASIM/commit/a475905), [`0ac258e`](https://github.com/jhardenberg/PLASIM/commit/0ac258e), [`74a1602`](https://github.com/jhardenberg/PLASIM/commit/74a1602), [`4838702`](https://github.com/jhardenberg/PLASIM/commit/4838702)).
+- **Restart and calendar:** Fixed PlaSim restart data used by the postprocessor and corrected the days-per-year handling in the NetCDF afterburner ([`9b7eaf5`](https://github.com/jhardenberg/PLASIM/commit/9b7eaf5), [`7efce03`](https://github.com/jhardenberg/PLASIM/commit/7efce03), [`b807308`](https://github.com/jhardenberg/PLASIM/commit/b807308)).
+- **Postprocessing:** Added monthly-mean and CMORization scripts, the `burn.sh` workflow, and `srv2nc` for direct compressed NetCDF conversion of PlaSim and LSG Service output ([`9f950d8`](https://github.com/jhardenberg/PLASIM/commit/9f950d8), [`6534b44`](https://github.com/jhardenberg/PLASIM/commit/6534b44), [`f3fef0a`](https://github.com/jhardenberg/PLASIM/commit/f3fef0a)).
+- **Build and interface:** Added compiler and MPI compatibility fixes, a console-only MoSt mode, resolution-switching fixes, and setup documentation ([`b149568`](https://github.com/jhardenberg/PLASIM/commit/b149568), [`a475905`](https://github.com/jhardenberg/PLASIM/commit/a475905), [`43eeeed`](https://github.com/jhardenberg/PLASIM/commit/43eeeed), [`35e3634`](https://github.com/jhardenberg/PLASIM/commit/35e3634)).
+
+## Original source import — 2014-04-02
+
+The repository began with an import of the version 16 MoSt/PlaSim source tree from SVN revision 46 ([`71bfcbf`](https://github.com/jhardenberg/PLASIM/commit/71bfcbf)). It already included PlaSim, PUMA, SAM, the LSG ocean, MoSt, and their documentation. See the [version 16 notes](https://github.com/jhardenberg/PLASIM/blob/71bfcbf/NEW_IN_VERSION_16) for features present at the starting point.
+
+[Full history from the import to v1.0](https://github.com/jhardenberg/PLASIM/compare/71bfcbf...1.0) · [Full history from v1.0 to the v1.1 draft](https://github.com/jhardenberg/PLASIM/compare/1.0...3cddd4e)
