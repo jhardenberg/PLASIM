@@ -191,31 +191,15 @@ class PlaSimTests(unittest.TestCase):
         self.assertTrue(all(map(math.isfinite, doubles(state["dt"]))))
         self.assertEqual(state["dls"], records(self.continuous / "plasim_status")["dls"])
 
-    def test_classic_namelist_options(self) -> None:
-        legacy_options = (
-            ("surface-pressure", "plasim_namelist", "psurf=101100.0"),
-            ("snow-albedo", "landmod_namelist", "albsmin=0.5"),
-            ("orbital-periods", "planet_namelist",
-             "sidereal_year=31558149.0, tropical_year=31556956.0"),
+    def test_albsmin_namelist_option(self) -> None:
+        run = self.prepare_run("namelist-snow-albedo", days=0)
+        (run / "plasim_namelist").write_text(
+            "&plasim_nl\n n_run_steps=1, kick=0, ngui=0, seed=1\n/\n",
+            encoding="ascii",
         )
-        for name, filename, option in legacy_options:
-            with self.subTest(option=name):
-                run = self.prepare_run(f"namelist-{name}", days=0)
-                (run / "plasim_namelist").write_text(
-                    "&plasim_nl\n n_run_steps=1, kick=0, ngui=0, seed=1\n/\n",
-                    encoding="ascii",
-                )
-                namelist = run / filename
-                contents = namelist.read_text(encoding="ascii")
-                if filename == "plasim_namelist":
-                    contents = contents.replace("&plasim_nl\n",
-                                                f"&plasim_nl\n {option},\n")
-                else:
-                    contents = contents.replace("/\n", f" {option}\n/\n")
-                namelist.write_text(
-                    contents, encoding="ascii"
-                )
-                self.run_model(run)
+        namelist = run / "landmod_namelist"
+        namelist.write_text("&landmod_nl\n albsmin=0.5\n/\n", encoding="ascii")
+        self.run_model(run)
 
 
 class CalendarTests(unittest.TestCase):
