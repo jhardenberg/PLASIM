@@ -142,6 +142,9 @@
       subroutine landini
       use landmod
       use radmod
+
+      integer :: nspectral_albedo_records
+      logical, external :: has_restart_record
 !
 !     initialize land surface
 !
@@ -412,6 +415,23 @@
 
       else ! restart > 0
 
+!      Spectral radiation needs the original band-specific restart state.
+       if (nstartemp > 0) then
+          nspectral_albedo_records = 0
+          if (mypid == NROOT) then
+             if (has_restart_record('dsalb1') .and. &
+     &           has_restart_record('dsalb2') .and. &
+     &           has_restart_record('dalbcl1') .and. &
+     &           has_restart_record('dalbcl2')) nspectral_albedo_records = 1
+          endif
+          call mpbci(nspectral_albedo_records)
+          if (nspectral_albedo_records == 0) then
+             if (mypid == NROOT) write(nud,*) &
+     &           'Spectral radiation requires spectral albedo restart records'
+             stop
+          endif
+       endif
+
        call mpgetgp('dtsl'    ,dts     ,NHOR,     1)
        call mpgetgp('dtsm'    ,dtsm    ,NHOR,     1)
        call mpgetgp('dqs'     ,dqs     ,NHOR,     1)
@@ -429,8 +449,25 @@
        call mpgetgp('dz0clim' ,dz0clim ,NHOR,     1)
        call mpgetgp('dz0climo',dz0climo,NHOR,     1)
        call mpgetgp('dalbcl'  ,dalbcl  ,NHOR,    14)
-       call mpgetgp('dalbcl1' ,dalbcl1 ,NHOR,    14)
-       call mpgetgp('dalbcl2' ,dalbcl2 ,NHOR,    14)
+       nspectral_albedo_records = 0
+       if (mypid == NROOT) then
+          if (has_restart_record('dalbcl1')) nspectral_albedo_records = &
+               nspectral_albedo_records + 1
+          if (has_restart_record('dalbcl2')) nspectral_albedo_records = &
+               nspectral_albedo_records + 1
+       endif
+       call mpbci(nspectral_albedo_records)
+       if (nspectral_albedo_records == 2) then
+          call mpgetgp('dalbcl1' ,dalbcl1 ,NHOR,14)
+          call mpgetgp('dalbcl2' ,dalbcl2 ,NHOR,14)
+       else if (nspectral_albedo_records == 0) then
+          dalbcl1(:,:) = dalbcl(:,:)
+          dalbcl2(:,:) = dalbcl(:,:)
+       else
+          if (mypid == NROOT) write(nud,*) &
+               'Incomplete spectral land albedo records in restart file'
+          stop
+       endif
 
        n_sea_points = ncountsea(dls)
 

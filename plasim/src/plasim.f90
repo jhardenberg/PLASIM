@@ -829,6 +829,9 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       subroutine read_atmos_restart
       use pumamod
 
+      integer :: nspectral_albedo_records
+      logical, external :: has_restart_record
+
 !     read scalars and full spectral arrays
 
       if (mypid == NROOT) then
@@ -863,8 +866,25 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       call mpgetgp('dls'    ,dls    ,NHOR,   1)
       call mpgetgp('drhs'   ,drhs   ,NHOR,   1)
       call mpgetgp('dalb'   ,dalb   ,NHOR,   1)
-      call mpgetgp('dsalb1' ,dsalb(1,:),NHOR,1)
-      call mpgetgp('dsalb2' ,dsalb(2,:),NHOR,1)
+      nspectral_albedo_records = 0
+      if (mypid == NROOT) then
+         if (has_restart_record('dsalb1')) nspectral_albedo_records = &
+              nspectral_albedo_records + 1
+         if (has_restart_record('dsalb2')) nspectral_albedo_records = &
+              nspectral_albedo_records + 1
+      endif
+      call mpbci(nspectral_albedo_records)
+      if (nspectral_albedo_records == 2) then
+         call mpgetgp('dsalb1' ,dsalb(1,:),NHOR,1)
+         call mpgetgp('dsalb2' ,dsalb(2,:),NHOR,1)
+      else if (nspectral_albedo_records == 0) then
+         dsalb(1,:) = dalb(:)
+         dsalb(2,:) = dalb(:)
+      else
+         if (mypid == NROOT) write(nud,*) &
+              'Incomplete spectral albedo records in restart file'
+         stop
+      endif
       call mpgetgp('dz0'    ,dz0    ,NHOR,   1)
       call mpgetgp('dicec'  ,dicec  ,NHOR,   1)
       call mpgetgp('diced'  ,diced  ,NHOR,   1)

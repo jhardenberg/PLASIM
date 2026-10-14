@@ -16,10 +16,11 @@ serial T21/L10 PlaSim in a temporary directory using the repository's existing
 `make_plasim` build rules. No generated files are written into the checkout.
 
 The suite checks the Gregorian and 360 day calendar, a deterministic two day
-T21 run with broad numerical baselines, and byte equality between a continuous
-two day run and a run restarted after one day. It also checks every value in
-selected Earth state fields against a one day `master` restart fixture, resumes
-that legacy restart, and runs one step with a non-default `albsmin` value.
+T21 run with broad numerical baselines, and byte equality between continuous
+two day runs and runs restarted after one day in broadband and spectral modes.
+It also checks every value in selected Earth state fields against a one day
+`master` restart fixture, resumes that legacy restart, and runs one step with
+a non-default `albsmin` value.
 The fixed random seed is needed for the restart comparisons. These tests
 exercise the serial model; MPI and T42 tests remain separate follow-up work.
 
@@ -37,7 +38,9 @@ The elementwise comparison uses an absolute and relative tolerance of `1e-6`
 to catch changes that broad global means miss. The fixture uses the source
 model's default 360 day calendar; the MoSt-generated 365 day setup is not yet
 covered by this strict comparison. The legacy restart and `albsmin` checks are
-compatibility gates. The planet branch reads `psurf` from `planet_namelist`
+compatibility gates. Legacy restarts without spectral albedo records can be
+continued in broadband radiation mode; spectral radiation requires those
+records. The planet branch reads `psurf` from `planet_namelist`
 and no longer accepts `sidereal_year` or `tropical_year`; those older input
 locations and options are not covered by these tests.
 

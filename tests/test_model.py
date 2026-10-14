@@ -160,6 +160,25 @@ class PlaSimTests(unittest.TestCase):
             (self.continuous / "plasim_status").read_bytes(),
         )
 
+    def test_spectral_restart_matches_continuous_run(self) -> None:
+        continuous = self.prepare_run("spectral-continuous", days=2)
+        (continuous / "radmod_namelist").write_text(
+            "&radmod_nl\n nstartemp=1\n/\n", encoding="ascii"
+        )
+        self.run_model(continuous)
+
+        split = self.prepare_run("spectral-split", days=1)
+        (split / "radmod_namelist").write_text(
+            "&radmod_nl\n nstartemp=1\n/\n", encoding="ascii"
+        )
+        self.run_model(split)
+        (split / "plasim_status").replace(split / "plasim_restart")
+        self.run_model(split)
+        self.assertEqual(
+            (split / "plasim_status").read_bytes(),
+            (continuous / "plasim_status").read_bytes(),
+        )
+
     def test_classic_earth_state_matches_master(self) -> None:
         """Compare every value in key Earth fields with the master fixture."""
         run = self.prepare_run("classic-earth", days=1)
@@ -189,7 +208,17 @@ class PlaSimTests(unittest.TestCase):
         state = records(run / "plasim_status")
         self.assertEqual(struct.unpack("=i", state["nstep"])[0], 11584)
         self.assertTrue(all(map(math.isfinite, doubles(state["dt"]))))
-        self.assertEqual(state["dls"], records(self.continuous / "plasim_status")["dls"])
+        reference = records(self.continuous / "plasim_status")
+        self.assertEqual(state["dls"], reference["dls"])
+        for field in ("dt", "dq", "dalb"):
+            with self.subTest(field=field):
+                values = doubles(state[field])
+                expected = doubles(reference[field])
+                self.assertEqual(len(values), len(expected))
+                self.assertTrue(all(
+                    abs(a - b) <= 1e-6 + 1e-6 * abs(b)
+                    for a, b in zip(values, expected)
+                ))
 
     def test_albsmin_namelist_option(self) -> None:
         run = self.prepare_run("namelist-snow-albedo", days=0)
