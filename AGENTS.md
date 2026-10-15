@@ -86,8 +86,8 @@ Report any checks that could not be completed and why.
   integration length, and observed behavior across available platforms.
   Document the compiler/version, flags, precision, rank counts, resolution,
   timestep, run length, measured errors, and physical meaning of the limits.
-  A justified integration limit
-  must retain sensitivity to the original defect; do not loosen a failing
+  A justified integration limit must retain sensitivity to the original
+  defect; do not loosen a failing
   check without this evidence. Preserve strict startup and existing default
   limits unless a separate scientific justification supports changing them.
 - For output-only diagnostic switches, verify that enabling them preserves
