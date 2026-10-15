@@ -82,7 +82,7 @@ Report any checks that could not be completed and why.
 ## Branches and review
 
 Start new work from the current remote default branch, using a focused
-`codex/` branch unless directed otherwise. Keep unrelated work separate and
+`ai/` branch unless directed otherwise. Keep unrelated work separate and
 preserve existing local changes. PR descriptions should explain the change,
 scientific or compatibility implications, and validation. Leave merging to
 the maintainer unless explicitly asked to merge.
