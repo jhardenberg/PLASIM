@@ -27,6 +27,7 @@ The `devel_planets` branch was merged on 2026-10-15 ([#13](https://github.com/jh
 
 ### Subsequent changes
 
+- **Testing guidance:** Expanded `AGENTS.md` with deterministic regression design, strict startup checks, MPI roundoff and nonlinear error growth, justified tolerance selection, diagnostic-state invariance, and statistical validation of long simulations.
 - **MPI tests:** Added two-rank T21/L10 runs with the real MPI module for both mixed-layer and LSG ocean configurations. Tests check rank diagnostics and compare atmospheric state, ocean state, and coupled fluxes against matching serial runs. CI now installs Open MPI and runs these tests through the existing discovery command ([#32](https://github.com/jhardenberg/PLASIM/pull/32)).
 - **Coupled LSG tests:** Added a real PlaSim–LSG T21/L10 build and two-day regression run with daily coupling, checking ocean evolution and exchanged stress and heat fluxes. Added byte-equality checks between continuous and restarted runs for both components' restart files and the final day's ocean output. The existing mixed-layer tests remain in place, and unittest discovery includes both configurations in CI ([#30](https://github.com/jhardenberg/PLASIM/pull/30)).
 
