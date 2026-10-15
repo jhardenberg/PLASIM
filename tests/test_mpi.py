@@ -27,9 +27,6 @@ class MPITests(unittest.TestCase):
     def test_mpi_nondefault_parameters_match_serial(self) -> None:
         serial_exe = build_model(self.work / "parameters-serial-build")
         mpi_exe = build_model(self.work / "parameters-mpi-build", ranks=2)
-        control = prepare_run(self.work, "parameters-control", days=2)
-        run_model(serial_exe, control)
-        control_state = records(control / "plasim_status")
         tidal_settings = (
             "nfixorb=1, eccen=0., obliq=0., ltidally_locked=.true., "
         )
@@ -38,32 +35,41 @@ class MPITests(unittest.TestCase):
             ("tidal-lock", "planet", tidal_settings + "tl_substellar=180."),
             ("substellar-longitude", "planet", tidal_settings + "tl_substellar=90."),
         )
-        serial_temperatures = {}
-        for name, module, settings in cases:
-            with self.subTest(parameter=name):
-                serial = prepare_run(self.work, f"{name}-serial", days=2)
-                parallel = prepare_run(self.work, f"{name}-mpi", days=2)
-                for run in (serial, parallel):
-                    (run / f"{module}_namelist").write_text(
-                        f"&{module}_nl\n {settings}\n/\n", encoding="ascii"
-                    )
-                run_model(serial_exe, serial)
-                run_model(mpi_exe, parallel, launcher=["mpiexec", "-n", "2"])
-                expected = records(serial / "plasim_status")
-                actual = records(parallel / "plasim_status")
-                self.assertEqual(struct.unpack("=i", actual["nstep"])[0], 11584)
-                # Verify that each input changes the serial solution, so an
-                # ignored namelist setting cannot make the comparison pass.
-                self.assertNotEqual(expected["dt"], control_state["dt"])
-                serial_temperatures[name] = expected["dt"]
-                for field in ("dt", "dq", "dalb", "dsalb1", "dsalb2", "dsoilt",
-                              "ysst", "dicec", "diced", "sz", "sd", "st", "sq", "sp"):
-                    self.assert_values_close(
-                        doubles(actual[field]), doubles(expected[field]),
-                        atol=1e-10, rtol=1e-8, label=f"{name}: {field}",
-                    )
-        self.assertNotEqual(serial_temperatures["tidal-lock"],
-                            serial_temperatures["substellar-longitude"])
+        for steps in (1, 64):
+            control = prepare_run(self.work, f"parameters-control-{steps}",
+                                  days=0, steps=steps)
+            run_model(serial_exe, control)
+            control_state = records(control / "plasim_status")
+            serial_responses = {}
+            for name, module, settings in cases:
+                with self.subTest(steps=steps, parameter=name):
+                    serial = prepare_run(self.work, f"{name}-{steps}-serial",
+                                         days=0, steps=steps)
+                    parallel = prepare_run(self.work, f"{name}-{steps}-mpi",
+                                           days=0, steps=steps)
+                    for run in (serial, parallel):
+                        (run / f"{module}_namelist").write_text(
+                            f"&{module}_nl\n {settings}\n/\n", encoding="ascii"
+                        )
+                    run_model(serial_exe, serial)
+                    run_model(mpi_exe, parallel, launcher=["mpiexec", "-n", "2"])
+                    expected = records(serial / "plasim_status")
+                    actual = records(parallel / "plasim_status")
+                    self.assertEqual(struct.unpack("=i", actual["nstep"])[0], 11520 + steps)
+                    # Verify that each input changes the serial solution, so an
+                    # ignored namelist setting cannot make the comparison pass.
+                    response = "dsoilt" if name == "soilcap" else "st"
+                    self.assertNotEqual(expected[response], control_state[response])
+                    serial_responses[name] = expected[response]
+                    for field in ("dt", "dq", "dalb", "dsalb1", "dsalb2", "dsoilt",
+                                  "ysst", "dicec", "diced", "sz", "sd", "st", "sq", "sp"):
+                        with self.subTest(field=field):
+                            self.assert_values_close(
+                                doubles(actual[field]), doubles(expected[field]),
+                                atol=1e-10, rtol=1e-8, label=f"{name}: {field}",
+                            )
+            self.assertNotEqual(serial_responses["tidal-lock"],
+                                serial_responses["substellar-longitude"])
 
     def assert_values_close(self, actual, expected, *, atol, rtol, label) -> None:
         self.assertEqual(len(actual), len(expected), label)

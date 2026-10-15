@@ -102,7 +102,7 @@ def build_model(build: Path, *, lsg: bool = False, ranks: int = 1) -> Path:
     return build / "plasim.x"
 
 
-def prepare_run(work: Path, name: str, *, days: int) -> Path:
+def prepare_run(work: Path, name: str, *, days: int, steps: int = 0) -> Path:
     run = work / name
     run.mkdir()
     for source in BOUNDARY_DATA.iterdir():
@@ -113,7 +113,7 @@ def prepare_run(work: Path, name: str, *, days: int) -> Path:
         )
     (run / "plasim_namelist").write_text(
         "&plasim_nl\n"
-        f" n_run_years=0, n_run_months=0, n_run_days={days}, "
+        f" n_run_years=0, n_run_months=0, n_run_days={days}, n_run_steps={steps}, "
         "kick=0, ngui=0, seed=1\n/\n", encoding="ascii",
     )
     return run
