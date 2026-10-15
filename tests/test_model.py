@@ -179,6 +179,59 @@ class PlaSimTests(unittest.TestCase):
             (self.continuous / "plasim_status").read_bytes(),
         )
 
+    def check_cloud_diagnostics(self, *, spectral: bool) -> None:
+        name = "spectral" if spectral else "classic"
+        reference = self.continuous
+        if spectral:
+            reference = self.prepare_run(f"{name}-cloud-off", days=2)
+            (reference / "radmod_namelist").write_text(
+                "&radmod_nl\n nstartemp=1\n/\n", encoding="ascii"
+            )
+            self.run_model(reference)
+
+        diagnostic = self.prepare_run(f"{name}-cloud-on", days=2)
+        shutil.copy2(reference / "radmod_namelist", diagnostic)
+        namelist = diagnostic / "plasim_namelist"
+        namelist.write_text(
+            namelist.read_text(encoding="ascii").replace(
+                "&plasim_nl\n", "&plasim_nl\n ndiagcf=1,\n"
+            ), encoding="ascii",
+        )
+        self.run_model(diagnostic)
+
+        # Cloud diagnostic fields are output separately, not saved in restart.
+        # Every saved state record should therefore be unchanged in this build.
+        expected = records(reference / "plasim_status")
+        actual = records(diagnostic / "plasim_status")
+        self.assertEqual(actual.keys(), expected.keys())
+        for field in expected:
+            with self.subTest(radiation=name, field=field):
+                self.assertTrue(actual[field] == expected[field],
+                                f"{field} changed when cloud diagnostics were enabled")
+
+        # Catch disabling the diagnostic calculation or replacing it with zeros.
+        nonzero_codes = set()
+        with (diagnostic / "plasim_output").open("rb") as stream:
+            while (header := _record(stream)) is not None:
+                self.assertEqual(len(header), 32)
+                code, _, _, _, nlon, nlat, _, _ = struct.unpack("=8i", header)
+                data = _record(stream)
+                self.assertIsNotNone(data)
+                if 101 <= code <= 107:
+                    self.assertEqual((nlon, nlat), (64, 32))
+                    self.assertEqual(len(data), nlon * nlat * 4)
+                    values = struct.unpack(f"={nlon * nlat}f", data)
+                    self.assertTrue(all(map(math.isfinite, values)), code)
+                    if any(value != 0.0 for value in values):
+                        nonzero_codes.add(code)
+        self.assertEqual(nonzero_codes, set(range(101, 108)))
+
+    def test_classic_cloud_diagnostics_preserve_state(self) -> None:
+        self.check_cloud_diagnostics(spectral=False)
+
+    def test_spectral_cloud_diagnostics_preserve_state(self) -> None:
+        self.check_cloud_diagnostics(spectral=True)
+
     def test_spectral_restart_matches_continuous_run(self) -> None:
         continuous = self.prepare_run("spectral-continuous", days=2)
         (continuous / "radmod_namelist").write_text(

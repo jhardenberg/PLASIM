@@ -30,6 +30,8 @@ The `devel_planets` branch was merged on 2026-10-15 ([#13](https://github.com/jh
 - **MPI tests:** Added two-rank T21/L10 runs with the real MPI module for both mixed-layer and LSG ocean configurations. Tests check rank diagnostics and compare atmospheric state, ocean state, and coupled fluxes against matching serial runs. CI now installs Open MPI and runs these tests through the existing discovery command ([#32](https://github.com/jhardenberg/PLASIM/pull/32)).
 - **Coupled LSG tests:** Added a real PlaSim–LSG T21/L10 build and two-day regression run with daily coupling, checking ocean evolution and exchanged stress and heat fluxes. Added byte-equality checks between continuous and restarted runs for both components' restart files and the final day's ocean output. The existing mixed-layer tests remain in place, and unittest discovery includes both configurations in CI ([#30](https://github.com/jhardenberg/PLASIM/pull/30)).
 
+- **Cloud radiation diagnostics:** Restore broadband surface albedo after the temporary clear-sky shortwave calculation, alongside the spectral albedos. Enabling `ndiagcf` no longer changes classic radiation through an altered ocean albedo. Added classic and spectral diagnostic-on/off state comparisons and checks that clear-sky flux diagnostics are still produced (issue [#34](https://github.com/jhardenberg/PLASIM/issues/34), PR [#35](https://github.com/jhardenberg/PLASIM/pull/35)).
+
 ## [v1.0.1](https://github.com/jhardenberg/PLASIM/releases/tag/v1.0.1) — 2026-10-15
 
 Changes from the `1.0` tag to the `v1.0.1` tag (`b093af1`), before the planetary developments were merged.
