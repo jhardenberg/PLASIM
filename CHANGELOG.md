@@ -2,9 +2,9 @@
 
 Notable changes in the `master` branch are summarized here in a format inspired by [Keep a Changelog](https://keepachangelog.com/). This history starts with the [2014 source import](https://github.com/jhardenberg/PLASIM/commit/71bfcbf), covers the releases tagged [`1.0`](https://github.com/jhardenberg/PLASIM/releases/tag/1.0) and [`v1.0.1`](https://github.com/jhardenberg/PLASIM/releases/tag/v1.0.1), and describes the planetary developments as the planned v1.1 release. The bullets highlight changes relevant to users; the comparison links provide the full commit history.
 
-## [v1.1](https://github.com/jhardenberg/PLASIM/compare/v1.0.1...bac0eb7) — planned
+## [v1.1](https://github.com/jhardenberg/PLASIM/compare/v1.0.1...master) — planned
 
-Changes since the `v1.0.1` tag, through commit `bac0eb7` (2026-10-15).
+Changes on `master` since the `v1.0.1` tag.
 
 ### Main changes
 
@@ -23,6 +23,10 @@ The `devel_planets` branch was merged on 2026-10-15 ([#13](https://github.com/jh
 - **Output and postprocessing:** Added planetary radius, gravity, gas constant, and lapse rate to the Service metadata read by `burn7`, while retaining postprocessor namelist overrides. Added `nc2txt` and a meridional-profile analysis script, and changed `burn.sh` to derive surface albedo from shortwave fluxes.
 - **Resolution and boundary data:** Corrected T42 dimensions in `makesra`, added T21/T42 selection to the Earth and aquaplanet boundary-data scripts, and extended the existing friction initialization and T42 convection defaults to models with at least ten vertical levels.
 - **Regression tests:** Added continuous-versus-restarted equality checks in spectral radiation mode and numerical checks after continuing the legacy Earth restart. Retained the classic Earth state comparison and the `albsmin` namelist test; removed acceptance tests for the old `psurf` location and the deleted orbital-year options. These short T21 checks do not establish bitwise equality for every Earth configuration or long climate simulation.
+
+### Subsequent changes
+
+- **Coupled LSG tests:** Added a real PlaSim–LSG T21/L10 build and two-day regression run with daily coupling, checking ocean evolution and exchanged stress and heat fluxes. Added byte-equality checks between continuous and restarted runs for both components' restart files and the final day's ocean output. The existing mixed-layer tests remain in place, and unittest discovery includes both configurations in CI ([#30](https://github.com/jhardenberg/PLASIM/pull/30)).
 
 ## [v1.0.1](https://github.com/jhardenberg/PLASIM/releases/tag/v1.0.1) — 2026-10-15
 
@@ -79,4 +83,4 @@ The original `NEW_IN_VERSION_17` file highlighted these changes to the model sui
 
 The repository began with an import of the version 16 MoSt/PlaSim source tree from SVN revision 46 ([`71bfcbf`](https://github.com/jhardenberg/PLASIM/commit/71bfcbf)). It already included PlaSim, PUMA, SAM, the LSG ocean, MoSt, and their documentation. See the [version 16 notes](https://github.com/jhardenberg/PLASIM/blob/71bfcbf/NEW_IN_VERSION_16) for features present at the starting point.
 
-[Full history from the import to v1.0](https://github.com/jhardenberg/PLASIM/compare/71bfcbf...1.0) · [Full history from v1.0 to v1.0.1](https://github.com/jhardenberg/PLASIM/compare/1.0...v1.0.1) · [Full history from v1.0.1 to the v1.1 draft](https://github.com/jhardenberg/PLASIM/compare/v1.0.1...bac0eb7)
+[Full history from the import to v1.0](https://github.com/jhardenberg/PLASIM/compare/71bfcbf...1.0) · [Full history from v1.0 to v1.0.1](https://github.com/jhardenberg/PLASIM/compare/1.0...v1.0.1) · [Full history from v1.0.1 to the v1.1 draft](https://github.com/jhardenberg/PLASIM/compare/v1.0.1...master)
