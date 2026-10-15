@@ -38,6 +38,30 @@ def lsg_output_records(path: Path) -> dict[tuple[int, int, int], bytes]:
     return result
 
 
+def prepare_coupled_run(work: Path, name: str, *, days: int) -> Path:
+    run = prepare_run(work, name, days=days)
+    # Match MoSt: LSG's data also supply the coupled atmosphere's land mask.
+    for source in (ROOT / "lsg" / "dat").iterdir():
+        shutil.copy2(source, run / source.name)
+    namelist = run / "plasim_namelist"
+    namelist.write_text(
+        namelist.read_text(encoding="ascii").replace(
+            "&plasim_nl\n", "&plasim_nl\n n_days_per_year=360,\n"
+        ), encoding="ascii",
+    )
+    # T21 has 32 atmosphere steps/day. Daily coupling makes this short run
+    # advance LSG twice, rather than waiting for the default ten-day interval.
+    (run / "oceanmod_namelist").write_text(
+        "&oceanmod_nl\n nlsg=1, naomod=32, nocean=1, nhdiff=0\n/\n",
+        encoding="ascii",
+    )
+    (run / "input").write_text(
+        "&param\n kiterm=8, ntback=360, ntout=1, ntsurf=1\n/\n",
+        encoding="ascii",
+    )
+    return run
+
+
 class LSGTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -51,27 +75,7 @@ class LSGTests(unittest.TestCase):
 
     @classmethod
     def prepare_coupled_run(cls, name: str, *, days: int) -> Path:
-        run = prepare_run(cls.work, name, days=days)
-        # Match MoSt: LSG's data also supply the coupled atmosphere's land mask.
-        for source in (ROOT / "lsg" / "dat").iterdir():
-            shutil.copy2(source, run / source.name)
-        namelist = run / "plasim_namelist"
-        namelist.write_text(
-            namelist.read_text(encoding="ascii").replace(
-                "&plasim_nl\n", "&plasim_nl\n n_days_per_year=360,\n"
-            ), encoding="ascii",
-        )
-        # T21 has 32 atmosphere steps/day. Daily coupling makes this short run
-        # advance LSG twice, rather than waiting for the default ten-day interval.
-        (run / "oceanmod_namelist").write_text(
-            "&oceanmod_nl\n nlsg=1, naomod=32, nocean=1, nhdiff=0\n/\n",
-            encoding="ascii",
-        )
-        (run / "input").write_text(
-            "&param\n kiterm=8, ntback=360, ntout=1, ntsurf=1\n/\n",
-            encoding="ascii",
-        )
-        return run
+        return prepare_coupled_run(cls.work, name, days=days)
 
     def test_coupled_t21_two_day_regression(self) -> None:
         self.assertEqual({key[2] for key in self.ocean}, {10101, 10102})

@@ -69,9 +69,10 @@ def doubles(data: bytes) -> tuple[float, ...]:
     return struct.unpack(f"={len(data) // 8}d", data)
 
 
-def build_model(build: Path, *, lsg: bool = False) -> Path:
-    """Build the serial T21/L10 model with real or stubbed LSG coupling."""
-    for program in ("gfortran", "make", "cc"):
+def build_model(build: Path, *, lsg: bool = False, ranks: int = 1) -> Path:
+    """Build T21/L10 with serial or MPI communication and optional real LSG."""
+    compiler = "mpif90" if ranks > 1 else "gfortran"
+    for program in (compiler, "make", "cc"):
         if shutil.which(program) is None:
             raise unittest.SkipTest(f"{program} is required")
     build.mkdir()
@@ -80,14 +81,19 @@ def build_model(build: Path, *, lsg: bool = False) -> Path:
             shutil.copy2(source, build / source.name)
     if lsg:
         shutil.copy2(ROOT / "lsg" / "src" / "lsgmod.f90", build / "lsgmod.f90")
-    shutil.copy2(build / "resmod_def.f90", build / "resmod.f90")
+    (build / "resmod.f90").write_text(
+        (build / "resmod_def.f90").read_text().replace(
+            "NPRO_ATM = 1", f"NPRO_ATM = {ranks}"
+        ), encoding="ascii",
+    )
     shutil.copy2(build / "make_plasim", build / "makefile")
 
     env = os.environ.copy()
     env.update({
         "MOST_CC": "cc", "MOST_CC_OPTS": "-O0",
-        "MOST_F90": "gfortran", "MOST_F90_OPTS": "-O0",
-        "MOST_PREC": "-fdefault-real-8", "MPIMOD": "mpimod_stub",
+        "MOST_F90": compiler, "MOST_F90_OPTS": "-O0",
+        "MOST_PREC": "-fdefault-real-8",
+        "MPIMOD": "mpimod" if ranks > 1 else "mpimod_stub",
         "GUIMOD": "guimod_stub", "PUMAX": "pumax_stub",
         "GUILIB": "", "OCEAN": "lsgmod" if lsg else "lsgmod_stub",
         "OCEANCOUP": "cpl" if lsg else "cpl_stub",
@@ -113,8 +119,8 @@ def prepare_run(work: Path, name: str, *, days: int) -> Path:
     return run
 
 
-def run_model(executable: Path, run: Path) -> None:
-    command([str(executable)], cwd=run)
+def run_model(executable: Path, run: Path, *, launcher: list[str] | None = None) -> None:
+    command([*(launcher or []), str(executable)], cwd=run)
     if (run / "Abort_Message").exists():
         raise AssertionError((run / "Abort_Message").read_text())
     for output in ("plasim_diag", "plasim_output", "plasim_status"):
