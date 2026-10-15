@@ -11,7 +11,8 @@ Running and interpreting the model requires some knowledge of meteorology and cl
 
 - Model tuning described in Angeloni et al. (submitted to GMD).
 - [`scripts/srv2nc`](scripts/srv2nc), which uses CDO to convert PlaSim and LSG Service output directly to compressed NetCDF4 without the afterburner.
-- Headless MoSt: `most.x -c` reads `most_last_used.cfg` by default, or a configuration file supplied as an additional argument. The [`devel_planets` branch](https://github.com/jhardenberg/PLASIM/tree/devel_planets) contains ongoing exoplanet work; it is separate from `master`.
+- Headless MoSt: `most.x -c` reads `most_last_used.cfg` by default, or a configuration file supplied as an additional argument.
+- Planetary and exoplanet developments, including optional stellar-spectrum radiation, spectral surface albedos, and tidally locked illumination.
 
 ## Requirements
 
