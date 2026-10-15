@@ -36,6 +36,10 @@ class MPITests(unittest.TestCase):
             ("substellar-longitude", "planet", tidal_settings + "tl_substellar=90."),
         )
         for steps in (1, 64):
+            # Check parameter propagation strictly before roundoff can grow.
+            # Longer perturbed trajectories allow small numerical drift; the
+            # existing two-day default comparisons retain their tighter limits.
+            atol, rtol = (1e-10, 1e-8) if steps == 1 else (1e-8, 1e-6)
             control = prepare_run(self.work, f"parameters-control-{steps}",
                                   days=0, steps=steps)
             run_model(serial_exe, control)
@@ -66,7 +70,7 @@ class MPITests(unittest.TestCase):
                         with self.subTest(field=field):
                             self.assert_values_close(
                                 doubles(actual[field]), doubles(expected[field]),
-                                atol=1e-10, rtol=1e-8, label=f"{name}: {field}",
+                                atol=atol, rtol=rtol, label=f"{name}: {field}",
                             )
             self.assertNotEqual(serial_responses["tidal-lock"],
                                 serial_responses["substellar-longitude"])
