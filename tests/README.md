@@ -90,6 +90,17 @@ diagnostic lists ranks 0 and 1 and that both two-day runs reach the expected
 final step. The mixed-layer and coupled LSG configurations each have a
 separate serial reference run with identical input files.
 
+An additional mixed-layer MPI test uses nondefault soil heat capacity
+(`soilcap=1.2e6`), tidally locked illumination, and a substellar longitude
+of 90 degrees instead of the default 180 degrees. The three cases share
+one serial build and one MPI build. Each two-day run is compared with its
+matching serial reference, including soil temperature, surface albedos,
+ocean state, and atmospheric spectral fields, using the same tolerances
+as the default cases below. Serial comparisons also check that the input
+settings change the solution, including the longitude shift. These tests
+exercise the shared planetary initialization through Earth; Mars and Exo
+setups are not run.
+
 Every value in selected gridpoint and global spectral fields is compared
 with the serial reference, with absolute tolerance `1e-10` and relative
 tolerance `1e-8` for double-precision restart data. For LSG this includes the
