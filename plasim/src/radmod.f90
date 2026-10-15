@@ -1175,7 +1175,10 @@
 !
 !     no PUMA variables are used
 
-      call mpputgp('zsolars',zsolars,2,1)
+!     Solar spectral fractions are replicated, not distributed grid fields.
+      if(mypid == NROOT) then
+       call put_restart_array('zsolars',zsolars,2,2,1)
+      endif
 !
       if(mypid == NROOT .and. ntime == 1) then
        write(nud,*)'******************************************'

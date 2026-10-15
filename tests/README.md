@@ -90,14 +90,21 @@ diagnostic lists ranks 0 and 1 and that both two-day runs reach the expected
 final step. The mixed-layer and coupled LSG configurations each have a
 separate serial reference run with identical input files.
 
+An additional mixed-layer run enables spectral radiation (`nstartemp=1`).
+All configurations check that the replicated `zsolars` restart record stores
+exactly two double-precision values and agrees with serial; the spectral
+fractions must also be positive and sum to one. Both classic and spectral
+mixed-layer runs compare every restart record byte for byte between a
+continuous two-day MPI run and two one-day MPI runs.
+
 Every value in selected gridpoint and global spectral fields is compared
 with the serial reference, with absolute tolerance `1e-10` and relative
 tolerance `1e-8` for double-precision restart data. For LSG this includes the
 heat flux returned to PlaSim and all dated ocean Service fields, using
 absolute tolerance `1e-5` and relative tolerance `1e-6` for the latter's
 32-bit output. This allows roundoff from MPI reductions while checking data
-distribution and flux exchange. MPI restart consistency, other rank counts,
-and scaling performance are not covered by these tests.
+distribution and flux exchange. Coupled LSG restart consistency under MPI,
+other rank counts, and scaling performance are not covered by these tests.
 
 To run only the MPI tests:
 
