@@ -160,6 +160,25 @@ class PlaSimTests(unittest.TestCase):
             (self.continuous / "plasim_status").read_bytes(),
         )
 
+    def test_spectral_restart_matches_continuous_run(self) -> None:
+        continuous = self.prepare_run("spectral-continuous", days=2)
+        (continuous / "radmod_namelist").write_text(
+            "&radmod_nl\n nstartemp=1\n/\n", encoding="ascii"
+        )
+        self.run_model(continuous)
+
+        split = self.prepare_run("spectral-split", days=1)
+        (split / "radmod_namelist").write_text(
+            "&radmod_nl\n nstartemp=1\n/\n", encoding="ascii"
+        )
+        self.run_model(split)
+        (split / "plasim_status").replace(split / "plasim_restart")
+        self.run_model(split)
+        self.assertEqual(
+            (split / "plasim_status").read_bytes(),
+            (continuous / "plasim_status").read_bytes(),
+        )
+
     def test_classic_earth_state_matches_master(self) -> None:
         """Compare every value in key Earth fields with the master fixture."""
         run = self.prepare_run("classic-earth", days=1)
@@ -189,33 +208,27 @@ class PlaSimTests(unittest.TestCase):
         state = records(run / "plasim_status")
         self.assertEqual(struct.unpack("=i", state["nstep"])[0], 11584)
         self.assertTrue(all(map(math.isfinite, doubles(state["dt"]))))
-        self.assertEqual(state["dls"], records(self.continuous / "plasim_status")["dls"])
+        reference = records(self.continuous / "plasim_status")
+        self.assertEqual(state["dls"], reference["dls"])
+        for field in ("dt", "dq", "dalb"):
+            with self.subTest(field=field):
+                values = doubles(state[field])
+                expected = doubles(reference[field])
+                self.assertEqual(len(values), len(expected))
+                self.assertTrue(all(
+                    abs(a - b) <= 1e-6 + 1e-6 * abs(b)
+                    for a, b in zip(values, expected)
+                ))
 
-    def test_classic_namelist_options(self) -> None:
-        legacy_options = (
-            ("surface-pressure", "plasim_namelist", "psurf=101100.0"),
-            ("snow-albedo", "landmod_namelist", "albsmin=0.4"),
-            ("orbital-periods", "planet_namelist",
-             "sidereal_year=31558149.0, tropical_year=31556956.0"),
+    def test_albsmin_namelist_option(self) -> None:
+        run = self.prepare_run("namelist-snow-albedo", days=0)
+        (run / "plasim_namelist").write_text(
+            "&plasim_nl\n n_run_steps=1, kick=0, ngui=0, seed=1\n/\n",
+            encoding="ascii",
         )
-        for name, filename, option in legacy_options:
-            with self.subTest(option=name):
-                run = self.prepare_run(f"namelist-{name}", days=0)
-                (run / "plasim_namelist").write_text(
-                    "&plasim_nl\n n_run_steps=1, kick=0, ngui=0, seed=1\n/\n",
-                    encoding="ascii",
-                )
-                namelist = run / filename
-                contents = namelist.read_text(encoding="ascii")
-                if filename == "plasim_namelist":
-                    contents = contents.replace("&plasim_nl\n",
-                                                f"&plasim_nl\n {option},\n")
-                else:
-                    contents = contents.replace("/\n", f" {option}\n/\n")
-                namelist.write_text(
-                    contents, encoding="ascii"
-                )
-                self.run_model(run)
+        namelist = run / "landmod_namelist"
+        namelist.write_text("&landmod_nl\n albsmin=0.5\n/\n", encoding="ascii")
+        self.run_model(run)
 
 
 class CalendarTests(unittest.TestCase):

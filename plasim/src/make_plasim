@@ -31,7 +31,7 @@ LANDMOD=landmod
 OCEAN=lsgmod
 OCEANCOUP=cpl
 
-OBJ=${MPIMOD}.o ${FFTMOD}.o ${GUIMOD}.o ${RAINMOD}.o ${VEGMOD}.o ${PLAMOD}.o resmod.o plasim.o plasimmod.o calmod.o gaussmod.o legmod.o outmod.o miscmod.o fluxmod.o radmod.o surfmod.o ${LANDMOD}.o seamod.o icemod.o oceanmod.o restartmod.o tracermod.o tpcore.o trc_routines.o ${PUMAX}.o ${OCEAN}.o ${OCEANCOUP}.o
+OBJ=${MPIMOD}.o ${FFTMOD}.o ${GUIMOD}.o ${RAINMOD}.o ${VEGMOD}.o ${PLAMOD}.o resmod.o plasim.o plasimmod.o calmod.o gaussmod.o legmod.o outmod.o miscmod.o fluxmod.o radmod.o surfmod.o ${LANDMOD}.o seamod.o icemod.o oceanmod.o restartmod.o specblock.o tracermod.o tpcore.o trc_routines.o ${PUMAX}.o ${OCEAN}.o ${OCEANCOUP}.o
 
 plasim.x:	$(OBJ)
 	$(MOST_F90) -o plasim.x $(MOST_F90_OPTS) $(OBJ) ${GUILIB}
@@ -52,12 +52,13 @@ legmod.o:	legmod.f90 plasimmod.o
 outmod.o:	outmod.f90 plasimmod.o
 miscmod.o:	miscmod.f90 plasimmod.o
 fluxmod.o:	fluxmod.f90 plasimmod.o
-radmod.o:	radmod.f90 plasimmod.o
+radmod.o:	radmod.f90 plasimmod.o specblock.o
 surfmod.o:	surfmod.f90 plasimmod.o
 seamod.o:	seamod.f90 plasimmod.o
 icemod.o:	icemod.f90 plasimmod.o
 oceanmod.o:	oceanmod.f90 plasimmod.o
 restartmod.o:	restartmod.f90
+specblock.o:    specblock.f90
 tracermod.o:	tracermod.f90 plasimmod.o
 tpcore.o:	tpcore.f90
 trc_routines.o:	trc_routines.f90

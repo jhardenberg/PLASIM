@@ -10,6 +10,20 @@
       logical            :: ldebrm   = .false. ! Print debug info
       end module restartmod
 
+      logical function has_restart_record(yn)
+      use restartmod
+      character (len=*), intent(in) :: yn
+      integer :: j
+
+      has_restart_record = .false.
+      do j = 1, nresnum
+         if (trim(yresnam(j)) == trim(yn)) then
+            has_restart_record = .true.
+            return
+         endif
+      enddo
+      end function has_restart_record
+
 !     ======================
 !     SUBROUTINE RESTART_INI
 !     ======================

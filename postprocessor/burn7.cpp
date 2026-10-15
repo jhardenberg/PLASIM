@@ -103,15 +103,7 @@ using namespace std;
 #define EARTH_RD (1000. * R / RMD)
 #define RV     (1000. * R / RMV)
 #define RCPD   (3.5 * RD)
-#define RCPV   (4.0 * RV)
-#define RETV   (RV / RD - 1.)
-#define RCW    (4218.)
-#define RCS    (2106.)
-#define RTT    (273.16)
-#define RLVTT  (2.5008e+6)
-#define RLSTT  (2.8345e+6)
-#define RESTT  (611.14)
-#define RLAPSE (0.0065)
+#define EARTH_RLAPSE (0.0065)
 
 #ifdef NETCDF_OUTPUT
 
@@ -197,6 +189,7 @@ int    FirstMonth = 1;
 int    LastMonth = 12;
 double   PlanetRadius= EARTH_RADIUS;
 double   RD          = EARTH_RD;
+double   RLAPSE          = EARTH_RLAPSE;
 int    Spectral = FALSE;
 int    TermCount     ;
 int    MonthCount    ;
@@ -5280,22 +5273,21 @@ int scanpar(const char *name, int def)
    return value;
 }
    
-double scanreal(const char *name, double def)
+double scanreal(const char *name, double value, double def)
 {
    char *cp;
-   double value;
    char tb[COLS+2];
 
    cp = amatch(namelist,name);
    if (cp == NULL)
    {
-       value = def;
-       sprintf(tb,"%10.10s = %8.3f  (default)",name,value);
+       if ( abs(value-def)<1e-12 ) sprintf(tb,"%10.10s = %8.3g (default)",name,value);
+       else sprintf(tb,"%10.10s = %8.3g           ",name,value);
    }
    else
    {
        value = strtod(cp,NULL);
-       sprintf(tb,"%10.10s = %8.3f           ",name,value);
+       sprintf(tb,"%10.10s = %8.3g           ",name,value);
    }
    LeftText(tb);
    return value;
@@ -5668,15 +5660,17 @@ void parini(void)
       HorType  = scantex("htype" ,"gsfz"); // 1. char is default value (g)
    }
    Multi    = scanpar("multi" ,0);
-   LevelFactor = scanreal("levelfactor",1.0);
+   LevelFactor = scanreal("levelfactor",LevelFactor,1.0);
    if (NetCDF == 0) NetCDF = scanpar("netcdf",0);
    HeadOu[6]    = scanpar("head7",0);
    mars         = scanpar("mars" ,0);
    FirstMonth   = scanpar("first",1);
    LastMonth    = scanpar("last",12);
-   PlanetRadius = scanreal("radius",EARTH_RADIUS);
-   Grav         = scanreal("gravity",EARTH_GRAV);
-   SigmaTop     = scanreal("sigmatop",0.0);
+   PlanetRadius = scanreal("radius",PlanetRadius,EARTH_RADIUS);
+   Grav         = scanreal("gravity",Grav,EARTH_GRAV);
+   RD           = scanreal("gascon",RD,EARTH_RD);
+   RLAPSE       = scanreal("lapse",RLAPSE,EARTH_RLAPSE);
+   SigmaTop     = scanreal("sigmatop",SigmaTop,0.0);
    vct[SigLevs] = SigmaTop;
    if (FirstMonth < 1) FirstMonth = 1;
    if (LastMonth > 12) LastMonth = 12;
@@ -5855,6 +5849,7 @@ void AnalyzeFile(void)
    LONG fcb,fce;       /* Fortran Record Control Words */
    char Id[8];
    char tb[COLS+2];
+   double data;
    
    union EndianCheck
    {
@@ -5959,6 +5954,18 @@ void AnalyzeFile(void)
       }
       if (RealSize == sizeof(float)) DaysPerYear = ReadFLOAT();
       else                           DaysPerYear = ReadDOUBLE();
+      if (RealSize == sizeof(float)) data = ReadFLOAT();
+      else                           data = ReadDOUBLE();
+      if ( data > 0.0 ) PlanetRadius=data;
+      if (RealSize == sizeof(float)) data = ReadFLOAT();
+      else                           data = ReadDOUBLE();
+      if ( data > 0.0 ) Grav=data;
+      if (RealSize == sizeof(float)) data = ReadFLOAT();
+      else                           data = ReadDOUBLE();
+      if ( data > 0.0 ) RD=data;
+      if (RealSize == sizeof(float)) data = ReadFLOAT();
+      else                           data = ReadDOUBLE();
+      if ( data > 0.0 ) RLAPSE=data;
    }
    HeadSt = HeadIn;
    sprintf(tb,"Truncation                        = %6d",Truncation);

@@ -285,8 +285,8 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       call mpbcr(ww      )
       call mpbcr(solar_day)
       call mpbcr(sidereal_day)
-      call mpbcr(tropical_year)
-      call mpbcr(sidereal_year)
+!      call mpbcr(tropical_year)
+!      call mpbcr(sidereal_year)
       call mpbcr(rotspd)
       call mpbcr(eccen)
       call mpbcr(obliq)
@@ -414,6 +414,28 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 
       call surfini
 
+      if (mypid==NROOT) then
+            write(nud,*) "==========Finalized Albedos=========="
+            write(nud,*) "-----For lambda < 0.75 microns------ "
+            write(nud,*) "Ground:",dgroundalb(1)
+            write(nud,*) "Ocean:",doceanalb(1) 
+            write(nud,*) "Snow:",dsnowalb(1)
+            write(nud,*) "Snow max:",dsnowalbmx(1)
+            write(nud,*) "Snow min:",dsnowalbmn(1)
+            write(nud,*) "Sea ice max:",dicealbmx(1) 
+            write(nud,*) "Sea ice min:",dicealbmn(1) 
+            write(nud,*) "Glacier min:",dglacalbmn(1)
+            write(nud,*) "-----For lambda > 0.75 microns------ "
+            write(nud,*) "Ground:",dgroundalb(2)
+            write(nud,*) "Ocean:;",doceanalb(2) 
+            write(nud,*) "Snow:",dsnowalb(2)
+            write(nud,*) "Snow max:",dsnowalbmx(2)
+            write(nud,*) "Snow min:",dsnowalbmn(2)
+            write(nud,*) "Sea ice max:",dicealbmx(2) 
+            write(nud,*) "Sea ice min:",dicealbmn(2) 
+            write(nud,*) "Glacier min:",dglacalbmn(2)
+         endif      
+     
 !
 !*    reset psurf according to orography
 !
@@ -664,6 +686,8 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       call mpputgp('dls'    ,dls    ,NHOR,1)
       call mpputgp('drhs'   ,drhs   ,NHOR,1)
       call mpputgp('dalb'   ,dalb   ,NHOR,1)
+      call mpputgp('dsalb1',dsalb(1,:),NHOR,1)
+      call mpputgp('dsalb2',dsalb(2,:),NHOR,1)
       call mpputgp('dz0'    ,dz0    ,NHOR,1)
       call mpputgp('dicec'  ,dicec  ,NHOR,1)
       call mpputgp('diced'  ,diced  ,NHOR,1)
@@ -805,6 +829,9 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       subroutine read_atmos_restart
       use pumamod
 
+      integer :: nspectral_albedo_records
+      logical, external :: has_restart_record
+
 !     read scalars and full spectral arrays
 
       if (mypid == NROOT) then
@@ -839,6 +866,25 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       call mpgetgp('dls'    ,dls    ,NHOR,   1)
       call mpgetgp('drhs'   ,drhs   ,NHOR,   1)
       call mpgetgp('dalb'   ,dalb   ,NHOR,   1)
+      nspectral_albedo_records = 0
+      if (mypid == NROOT) then
+         if (has_restart_record('dsalb1')) nspectral_albedo_records = &
+              nspectral_albedo_records + 1
+         if (has_restart_record('dsalb2')) nspectral_albedo_records = &
+              nspectral_albedo_records + 1
+      endif
+      call mpbci(nspectral_albedo_records)
+      if (nspectral_albedo_records == 2) then
+         call mpgetgp('dsalb1' ,dsalb(1,:),NHOR,1)
+         call mpgetgp('dsalb2' ,dsalb(2,:),NHOR,1)
+      else if (nspectral_albedo_records == 0) then
+         dsalb(1,:) = dalb(:)
+         dsalb(2,:) = dalb(:)
+      else
+         if (mypid == NROOT) write(nud,*) &
+              'Incomplete spectral albedo records in restart file'
+         stop
+      endif
       call mpgetgp('dz0'    ,dz0    ,NHOR,   1)
       call mpgetgp('dicec'  ,dicec  ,NHOR,   1)
       call mpgetgp('diced'  ,diced  ,NHOR,   1)
@@ -975,25 +1021,24 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
                    , syncstr , synctime                                 &
                    , dtep    , dtns    , dtrop   , dttrp                &
                    , tdissd  , tdissz  , tdisst  , tdissq  , tgr        &
-                   , psurf                                              &
                    , restim  , t0      , tfrc                           &
                    , sigh    , nenergy , nener3d , nsponge , dampsp
 !
 !     preset namelist parameter according to model set up
 !
-      if (NLEV==10) then
-         tfrc(1)      =  20.0 * solar_day
-         tfrc(2)      = 100.0 * solar_day
-         tfrc(3:NLEV) =   0.0 * solar_day
+      if (NLEV>=10) then
+         tfrc(1)      =  20.0 * earth_solar_day ! expressed in EARTH days
+         tfrc(2)      = 100.0 * earth_solar_day
+         tfrc(3:NLEV) =   0.0 * earth_solar_day
       endif
 !
       if(NTRU==42) then
        nhdiff=16
        ndel(:)=4
-       tdissq(:)=0.1  * solar_day
-       tdisst(:)=0.76 * solar_day
-       tdissz(:)=0.3  * solar_day
-       tdissd(:)=0.06 * solar_day
+       tdissq(:)=0.1  * earth_solar_day
+       tdisst(:)=0.76 * earth_solar_day
+       tdissz(:)=0.3  * earth_solar_day
+       tdissd(:)=0.06 * earth_solar_day
       endif
 
 !
@@ -1120,7 +1165,10 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 !     set sponge layer time scale
 
       if(dampsp > 0.) then
-       if(dampsp < (solar_day/ntspd)) dampsp=dampsp*solar_day
+       if(dampsp < (solar_day/ntspd)) then
+            dampsp=dampsp*earth_solar_day
+            write(nud,*) 'dampsp: assuming [days] - converting to [sec]'
+       endif
        dampsp=solar_day/(TWOPI*dampsp)
       endif
 
@@ -1145,7 +1193,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       if (zmax < (solar_day / ntspd) .and. zmax > 0.0) then
          write(nud,*) 'old maxval(',trim(yn),') = ',zmax
          write(nud,*) 'assuming [days] - converting to [sec]'
-         pf(:) = pf(:) * solar_day
+         pf(:) = pf(:) * earth_solar_day
          write(nud,*) 'new maxval(',trim(yn),') = ',maxval(pf(:))
       endif   
       return
@@ -1158,7 +1206,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       subroutine initpm
       use pumamod
 
-      real (kind=8) radea,zakk
+      real (kind=8) radea, zakk, norm_day
 
 !     *************************************************************
 !     * carries out all initialisation of model prior to running. *
@@ -1208,14 +1256,21 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       call dayseccheck(tdisst,"tdisst")
       call dayseccheck(tdissq,"tdissq")
 
+      ! Select the day used for normalization. Classic Earth uses the solar day.
+      if (normalization_day == "solar") then
+         norm_day = solar_day
+      else
+         norm_day = sidereal_day 
+      endif
+
       where (restim > 0.0)
-         damp = solar_day / (TWOPI * restim)
+         damp = norm_day / (TWOPI * restim)
       elsewhere
          damp = 0.0
       endwhere
          
       where (tfrc > 0.0)
-          tfrc = solar_day / (TWOPI * tfrc)
+          tfrc = norm_day / (TWOPI * tfrc)
       elsewhere
           tfrc = 0.0
       endwhere
@@ -1225,22 +1280,22 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       do jlev=1,NLEV
        jdel = ndel(jlev)
        if (tdissd(jlev) > 0.0) then
-        tdissd(jlev) = solar_day/(TWOPI*tdissd(jlev))
+        tdissd(jlev) = norm_day/(TWOPI*tdissd(jlev))
        else
         tdissd(jlev)=0.
        endif
        if (tdissz(jlev) > 0.0) then
-        tdissz(jlev) = solar_day/(TWOPI*tdissz(jlev))
+        tdissz(jlev) = norm_day/(TWOPI*tdissz(jlev))
        else
         tdissz(jlev)=0.
        endif
        if (tdisst(jlev) > 0.0) then
-        tdisst(jlev) = solar_day/(TWOPI*tdisst(jlev))
+        tdisst(jlev) = norm_day/(TWOPI*tdisst(jlev))
        else
         tdisst(jlev) = 0.
        endif
        if (tdissq(jlev) > 0.0) then
-        tdissq(jlev) = solar_day/(TWOPI*tdissq(jlev))
+        tdissq(jlev) = norm_day/(TWOPI*tdissq(jlev))
        else
         tdissq(jlev)=0.
        endif
