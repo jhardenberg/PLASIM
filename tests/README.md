@@ -11,10 +11,13 @@ be started manually from the Actions tab once the workflow is on the default
 branch. On pull requests targeting either branch, add the exact `run tests`
 label to start a run; later commits rerun the tests while the label remains.
 
-The tests need Python 3, `gfortran`, `cc`, and `make`. They build headless,
-serial T21/L10 binaries with and without LSG in temporary directories using
-the repository's existing `make_plasim` build rules. No generated files are
-written into the checkout.
+The tests need Python 3, `gfortran`, `cc`, and `make`. MPI tests additionally
+need `mpif90` and `mpiexec` from Open MPI or a compatible MPI installation;
+those tests are skipped locally if either tool is absent. CI installs and
+checks Open MPI. The suite builds headless serial and two-rank MPI T21/L10
+binaries with and without LSG in temporary directories using the repository's
+existing `make_plasim` build rules. No generated files are written into the
+checkout.
 
 The suite checks the Gregorian and 360 day calendar, a deterministic two day
 T21 run with broad numerical baselines, and byte equality between continuous
@@ -23,7 +26,8 @@ It also checks every value in selected Earth state fields against a one day
 `master` restart fixture, resumes that legacy restart, and runs one step with
 a non-default `albsmin` value.
 The fixed random seed is needed for the restart comparisons. These tests
-exercise the serial model; MPI and T42 tests remain separate follow-up work.
+exercise the serial model; additional MPI coverage is described below. T42
+tests remain separate follow-up work.
 
 The numerical baselines come from the current `master` model, built with
 `gfortran -O0 -fdefault-real-8`. They are intentionally tolerant of small
@@ -69,13 +73,36 @@ two one-day runs, retaining `kleiin1`, `kleiswi`, and the generated LSG matrix
 between runs. It requires byte equality for both the atmospheric and LSG
 restart files and for the final day's ocean output within the same build.
 This covers short coupled execution and restart consistency; ocean spin-up,
-long climate statistics, MPI, and other coupling modes need separate tests.
+long climate statistics, and other coupling modes need separate tests.
 
 These tests are included in the normal discovery command and the existing
 GitHub Actions workflow. To run only the LSG tests:
 
 ```sh
 python3 -m unittest discover -s tests -p 'test_lsg.py' -v
+```
+
+## MPI tests
+
+[`test_mpi.py`](test_mpi.py) builds the real `mpimod.f90` with `mpif90` and
+`NPRO_ATM=2`, then launches two ranks with `mpiexec -n 2`. It checks that the
+diagnostic lists ranks 0 and 1 and that both two-day runs reach the expected
+final step. The mixed-layer and coupled LSG configurations each have a
+separate serial reference run with identical input files.
+
+Every value in selected gridpoint and global spectral fields is compared
+with the serial reference, with absolute tolerance `1e-10` and relative
+tolerance `1e-8` for double-precision restart data. For LSG this includes the
+heat flux returned to PlaSim and all dated ocean Service fields, using
+absolute tolerance `1e-5` and relative tolerance `1e-6` for the latter's
+32-bit output. This allows roundoff from MPI reductions while checking data
+distribution and flux exchange. MPI restart consistency, other rank counts,
+and scaling performance are not covered by these tests.
+
+To run only the MPI tests:
+
+```sh
+python3 -m unittest discover -s tests -p 'test_mpi.py' -v
 ```
 
 Known gap: `cal2step` currently ignores hour and minute for the simplified
