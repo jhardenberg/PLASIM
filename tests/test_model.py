@@ -69,34 +69,66 @@ def doubles(data: bytes) -> tuple[float, ...]:
     return struct.unpack(f"={len(data) // 8}d", data)
 
 
+def build_model(build: Path, *, lsg: bool = False) -> Path:
+    """Build the serial T21/L10 model with real or stubbed LSG coupling."""
+    for program in ("gfortran", "make", "cc"):
+        if shutil.which(program) is None:
+            raise unittest.SkipTest(f"{program} is required")
+    build.mkdir()
+    for source in SOURCE.iterdir():
+        if source.is_file():
+            shutil.copy2(source, build / source.name)
+    if lsg:
+        shutil.copy2(ROOT / "lsg" / "src" / "lsgmod.f90", build / "lsgmod.f90")
+    shutil.copy2(build / "resmod_def.f90", build / "resmod.f90")
+    shutil.copy2(build / "make_plasim", build / "makefile")
+
+    env = os.environ.copy()
+    env.update({
+        "MOST_CC": "cc", "MOST_CC_OPTS": "-O0",
+        "MOST_F90": "gfortran", "MOST_F90_OPTS": "-O0",
+        "MOST_PREC": "-fdefault-real-8", "MPIMOD": "mpimod_stub",
+        "GUIMOD": "guimod_stub", "PUMAX": "pumax_stub",
+        "GUILIB": "", "OCEAN": "lsgmod" if lsg else "lsgmod_stub",
+        "OCEANCOUP": "cpl" if lsg else "cpl_stub",
+    })
+    command(["make", "-e", "-j1", "plasim.x"], cwd=build, env=env)
+    return build / "plasim.x"
+
+
+def prepare_run(work: Path, name: str, *, days: int) -> Path:
+    run = work / name
+    run.mkdir()
+    for source in BOUNDARY_DATA.iterdir():
+        shutil.copy2(source, run / source.name)
+    for module in NAMELISTS:
+        (run / f"{module}_namelist").write_text(
+            f"&{module}_nl\n/\n", encoding="ascii"
+        )
+    (run / "plasim_namelist").write_text(
+        "&plasim_nl\n"
+        f" n_run_years=0, n_run_months=0, n_run_days={days}, "
+        "kick=0, ngui=0, seed=1\n/\n", encoding="ascii",
+    )
+    return run
+
+
+def run_model(executable: Path, run: Path) -> None:
+    command([str(executable)], cwd=run)
+    if (run / "Abort_Message").exists():
+        raise AssertionError((run / "Abort_Message").read_text())
+    for output in ("plasim_diag", "plasim_output", "plasim_status"):
+        if not (run / output).is_file() or (run / output).stat().st_size == 0:
+            raise AssertionError(f"Missing or empty {output}")
+
+
 class PlaSimTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        for program in ("gfortran", "make", "cc"):
-            if shutil.which(program) is None:
-                raise unittest.SkipTest(f"{program} is required")
-
         cls.temp = tempfile.TemporaryDirectory(prefix="plasim-tests-")
         cls.addClassCleanup(cls.temp.cleanup)
         cls.work = Path(cls.temp.name)
-        cls.build = cls.work / "build"
-        cls.build.mkdir()
-        for source in SOURCE.iterdir():
-            if source.is_file():
-                shutil.copy2(source, cls.build / source.name)
-        shutil.copy2(cls.build / "resmod_def.f90", cls.build / "resmod.f90")
-        shutil.copy2(cls.build / "make_plasim", cls.build / "makefile")
-
-        env = os.environ.copy()
-        env.update({
-            "MOST_CC": "cc", "MOST_CC_OPTS": "-O0",
-            "MOST_F90": "gfortran", "MOST_F90_OPTS": "-O0",
-            "MOST_PREC": "-fdefault-real-8", "MPIMOD": "mpimod_stub",
-            "GUIMOD": "guimod_stub", "PUMAX": "pumax_stub",
-            "GUILIB": "", "OCEAN": "lsgmod_stub", "OCEANCOUP": "cpl_stub",
-        })
-        command(["make", "-e", "-j1", "plasim.x"], cwd=cls.build, env=env)
-        cls.executable = cls.build / "plasim.x"
+        cls.executable = build_model(cls.work / "build")
 
         cls.continuous = cls.prepare_run("continuous", days=2)
         cls.run_model(cls.continuous)
@@ -105,30 +137,11 @@ class PlaSimTests(unittest.TestCase):
 
     @classmethod
     def prepare_run(cls, name: str, *, days: int) -> Path:
-        run = cls.work / name
-        run.mkdir()
-        for source in BOUNDARY_DATA.iterdir():
-            shutil.copy2(source, run / source.name)
-        for module in NAMELISTS:
-            (run / f"{module}_namelist").write_text(
-                f"&{module}_nl\n/\n", encoding="ascii"
-            )
-        (run / "plasim_namelist").write_text(
-            "&plasim_nl\n"
-            f" n_run_years=0, n_run_months=0, n_run_days={days}, "
-            "kick=0, ngui=0, seed=1\n/\n",
-            encoding="ascii",
-        )
-        return run
+        return prepare_run(cls.work, name, days=days)
 
     @classmethod
     def run_model(cls, run: Path) -> None:
-        command([str(cls.executable)], cwd=run)
-        if (run / "Abort_Message").exists():
-            raise AssertionError((run / "Abort_Message").read_text())
-        for output in ("plasim_diag", "plasim_output", "plasim_status"):
-            if not (run / output).is_file() or (run / output).stat().st_size == 0:
-                raise AssertionError(f"Missing or empty {output}")
+        run_model(cls.executable, run)
 
     def test_t21_two_day_regression(self) -> None:
         state = records(self.continuous / "plasim_status")
