@@ -9,7 +9,7 @@ Changes on `master` since the `v1.0.1` tag.
 ### Main changes
 
 - Merged the planetary and exoplanet developments, including optional stellar-spectrum radiation, spectral surface albedos, and tidally locked illumination. See the feature and compatibility notes below ([#13](https://github.com/jhardenberg/PLASIM/pull/13)).
-- Added repository instructions in `AGENTS.md` for scientific compatibility, testing both ocean configurations, documentation, changelog maintenance, and review.
+- Added repository instructions in `AGENTS.md` for scientific compatibility, testing both ocean configurations, documentation, changelog maintenance, and review ([#31](https://github.com/jhardenberg/PLASIM/pull/31)).
 
 ### Detailed changes
 
