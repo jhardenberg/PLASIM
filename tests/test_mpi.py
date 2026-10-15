@@ -36,11 +36,18 @@ class MPITests(unittest.TestCase):
             f"{label}[{worst}]: MPI {actual[worst]} vs serial {expected[worst]}",
         )
 
-    def compare_configuration(self, *, lsg: bool) -> None:
+    def compare_configuration(self, *, lsg: bool, spectral: bool = False) -> None:
         name = "lsg" if lsg else "mixed-layer"
+        if spectral:
+            name += "-spectral"
         prepare = prepare_coupled_run if lsg else prepare_run
         serial = prepare(self.work, f"{name}-serial", days=2)
         parallel = prepare(self.work, f"{name}-mpi", days=2)
+        if spectral:
+            for run in (serial, parallel):
+                (run / "radmod_namelist").write_text(
+                    "&radmod_nl\n nstartemp=1\n/\n", encoding="ascii"
+                )
         serial_exe = build_model(self.work / f"{name}-serial-build", lsg=lsg)
         mpi_exe = build_model(self.work / f"{name}-mpi-build", lsg=lsg, ranks=2)
         run_model(serial_exe, serial)
@@ -57,6 +64,17 @@ class MPITests(unittest.TestCase):
                              ("nstep", 11584)):
             self.assertEqual(struct.unpack("=i", actual[field])[0], value, field)
         self.assertEqual(actual["dls"], expected["dls"])
+        # These two replicated values must not be gathered as a grid field.
+        for label, state in (("serial", expected), ("MPI", actual)):
+            self.assertEqual(len(state["zsolars"]), 16, f"{label} zsolars size")
+        self.assert_values_close(
+            doubles(actual["zsolars"]), doubles(expected["zsolars"]),
+            atol=1e-14, rtol=1e-12, label="zsolars",
+        )
+        if spectral:
+            fractions = doubles(actual["zsolars"])
+            self.assertTrue(all(0.0 < value < 1.0 for value in fractions))
+            self.assertAlmostEqual(math.fsum(fractions), 1.0, delta=1e-12)
         # Parallel reductions can change roundoff; compare every value in both
         # gridpoint fields and global spectral fields rather than file bytes.
         fields = ["dt", "dq", "dalb", "ysst", "dicec", "diced",
@@ -82,12 +100,30 @@ class MPITests(unittest.TestCase):
                         floats(ocean[key]), floats(reference[key]),
                         atol=1e-5, rtol=1e-6, label=str(key),
                     )
+        else:
+            split = prepare(self.work, f"{name}-mpi-split", days=1)
+            if spectral:
+                shutil.copy2(parallel / "radmod_namelist", split)
+            run_model(mpi_exe, split, launcher=["mpiexec", "-n", "2"])
+            (split / "plasim_status").replace(split / "plasim_restart")
+            run_model(mpi_exe, split, launcher=["mpiexec", "-n", "2"])
+            continued = records(split / "plasim_status")
+            self.assertEqual(continued.keys(), actual.keys())
+            for field in actual:
+                with self.subTest(configuration=name, restart_field=field):
+                    self.assertTrue(
+                        continued[field] == actual[field],
+                        f"{field} differs between continuous and restarted MPI runs",
+                    )
 
     def test_mpi_mixed_layer_matches_serial(self) -> None:
         self.compare_configuration(lsg=False)
 
     def test_mpi_lsg_matches_serial(self) -> None:
         self.compare_configuration(lsg=True)
+
+    def test_mpi_spectral_matches_serial(self) -> None:
+        self.compare_configuration(lsg=False, spectral=True)
 
 
 if __name__ == "__main__":
