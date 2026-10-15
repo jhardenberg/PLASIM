@@ -11,9 +11,10 @@ be started manually from the Actions tab once the workflow is on the default
 branch. On pull requests targeting either branch, add the exact `run tests`
 label to start a run; later commits rerun the tests while the label remains.
 
-The tests need Python 3, `gfortran`, `cc`, and `make`. They build a headless,
-serial T21/L10 PlaSim in a temporary directory using the repository's existing
-`make_plasim` build rules. No generated files are written into the checkout.
+The tests need Python 3, `gfortran`, `cc`, and `make`. They build headless,
+serial T21/L10 binaries with and without LSG in temporary directories using
+the repository's existing `make_plasim` build rules. No generated files are
+written into the checkout.
 
 The suite checks the Gregorian and 360 day calendar, a deterministic two day
 T21 run with broad numerical baselines, and byte equality between continuous
@@ -43,6 +44,39 @@ continued in broadband radiation mode; spectral radiation requires those
 records. The planet branch reads `psurf` from `planet_namelist`
 and no longer accepts `sidereal_year` or `tropical_year`; those older input
 locations and options are not covered by these tests.
+
+## Coupled PlaSim and LSG tests
+
+[`test_lsg.py`](test_lsg.py) builds the actual `lsg/src/lsgmod.f90` and
+`plasim/src/cpl.f90`, rather than the stubs used by the atmosphere tests.
+It uses the checked-in `lsg/dat` inputs and restart, including the coupled
+land mask, on LSG's 72 × 76 grid with 22 ocean levels. The atmosphere uses
+T21/L10, the 360-day calendar, and `nlsg=1` (atmospheric SST forcing and
+ocean heat-flux feedback).
+
+The coupling interval is one day (`naomod=32`), instead of the production
+default of ten days, so a two-day test advances the ocean twice. LSG output
+is written at each step. The tests check output dates, grid and level counts,
+finite values, changing ocean temperature and salinity, and numerical means
+for surface temperature, salinity, atmospheric wind stress, and ocean heat
+flux. The `yfldo` atmospheric restart field checks the returned LSG heat flux
+after interpolation to PlaSim's grid.
+
+The numerical means were recorded from commit `d2eef95` with GNU Fortran
+15.2.0 using `-O0 -fdefault-real-8`. Their tolerances allow small compiler
+differences. A separate restart test compares a continuous two-day run with
+two one-day runs, retaining `kleiin1`, `kleiswi`, and the generated LSG matrix
+between runs. It requires byte equality for both the atmospheric and LSG
+restart files and for the final day's ocean output within the same build.
+This covers short coupled execution and restart consistency; ocean spin-up,
+long climate statistics, MPI, and other coupling modes need separate tests.
+
+These tests are included in the normal discovery command and the existing
+GitHub Actions workflow. To run only the LSG tests:
+
+```sh
+python3 -m unittest discover -s tests -p 'test_lsg.py' -v
+```
 
 Known gap: `cal2step` currently ignores hour and minute for the simplified
 360 day calendar, so the calendar test checks that path at midnight. This is
