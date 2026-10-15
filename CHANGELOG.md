@@ -2,13 +2,14 @@
 
 Notable changes in the `master` branch are summarized here in a format inspired by [Keep a Changelog](https://keepachangelog.com/). This history starts with the [2014 source import](https://github.com/jhardenberg/PLASIM/commit/71bfcbf), covers the releases tagged [`1.0`](https://github.com/jhardenberg/PLASIM/releases/tag/1.0) and [`v1.0.1`](https://github.com/jhardenberg/PLASIM/releases/tag/v1.0.1), and describes the planetary developments as the planned v1.1 release. The bullets highlight changes relevant to users; the comparison links provide the full commit history.
 
-## [v1.1](https://github.com/jhardenberg/PLASIM/compare/v1.0.1...bac0eb7) — planned
+## [v1.1](https://github.com/jhardenberg/PLASIM/compare/v1.0.1...master) — planned
 
-Changes since the `v1.0.1` tag, through commit `bac0eb7` (2026-10-15).
+Changes on `master` since the `v1.0.1` tag.
 
 ### Main changes
 
 - Merged the planetary and exoplanet developments, including optional stellar-spectrum radiation, spectral surface albedos, and tidally locked illumination. See the feature and compatibility notes below ([#13](https://github.com/jhardenberg/PLASIM/pull/13)).
+- Added repository instructions in `AGENTS.md` for scientific compatibility, testing both ocean configurations, documentation, changelog maintenance, and review.
 
 ### Detailed changes
 
@@ -79,4 +80,4 @@ The original `NEW_IN_VERSION_17` file highlighted these changes to the model sui
 
 The repository began with an import of the version 16 MoSt/PlaSim source tree from SVN revision 46 ([`71bfcbf`](https://github.com/jhardenberg/PLASIM/commit/71bfcbf)). It already included PlaSim, PUMA, SAM, the LSG ocean, MoSt, and their documentation. See the [version 16 notes](https://github.com/jhardenberg/PLASIM/blob/71bfcbf/NEW_IN_VERSION_16) for features present at the starting point.
 
-[Full history from the import to v1.0](https://github.com/jhardenberg/PLASIM/compare/71bfcbf...1.0) · [Full history from v1.0 to v1.0.1](https://github.com/jhardenberg/PLASIM/compare/1.0...v1.0.1) · [Full history from v1.0.1 to the v1.1 draft](https://github.com/jhardenberg/PLASIM/compare/v1.0.1...bac0eb7)
+[Full history from the import to v1.0](https://github.com/jhardenberg/PLASIM/compare/71bfcbf...1.0) · [Full history from v1.0 to v1.0.1](https://github.com/jhardenberg/PLASIM/compare/1.0...v1.0.1) · [Full history from v1.0.1 to the v1.1 draft](https://github.com/jhardenberg/PLASIM/compare/v1.0.1...master)
