@@ -2,12 +2,13 @@
 
 Notable changes in the `master` branch are summarized here in a format inspired by [Keep a Changelog](https://keepachangelog.com/). This history starts with the [2014 source import](https://github.com/jhardenberg/PLASIM/commit/71bfcbf), covers the release tagged [`1.0`](https://github.com/jhardenberg/PLASIM/releases/tag/1.0), and describes the current `master` as the planned v1.1 release. The bullets highlight changes relevant to users; the comparison links provide the full commit history.
 
-## [v1.1](https://github.com/jhardenberg/PLASIM/compare/1.0...3cddd4e) — planned
+## [v1.1](https://github.com/jhardenberg/PLASIM/compare/1.0...bac0eb7) — planned
 
-Changes on `master` since the `1.0` tag, through commit `3cddd4e` (2026-10-14).
+Changes on `master` since the `1.0` tag, through commit `bac0eb7` (2026-10-15).
 
 ### Main changes
 
+- Merged the planetary and exoplanet developments, including optional stellar-spectrum radiation, spectral surface albedos, and tidally locked illumination. See the feature and compatibility notes below ([#13](https://github.com/jhardenberg/PLASIM/pull/13)).
 - Added short, reproducible T21/L10 PlaSim tests and a GitHub Actions workflow for manual runs, labeled pull requests, and pushes to `master` ([#23](https://github.com/jhardenberg/PLASIM/pull/23)).
 - Added classic Earth numerical, legacy restart, and namelist compatibility checks ([#24](https://github.com/jhardenberg/PLASIM/pull/24)).
 - Expanded LSG ocean setup and vertical diffusion controls, and added scripts for boundary data preparation and conversion ([2021 changes](https://github.com/jhardenberg/PLASIM/compare/1.0...6514261)).
@@ -21,6 +22,20 @@ Changes on `master` since the `1.0` tag, through commit `3cddd4e` (2026-10-14).
 - **Data conversion:** Added `nc2sra` and `sra2nc`, fixed the Gaussian output grid and latitude orientation, and improved their documentation and command behavior ([#17](https://github.com/jhardenberg/PLASIM/pull/17), [#18](https://github.com/jhardenberg/PLASIM/pull/18), [#19](https://github.com/jhardenberg/PLASIM/pull/19)).
 - **Tests and CI:** Added calendar, deterministic two-day, and restart-consistency tests; then added a saved master Earth state fixture and checks for legacy restart and namelist inputs. CI runs on pushes, by manual dispatch, or on pull requests carrying the `run tests` label ([#23](https://github.com/jhardenberg/PLASIM/pull/23), [#24](https://github.com/jhardenberg/PLASIM/pull/24)).
 - **Maintenance:** Updated README guidance for this standalone repository and made configuration more robust to locale-specific numeric formats ([`8e7e672`](https://github.com/jhardenberg/PLASIM/commit/8e7e672), [`27ab3a9`](https://github.com/jhardenberg/PLASIM/commit/27ab3a9)).
+
+### Planetary features and compatibility changes — PR #13
+
+The `devel_planets` branch was merged on 2026-10-15 ([#13](https://github.com/jhardenberg/PLASIM/pull/13), [`bac0eb7`](https://github.com/jhardenberg/PLASIM/commit/bac0eb7)). Its changes relative to the preceding `master` include:
+
+- **Planet setup and normalization:** Harmonized Earth, Mars, and Exo parameter handling and added planetary soil-water field capacity (`p_wsmax`). The new `normalization_day` option selects solar or sidereal day normalization for damping and dissipation coefficients. Earth defaults to `"solar"` for classic behavior; Mars and Exo default to `"sidereal"`.
+- **Stellar radiation and albedos:** Added optional radiation based on a stellar blackbody temperature or supplied spectrum, two surface-albedo bands separated at 0.75 µm, and spectrum-dependent Rayleigh scattering scaled by surface pressure and gravity. The new spectral data module is included in the build. The default `nstartemp=0` retains the classic broadband radiation path; spectral behavior is enabled explicitly through the radiation namelist.
+- **Illumination and orbits:** Added tidally locked illumination with a configurable substellar longitude (`ltidally_locked`, `tl_substellar`), made the diurnal-angle calculation use `solar_day`, and relaxed the former eccentricity limit of 0.1.
+- **Physical timescales and ocean diffusion:** Expressed day-based physical parameter conversions in fixed 86,400-second Earth days and vegetation/soil turnover years in fixed 365-day Earth years. The latter changes their conversion in 360-day-calendar configurations. Horizontal diffusion in `oceanmod` now uses the configured planetary radius; for Earth this changes the radius from 6,371,000 to 6,371,220 m. These changes can affect enabled configurations even when the Earth planet is selected.
+- **Namelist migration:** Moved `psurf` from `plasim_namelist` (`plasim_nl`) to `planet_namelist` (`planet_nl`) and removed `sidereal_year` and `tropical_year` from `planet_nl`. Exo's `planet_nl` also no longer accepts `alv`, `als`, or `tmelt`. In `landmod_nl`, the scalar controls `albsmax`, `albsminf`, `albsmaxf`, `albgmin`, and `albgmax` are no longer accepted; the spectral path uses two-band albedo arrays. The classic `albsmin` input remains supported.
+- **Restart compatibility:** Added band-specific surface and land-climatology albedo records to new restarts. Broadband runs can continue older restarts without those records by initializing both bands from the broadband fields; spectral radiation requires the spectral records. Existing spectral records are read when present, and incomplete record pairs are rejected.
+- **Output and postprocessing:** Added planetary radius, gravity, gas constant, and lapse rate to the Service metadata read by `burn7`, while retaining postprocessor namelist overrides. Added `nc2txt` and a meridional-profile analysis script, and changed `burn.sh` to derive surface albedo from shortwave fluxes.
+- **Resolution and boundary data:** Corrected T42 dimensions in `makesra`, added T21/T42 selection to the Earth and aquaplanet boundary-data scripts, and extended the existing friction initialization and T42 convection defaults to models with at least ten vertical levels.
+- **Regression tests:** Added continuous-versus-restarted equality checks in spectral radiation mode and numerical checks after continuing the legacy Earth restart. Retained the classic Earth state comparison and the `albsmin` namelist test; removed acceptance tests for the old `psurf` location and the deleted orbital-year options. These short T21 checks do not establish bitwise equality for every Earth configuration or long climate simulation.
 
 ## [v1.0](https://github.com/jhardenberg/PLASIM/releases/tag/1.0) — 2020-09-18
 
@@ -57,4 +72,4 @@ The original `NEW_IN_VERSION_17` file highlighted these changes to the model sui
 
 The repository began with an import of the version 16 MoSt/PlaSim source tree from SVN revision 46 ([`71bfcbf`](https://github.com/jhardenberg/PLASIM/commit/71bfcbf)). It already included PlaSim, PUMA, SAM, the LSG ocean, MoSt, and their documentation. See the [version 16 notes](https://github.com/jhardenberg/PLASIM/blob/71bfcbf/NEW_IN_VERSION_16) for features present at the starting point.
 
-[Full history from the import to v1.0](https://github.com/jhardenberg/PLASIM/compare/71bfcbf...1.0) · [Full history from v1.0 to the v1.1 draft](https://github.com/jhardenberg/PLASIM/compare/1.0...3cddd4e)
+[Full history from the import to v1.0](https://github.com/jhardenberg/PLASIM/compare/71bfcbf...1.0) · [Full history from v1.0 to the v1.1 draft](https://github.com/jhardenberg/PLASIM/compare/1.0...bac0eb7)
