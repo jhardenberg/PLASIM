@@ -63,15 +63,23 @@
 
       subroutine yday2mmdd(kyday,kmon,kday)
       use calmod
+      implicit none
+      integer, intent(in ) :: kyday
+      integer, intent(out) :: kmon,kday
+
+      if (kyday < 1 .or. kyday > n_days_per_year) &
+         error stop 'YDAY2MMDD: day of year out of range'
+
       if (n_days_per_year == 365) then
+!        Perpetual dates use a fixed non-leap climatology, with no year.
          kmon = 1
          do while (kyday > mona365(kmon))
             kmon = kmon + 1
          enddo
-         kday = kyday - monaccu(kmon-1)
+         kday = kyday - mona365(kmon-1)
       else
-         kmon = (kyday-1) / n_days_per_month
-         kday = kyday - n_days_per_month * kmon
+         kmon = (kyday-1) / n_days_per_month + 1
+         kday = mod(kyday-1,n_days_per_month) + 1
       endif
       return
       end
@@ -237,6 +245,8 @@
          kstep = ktspd * (kyea    * n_days_per_year  &
                        + (kmon-1) * n_days_per_month &
                        +  kday-1)
+!        Use the configured solar day, truncating to the preceding step.
+         kstep = kstep + int(ktspd * (khou * 3600.0 + kmin * 60.0) / solar_day)
       return
       endif
       iy400 = kyea   /  400    ! segment [400]
