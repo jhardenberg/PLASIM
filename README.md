@@ -73,7 +73,7 @@ burn.sh [options] infile outfile var
   -p lev1,lev2,...  Pressure levels in hPa
 ```
 
-The default pressure levels are `20,30,50,70,100,150,200,250,300,400,500,600,700,850,925,1000` hPa. `uas` and `vas` are derived from `ua` and `va` at sigma level 1. Sea-level pressure (`psl`) is derived from surface humidity, temperature, and pressure using the hypsometric formula. Variables outside the named list are passed directly to the afterburner. As currently written, `burn.sh` sets `BURNER` to developer-specific absolute paths; point it to your `burn7.x` before running a conversion. The following variable reference preserves the original script README's categories and uses the current script's source-variable names; `burn.sh -h` generates its current list.
+The default pressure levels are `20,30,50,70,100,150,200,250,300,400,500,600,700,850,925,1000` hPa. `uas` and `vas` are derived from `ua` and `va` at sigma level 1. Sea-level pressure (`psl`) is derived from surface humidity, temperature, and pressure using the hypsometric formula. Variables outside the named list are passed directly to the afterburner. `burn.sh` uses this checkout's `postprocessor/burn7.x` by default; set `BURNER=/path/to/burn7.x` to use another executable. `PLEVS` can override the default pressure levels, or use `-p`. Both executable and data paths may contain spaces. The following variable reference preserves the original script README's categories and uses the current script's source-variable names; `burn.sh -h` generates its current list.
 
 #### 2D CMOR2 variables
 
@@ -145,6 +145,27 @@ The default pressure levels are `20,30,50,70,100,150,200,250,300,400,500,600,700
 | `lsm` | Land Sea Mask | 1 | `lsm` |
 | `mld` | Ocean Mixed Layer Thickness | m | `mld` |
 
+### Monthly extraction
+
+[`scripts/postmon.sh`](scripts/postmon.sh) processes `MOST.NNN` files for an
+inclusive year range and writes fixed fields and monthly means:
+
+```sh
+INDIR=/path/to/run POSTDIR=/path/to/post scripts/postmon.sh experiment 1 10
+```
+
+It uses the adjacent `burn.sh`; set `BURNSH` to another executable script if
+needed. Set `BURNER` for that script's afterburner. If `INDIR` and `POSTDIR` are
+omitted, the historical defaults use `$WORK/plasim/plasim/exps/experiment`
+and `$SCRATCH/plasim/exps/experiment/post`. `PLEVS` is passed to `burn.sh`.
+
+Both extraction scripts require Bash, CDO, and `mktemp`. They use private
+temporary directories under `TMPDIR` (or `/tmp`), clean up on exit or signals,
+and return a nonzero status on processing failures. `burn.log` in the current
+directory records the most recent `burn.sh` invocation, including all component
+variables and command errors. Numerical conversion formulas and output naming
+are unchanged.
+
 ### Other conversion tools
 
 [`scripts/srv2nc`](scripts/srv2nc) converts PlaSim and LSG Service output to NetCDF4 with CDO. [`scripts/nc2sra`](scripts/nc2sra) and [`scripts/sra2nc`](scripts/sra2nc) convert between NetCDF and Service-format boundary data. The [`scripts` directory](scripts) also contains monthly postprocessing and boundary-data helpers.
@@ -157,7 +178,7 @@ Run the regression suite from the repository root:
 python3 -m unittest discover -s tests -v
 ```
 
-The tests require Python 3, `gfortran`, `cc`, and `make`. MPI tests additionally require `mpif90` and `mpiexec`; they are skipped locally if those tools are absent. CI installs Open MPI. Tests build headless T21/L10 PlaSim binaries in temporary directories using `make_plasim`; generated files are not written into the checkout. The suite checks Gregorian and 360-day calendars, a deterministic two-day run with broad numerical baselines, byte equality between continuous and restarted two-day runs, selected Earth state values against a saved one-day `master` restart, legacy restart loading, and classic namelist inputs. A fixed random seed is required for restart comparisons.
+The tests require Python 3, `gfortran`, `cc`, and `make`. MPI tests additionally require `mpif90` and `mpiexec`; they are skipped locally if those tools are absent. The MoSt input-reader tests also need X11 headers and libraries (no running X server); CI installs `libx11-dev` alongside Open MPI. Tests build headless T21/L10 PlaSim binaries in temporary directories using `make_plasim`; generated files are not written into the checkout. The suite checks Gregorian and 360-day calendars, a deterministic two-day run with broad numerical baselines, byte equality between continuous and restarted two-day runs, selected Earth state values against a saved one-day `master` restart, legacy restart loading, and classic namelist inputs. A fixed random seed is required for restart comparisons.
 
 The suite also builds and runs the real PlaSim–LSG coupled model. Its two-day test uses daily coupling to exercise two ocean steps, checks ocean state and fluxes in both directions, and verifies that restarting both components reproduces a continuous run. See the [coupled test setup](tests/README.md#coupled-plasim-and-lsg-tests) for inputs, baselines, and scope.
 

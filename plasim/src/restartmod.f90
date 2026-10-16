@@ -268,9 +268,13 @@
 !     =========================
 
       subroutine check_equality(yn,pa,pb,k1,k2)
-      character (len=*) :: yn
-      real :: pa(k1,k2)
-      real :: pb(k1,k2)
+      use restartmod, only: nud
+      implicit none
+      integer, intent(in) :: k1,k2
+      character (len=*), intent(in) :: yn
+      real, intent(in) :: pa(k1,k2)
+      real, intent(in) :: pb(k1,k2)
+      integer :: j1,j2
 
       do j2 = 1 , k2
       do j1 = 1 , k1
