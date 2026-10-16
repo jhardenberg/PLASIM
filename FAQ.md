@@ -22,6 +22,18 @@ The variable is not recognized by the version of the model being run. Check the 
 
 Make permanent edits in `plasim/src`, not the copied sources under `plasim/bld`. MoSt can reuse binaries from `plasim/bin`. After saving any outputs you need, run `./cleanplasim` from the repository root and rebuild. This command removes the generated contents of `plasim/bld`, `plasim/bin`, and `plasim/run`.
 
+## Why do orbital parameters depend on how I split a run?
+
+With `NFIXORB=0`, Berger orbital elements are calculated at radiation
+initialization from the current model year, including the restored year
+when restarting. They remain unchanged during that executable invocation.
+A continuous multiyear run and annual restart chunks therefore use different
+orbital forcing. For annual evolution, restart at each year boundary and
+omit an explicit `IYRBP` override. For a prescribed fixed orbit, use
+`NFIXORB=1` with explicit `ECCEN`, `OBLIQ`, and `MVELP`. This is a known
+limitation, not a guarantee of restart-independent transient forcing; see
+the [orbital configuration notes](README.md#orbital-parameters-and-experiment-dates).
+
 ## Can I edit orography with MoSt?
 
 The old FAQ described an experimental PUMA orography editor for a 32-latitude setup: select a rectangular region, enter an anomaly in geopotential metres, and preprocess it. The GUI did not immediately redraw the result; the next PUMA run used the new orography. PUMA is not included in this PlaSim-focused checkout, so those steps are historical and cannot be followed here as written. For PlaSim input data, consult the [User's Guide](plasim/doc/PS_UsersGuide.pdf).

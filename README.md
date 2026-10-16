@@ -33,6 +33,47 @@ In the MoSt GUI, select **Planet Simulator** and use **Save & Run** to build and
 
 Configuration and builds create files under `plasim/bld`, `plasim/bin`, and `plasim/run`. Edit permanent model sources in [`plasim/src`](plasim/src). Running `./cleanplasim` removes the generated build, binary, and run files before rebuilding; save any run output you need first.
 
+### Orbital parameters and experiment dates
+
+New MoSt experiments default to start year **2000** and `NFIXORB=1` in
+`planet_namelist` (`planet_nl`). This holds the prescribed eccentricity
+(`ECCEN`), obliquity (`OBLIQ`), and longitude of perihelion (`MVELP`) fixed.
+The seasonal and diurnal cycles still follow the model calendar. Saved MoSt
+configurations and existing namelists retain their explicit settings.
+
+With `NFIXORB=0`, the model computes Berger orbital elements **once at
+radiation initialization**, using the current model year. A cold start uses
+`N_START_YEAR`; a restart uses the year of the restored model timestep,
+even if `N_START_YEAR` is unchanged. An explicit `IYRBP` in
+`radmod_namelist` overrides this epoch: the orbital year is `1950 - IYRBP`.
+`IYRBP` has no effect when `NFIXORB=1`.
+
+**There is currently no automatic orbital update at a year boundary within
+one executable invocation.** For example, a continuous 2000–2009 run with
+`NFIXORB=0` retains the elements calculated for 2000 throughout. Running the
+same experiment as one-year chunks, each continued from `plasim_restart`,
+recalculates the elements for 2000, 2001, and so on, unless `IYRBP` explicitly
+fixes the orbital epoch. MoSt normally creates annual chunks without the
+simulation GUI; selecting that GUI instead runs all requested years in one
+invocation. Check the generated run script and `N_RUN_YEARS` rather than
+assuming an update interval. The computed epoch and elements are printed in
+`plasim_diag` at each initialization.
+
+This initialization-only behavior is a known limitation for transient
+orbital experiments: changing restart frequency can change the forcing and
+trajectory. Use annual restarts for yearly orbital updates, or prescribe a
+fixed orbit for time-independent forcing. Automatic annual updates remain
+an open design question in [issue #9](https://github.com/jhardenberg/PLASIM/issues/9).
+
+These new defaults apply to MoSt-generated experiments. Direct executable
+runs with omitted namelist settings retain the legacy Earth defaults
+(`N_START_YEAR=1`, `NFIXORB=0`); set both explicitly when bypassing MoSt.
+Restart-file formats are unchanged, but continuing an existing
+`NFIXORB=0` experiment now uses its restart year instead of its original
+start year. To reproduce its previous orbital forcing, set `IYRBP` to
+`1950 - original_start_year` (for example, `IYRBP=-50` for an original start
+year of 2000), or retain any existing explicit `IYRBP` value.
+
 ## Platform notes
 
 ### Ubuntu and other Linux distributions

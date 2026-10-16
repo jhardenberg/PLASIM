@@ -6,6 +6,7 @@ import gzip
 import math
 import os
 from pathlib import Path
+import re
 import shutil
 import struct
 import subprocess
@@ -197,6 +198,93 @@ class PlaSimTests(unittest.TestCase):
             (split / "plasim_status").read_bytes(),
             (continuous / "plasim_status").read_bytes(),
         )
+
+    def test_dynamic_orbit_uses_restart_year(self) -> None:
+        """Cross a year boundary and compare restarted and fresh orbits."""
+        for calendar, december_days in ((360, 30), (365, 31)):
+            with self.subTest(calendar=calendar):
+                def prepare(name, *, year=2000, month=12, days):
+                    run = self.prepare_run(f"orbit-{calendar}-{name}", days=days)
+                    (run / "plasim_namelist").write_text(
+                        "&plasim_nl\n"
+                        f" n_start_year={year}, n_start_month={month}, "
+                        f"n_days_per_year={calendar}, n_run_years=0, "
+                        f"n_run_months=0, n_run_days={days}, "
+                        "kick=0, ngui=0, seed=1\n/\n", encoding="ascii",
+                    )
+                    (run / "planet_namelist").write_text(
+                        "&planet_nl\n nfixorb=0\n/\n", encoding="ascii",
+                    )
+                    return run
+
+                continuous = prepare("continuous", days=december_days + 1)
+                self.run_model(continuous)
+                diagnostic = (continuous / "plasim_diag").read_text()
+                # Record the current limitation: no recalculation inside a run.
+                self.assertEqual(re.findall(r"Year AD\s*=\s*(\d+)", diagnostic),
+                                 ["2000"])
+                self.assertIn("initialization only", diagnostic)
+
+                split = prepare("split", days=december_days)
+                self.run_model(split)
+                (split / "plasim_status").replace(split / "plasim_restart")
+                namelist = split / "plasim_namelist"
+                namelist.write_text(namelist.read_text().replace(
+                    f"n_run_days={december_days}", "n_run_days=1"
+                ), encoding="ascii")
+                self.run_model(split)
+                diagnostic = (split / "plasim_diag").read_text()
+                self.assertEqual(re.findall(r"Year AD\s*=\s*(\d+)", diagnostic),
+                                 ["2001"])
+
+                fresh = prepare("fresh", year=2001, month=1, days=1)
+                self.run_model(fresh)
+                pattern = (r"\* (?:Eccentricity|Obliquity \(deg\)|"
+                           r"Long of perh\(deg\))\s*=\s*([\d.+-]+)")
+                restarted_orbit = re.findall(pattern, diagnostic)
+                self.assertEqual(len(restarted_orbit), 3)
+                self.assertEqual(restarted_orbit, re.findall(
+                    pattern, (fresh / "plasim_diag").read_text()
+                ))
+                self.assertNotEqual(restarted_orbit, re.findall(
+                    pattern, (continuous / "plasim_diag").read_text()
+                ))
+                self.assertEqual(records(split / "plasim_status")["nstep"],
+                                 records(continuous / "plasim_status")["nstep"])
+
+                # An explicit orbital epoch must still override the restart date.
+                (split / "plasim_status").replace(split / "plasim_restart")
+                (split / "radmod_namelist").write_text(
+                    "&radmod_nl\n iyrbp=50\n/\n", encoding="ascii",
+                )
+                self.run_model(split)
+                self.assertEqual(re.findall(
+                    r"Year AD\s*=\s*(\d+)",
+                    (split / "plasim_diag").read_text(),
+                ), ["1900"])
+
+    def test_fixed_orbit_preserves_explicit_elements(self) -> None:
+        for year in (2000, 2001):
+            with self.subTest(year=year):
+                run = self.prepare_run(f"fixed-orbit-{year}", days=0)
+                (run / "plasim_namelist").write_text(
+                    f"&plasim_nl\n n_start_year={year}, n_run_steps=1, "
+                    "kick=0, ngui=0, seed=1\n/\n", encoding="ascii",
+                )
+                (run / "planet_namelist").write_text(
+                    "&planet_nl\n nfixorb=1, eccen=0.02, obliq=24.0, "
+                    "mvelp=105.0\n/\n", encoding="ascii",
+                )
+                self.run_model(run)
+                diagnostic = (run / "plasim_diag").read_text()
+                self.assertIn("Use input orbital parameters", diagnostic)
+                for label, expected in (("Eccentricity", 0.02),
+                                        ("Obliquity (deg)", 24.0),
+                                        ("Long of perh(deg)", 105.0)):
+                    match = re.search(re.escape(label) + r"\s*=\s*([\d.]+)",
+                                      diagnostic)
+                    self.assertIsNotNone(match, label)
+                    self.assertEqual(float(match.group(1)), expected, label)
 
     def test_classic_earth_state_matches_master(self) -> None:
         """Compare every value in key Earth fields with the master fixture."""

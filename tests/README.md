@@ -25,6 +25,13 @@ two day runs and runs restarted after one day in broadband and spectral modes.
 It also checks every value in selected Earth state fields against a one day
 `master` restart fixture, resumes that legacy restart, and runs one step with
 a non-default `albsmin` value.
+Orbital tests cross December–January in both the 360-day and Gregorian
+calendars with `NFIXORB=0`. They check that a restart uses the restored year
+even when `N_START_YEAR` is unchanged, matches a fresh run's orbital elements
+for that year, and still respects an explicit `IYRBP` override. They also
+record the current initialization-only limitation in a continuous run and
+check prescribed `NFIXORB=1` elements at different start years. The existing
+Earth fixture continues to exercise the unchanged direct-model defaults.
 The fixed random seed is needed for the restart comparisons. These tests
 exercise the serial model; additional MPI coverage is described below. T42
 tests remain separate follow-up work.

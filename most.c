@@ -1004,7 +1004,7 @@ void InitNamelist(void)
    NL_p("OBLIQ" , obliq_vec);
    NL_p("GSOL0" , gsol0_vec);
 
-   NL_i(PLASIM,"planet" ,"NFIXORB" ,  0);
+   NL_i(PLASIM,"planet" ,"NFIXORB" ,  1); // Fixed orbit for new experiments
    NL_r(PLASIM,"radmod" ,"CO2"     ,360.0);
    NL_i(PLASIM,"plasim" ,"KICK"    ,  1);
    NL_i(PLASIM,"plasim" ,"MPSTEP"  ,  0);
@@ -1553,7 +1553,7 @@ void InitSelections(void)
    Sel->w    = 4 * FixFontWidth + 2;
    Sel->edco = 4;
    Sel->type = SEL_INT;
-   Sel->div  = Sel->iv = 1;
+   Sel->div  = Sel->iv = 2000;
    Sel->piv  = &SimStart;
    SelSYear  = Sel;
 
