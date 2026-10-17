@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "plasim" / "src"
 BOUNDARY_DATA = ROOT / "plasim" / "dat" / "T21"
 LEGACY_RESTART = ROOT / "tests" / "fixtures" / "earth_t21_l10_day1_360.restart.gz"
+DEFAULT_RESTART = ROOT / "tests" / "fixtures" / "earth_t21_l10_day1_2000_fixed.restart.gz"
 NAMELISTS = (
     "fluxmod", "icemod", "landmod", "miscmod", "oceanmod", "planet",
     "radmod", "rainmod", "seamod", "surfmod", "vegmod",
@@ -141,6 +142,8 @@ class PlaSimTests(unittest.TestCase):
         cls.run_model(cls.continuous)
         cls.legacy_status = cls.work / "legacy_status"
         cls.legacy_status.write_bytes(gzip.decompress(LEGACY_RESTART.read_bytes()))
+        cls.default_status = cls.work / "default_status"
+        cls.default_status.write_bytes(gzip.decompress(DEFAULT_RESTART.read_bytes()))
 
     @classmethod
     def prepare_run(cls, name: str, *, days: int) -> Path:
@@ -155,13 +158,13 @@ class PlaSimTests(unittest.TestCase):
         self.assertEqual(struct.unpack("=i", state["nlat"])[0], 32)
         self.assertEqual(struct.unpack("=i", state["nlon"])[0], 64)
         self.assertEqual(struct.unpack("=i", state["nlev"])[0], 10)
-        self.assertEqual(struct.unpack("=i", state["nstep"])[0], 11584)
+        self.assertEqual(struct.unpack("=i", state["nstep"])[0], 23040064)
 
         # Broad numerical baselines: catch changed physics and broken data
         # loading without requiring bitwise agreement across compilers.
         for field, expected_mean, tolerance in (
-            ("dt", 277.6539, 0.3),
-            ("dq", 0.00905793, 0.0001),
+            ("dt", 277.6631607, 0.3),
+            ("dq", 0.00906076004, 0.0001),
             ("dls", 0.32861328125, 0.0),
         ):
             values = doubles(state[field])
@@ -286,13 +289,15 @@ class PlaSimTests(unittest.TestCase):
                     self.assertIsNotNone(match, label)
                     self.assertEqual(float(match.group(1)), expected, label)
 
-    def test_classic_earth_state_matches_master(self) -> None:
-        """Compare every value in key Earth fields with the master fixture."""
-        run = self.prepare_run("classic-earth", days=1)
+    def test_default_earth_state_matches_reference(self) -> None:
+        """Check the new defaults without setting either date or orbit mode."""
+        run = self.prepare_run("default-earth", days=1)
         self.run_model(run)
         actual = records(run / "plasim_status")
-        expected = records(self.legacy_status)
-        self.assertEqual(struct.unpack("=i", actual["nstep"])[0], 11552)
+        expected = records(self.default_status)
+        self.assertEqual(struct.unpack("=i", actual["nstep"])[0], 23040032)
+        self.assertIn("Use input orbital parameters",
+                      (run / "plasim_diag").read_text())
         for field in ("dt", "dq", "dalb", "dls", "sz", "sd", "st", "sq", "sp"):
             with self.subTest(field=field):
                 reference = doubles(expected[field])
@@ -304,18 +309,32 @@ class PlaSimTests(unittest.TestCase):
                 worst = max(range(len(values)), key=lambda i: differences[i] / limits[i])
                 self.assertLessEqual(
                     differences[worst], limits[worst],
-                    f"{field}[{worst}] differs from master: "
+                    f"{field}[{worst}] differs from default reference: "
                     f"{values[worst]} vs {reference[worst]}",
                 )
 
     def test_master_restart_can_continue(self) -> None:
-        run = self.prepare_run("master-restart", days=1)
+        def prepare_legacy(name, *, days):
+            run = self.prepare_run(name, days=days)
+            namelist = run / "plasim_namelist"
+            namelist.write_text(namelist.read_text().replace(
+                "&plasim_nl\n", "&plasim_nl\n n_start_year=1,\n"
+            ), encoding="ascii")
+            (run / "planet_namelist").write_text(
+                "&planet_nl\n nfixorb=0\n/\n", encoding="ascii",
+            )
+            return run
+
+        # The historical fixture used year 1 and a calculated Berger orbit.
+        run = prepare_legacy("master-restart", days=1)
         (run / "plasim_restart").write_bytes(self.legacy_status.read_bytes())
         self.run_model(run)
         state = records(run / "plasim_status")
         self.assertEqual(struct.unpack("=i", state["nstep"])[0], 11584)
         self.assertTrue(all(map(math.isfinite, doubles(state["dt"]))))
-        reference = records(self.continuous / "plasim_status")
+        continuous = prepare_legacy("legacy-continuous", days=2)
+        self.run_model(continuous)
+        reference = records(continuous / "plasim_status")
         self.assertEqual(state["dls"], reference["dls"])
         for field in ("dt", "dq", "dalb"):
             with self.subTest(field=field):

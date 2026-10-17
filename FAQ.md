@@ -24,6 +24,11 @@ Make permanent edits in `plasim/src`, not the copied sources under `plasim/bld`.
 
 ## Why do orbital parameters depend on how I split a run?
 
+Earth runs now default to `N_START_YEAR=2000` and `NFIXORB=1`, including
+direct executable runs. Existing namelists that omit these fields inherit
+the new defaults; explicitly specify older values when reproducing an old
+experiment.
+
 With `NFIXORB=0`, Berger orbital elements are calculated at radiation
 initialization from the current model year, including the restored year
 when restarting. They remain unchanged during that executable invocation.

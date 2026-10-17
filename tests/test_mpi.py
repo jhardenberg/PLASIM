@@ -54,7 +54,7 @@ class MPITests(unittest.TestCase):
         expected = records(serial / "plasim_status")
         actual = records(parallel / "plasim_status")
         for field, value in (("nlat", 32), ("nlon", 64), ("nlev", 10),
-                             ("nstep", 11584)):
+                             ("nstep", 23040064)):
             self.assertEqual(struct.unpack("=i", actual[field])[0], value, field)
         self.assertEqual(actual["dls"], expected["dls"])
         # Parallel reductions can change roundoff; compare every value in both
@@ -73,7 +73,7 @@ class MPITests(unittest.TestCase):
         if lsg:
             ocean = lsg_output_records(parallel / "lsg_output")
             reference = lsg_output_records(serial / "lsg_output")
-            self.assertEqual({key[2] for key in ocean}, {10101, 10102})
+            self.assertEqual({key[2] for key in ocean}, {20000101, 20000102})
             self.assertEqual(ocean.keys(), reference.keys())
             for key in ocean:
                 with self.subTest(ocean_record=key):
