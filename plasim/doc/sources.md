@@ -1,26 +1,35 @@
-# Source material and coverage
+# Source material and attribution
 
-This manual combines the historical User's Guide with current repository
-instructions and implementation checks. Original authorship is retained;
-new descriptions should identify the source sections and distinguish
-historical behavior from the present model.
+The manual adapts the University of Hamburg's *Planet Simulator User's
+Guide*, version 16.0, by Frank Lunkeit, Simon Blessing, Klaus Fraedrich,
+Heiko Jansen, Edilbert Kirk, Ute Luksch, and Frank Sielmann. The original
+PDF is retained, including its figures and historical context. Current
+behavior is determined by code review and the checks recorded in
+{doc}`development/verification`.
 
-| Material | Intended use | Coverage in this installment |
-| --- | --- | --- |
-| {download}`User's Guide <PS_UsersGuide.pdf>` (version 16.0, 70 pages) | Installation, running, module overview, GUI, postprocessing, and appendices | Section 1.1 informs {doc}`user/most`; sections 1.2–1.5 are adapted in {doc}`user/experiments`. Remaining chapters are planned. |
-| {download}`README <../../README.md>` | Current build/run workflows, planets, orbital settings, postprocessing, and tests | MoSt workflow, current context, and the outline; remains an entry point for workflows not yet migrated. |
-| {download}`FAQ <../../FAQ.md>` | Dependencies, namelist errors, source/build separation, and troubleshooting | Selected troubleshooting in the user and developer chapters; full integration is planned. |
-| {download}`Changelog <../../CHANGELOG.md>` | New features and behavior/input migrations | Used to identify work beyond the historical manual. |
-| {download}`Ice output codes <codes_in_ice_output.pdf>` | Ice variables and budget identities | Planned; not transcribed or verified in this installment. |
-| {download}`Variable list <variable_list.txt>` | Variable names, dimensions, units, and codes | Planned; reconcile with current output and conversion code before publishing a catalogue. |
-| {download}`Test guide <../../tests/README.md>` and {repo}`tests/test_model.py` | Headless compilation, runtime setup, and validation scope | Basis for the standalone direct-Make example in Part II. |
-| {download}`burn.sh guide <../../scripts/README_burn.txt>` and {download}`postprocessor notes <../../postprocessor/README_POSTPROCESSOR>` | Specialized postprocessing instructions | Planned; keep these sources available during migration. |
+| Material | Current use |
+| --- | --- |
+| {download}`User's Guide <PS_UsersGuide.pdf>` (70 pages) | Chapters 1–7 and appendices A–C mapped to current practical/user/developer/reference chapters in the ledger; obsolete instructions are replaced or identified as historical. |
+| {download}`README <../../README.md>` | Current MoSt, planetary/orbital, postprocessor, and test context. |
+| {download}`FAQ <../../FAQ.md>` | Dependencies, file paths, rejected inputs, source/build separation, and compatibility advice. |
+| {download}`Changelog <../../CHANGELOG.md>` | Recent features and intentional input/behavior migrations, checked against implementation before adoption. |
+| {download}`Ice-output sheet <codes_in_ice_output.pdf>` | Code families compared with current `iceout`/`icestep`; added fields and diagnostic scope reflected in the output reference. |
+| {download}`Variable list <variable_list.txt>` | Historical names/dimensions/units compared with actual writers and converters; current inventories keep those sources distinct. |
+| {download}`Test guide <../../tests/README.md>` and source tests | Actual temporary builds, fixtures, restart/MPI/LSG checks, and validation limits. |
+| {download}`burn.sh guide <../../scripts/README_burn.txt>` | Historical extraction categories compared with current script expressions. |
+| {download}`Postprocessor notes <../../postprocessor/README_POSTPROCESSOR>` and {download}`burn7 quick reference <../../postprocessor/burn7qr.pdf>` | Compared with today's `burn7.cpp` options, parser, metadata, and Makefiles. |
 
-The scientific Reference Manual is intentionally excluded from this phase:
-none of its chapters or equation set is being migrated. The few equations
-in the developer example explain operational timestep and run-length choices
-directly from the current run-control code.
+The scientific Reference Manual is intentionally excluded: its chapters,
+derivations, and equation set have not been migrated. Operational equations
+for timestep/run length and code-defined diagnostics do not change that scope.
 
-The User's Guide was produced with LaTeX, but editable LaTeX sources are not
-present in this checkout. If recovered, use them to improve future migration
-of tables, figures, and citations rather than relying on PDF text extraction.
+The original User's Guide was produced with LaTeX, but editable sources are
+not in this checkout. The migration paraphrases practical text, preserves
+authorship, and checks extracted information against code. No historical
+screenshot is presented as proof of the current GUI. If original editable
+sources become available, they can improve future figure/citation handling.
+
+Implementation bugs found during documentation work are reported in separate
+GitHub issues and left for separate fixes. The manual describes current
+interfaces and tested scope; it does not contain workaround tutorials for
+those findings.

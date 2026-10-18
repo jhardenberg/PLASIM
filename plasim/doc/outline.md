@@ -1,92 +1,61 @@
-# Manual outline and migration plan
+# Manual structure and migration coverage
 
-The manual separates **Part I: User guide** from **Part II: Developer guide**.
-The sections below track the intended full manual; entries marked **planned**
-are a content backlog, not instructions ready to follow. MoSt is the
-recommended user build workflow; direct Make is an additional developer option.
+The practical content of the User's Guide is organized into a user part and
+an implementation/maintenance part. This is a migration to the current
+interfaces, not a verbatim transcription of obsolete examples. The scientific
+Reference Manual is excluded.
 
 ## Part I: User guide
 
-### 1. Getting started and running experiments
-
-- **Available:** {doc}`user/most`: configure and compile with MoSt, select a
-  graphical or headless preparation workflow, and launch the generated script.
-- **Available:** {doc}`user/experiments`: a direct adaptation of User's Guide
-  sections 1.2–1.5, covering directory roles, build/run preparation, and long
-  simulations with current script and output conventions.
-- **Planned:** platform-specific setup; further resolutions, parallelism,
-  boundary conditions, and worked restart/recovery procedures.
-- **Planned:** practical troubleshooting adapted from the root FAQ,
-  distinguishing supported PlaSim workflows from historical PUMA recipes.
-
-Primary material: User's Guide chapter 1, current README/FAQ, `configure.sh`,
-`most.c`, and the regression setup.
-
-### 2. Model components and experiment choices
-
-- **Planned:** a practical overview of the atmosphere, land/vegetation, sea
-  ice, mixed-layer ocean, and optional LSG ocean, linked to configuration.
-- **Planned:** Earth, Mars, and Exo setups; calendar and planetary day
-  conventions; start dates and prescribed versus calculated orbital elements.
-- **Planned:** classic versus stellar-spectrum radiation, two-band albedos,
-  tidally locked illumination, tuning choices, and compatibility notes.
-- **Deferred:** migration of the scientific Reference Manual, including its
-  dynamics, parameterization derivations, and full equation set. This section
-  will initially explain how to select experiments without reproducing those
-  derivations.
-
-Primary material: User's Guide module overview, current README/changelog,
-and the corresponding model sources. Tuning descriptions need verified
-publication details and the actual settings used in this repository.
-
-### 3. Configuration and output reference
-
-- **Available:** a first MoSt configuration in {doc}`user/most`. The direct
-  executable's runtime table in {ref}`headless-parameters` is currently in
-  Part II's CI example; it explicitly distinguishes source defaults from
-  MoSt-generated settings.
-- **Planned:** namelist files and groups, accepted parameters, types, units,
-  defaults, valid combinations, and migration notes for removed or moved inputs.
-- **Planned:** boundary-data grids, Service and restart formats, and output
-  frequency and averaging conventions.
-- **Planned:** an atmospheric, ocean, and ice variable catalogue, starting
-  from `variable_list.txt` and `codes_in_ice_output.pdf`, checked against output
-  routines and the postprocessors. Record dimensions, codes, units, signs, and
-  whether a field is instantaneous, accumulated, averaged, or derived.
-- **Planned:** `srv2nc`, `burn7`, and `burn.sh`, including their different
-  dependencies, transformations, and example conversions.
-
-Primary material: User's Guide appendices and postprocessor chapter, output
-lists, script help, `outmod.f90`, and specialized postprocessor documentation.
-Do not silently equate raw model output with renamed or converted variables.
+| Topic | Chapter |
+| --- | --- |
+| Recommended compilation/preparation | {doc}`user/most`: MoSt GUI and configuration-file workflows. |
+| Experiment management | {doc}`user/experiments`: original guide §§1.2–1.5 adapted to current paths and scripts. |
+| Components and configuration choices | {doc}`user/components`: practical current module overview. |
+| Recent planetary development | {doc}`user/planets`: effective presets, calendars, orbits, spectrum, albedos, and illumination. |
+| Parallel and coupled runs | {doc}`user/parallel-ocean`: MoSt MPI selection and actual LSG setup. |
+| Input data | {doc}`user/boundary-data`: current surface-file names, grids, climatologies, and conversion interfaces. |
+| Interactive model display | {doc}`user/gui`: current configuration precedence, arrays, plot types, and display scaling. |
+| Continuation and provenance | {doc}`user/restarts`: segment handoff, compatibility, and reproducibility. |
+| Output conversion | {doc}`user/postprocessing`: srv2nc, current burn7, and extraction conventions. |
+| Inspection and graphics | {doc}`user/visualization`: tested CDO inspection and current versus historical graphics paths. |
+| Columns and soundings | {doc}`user/column`: individual current controls, absent historical macro, and sounding interface. |
+| Practical FAQ | {doc}`user/troubleshooting`: current workflow and compatibility checks. |
+| Configuration reference | {doc}`reference/namelists` plus the complete accepted-name inventory for the reviewed implementations. |
+| Output reference | {doc}`reference/output`, literal writer inventory, and separate conversion metadata vocabulary. |
+| Definitions | {doc}`reference/units`: current dimensions, selected constants, and unit/representation distinctions. |
 
 ## Part II: Developer guide
 
-- **Available:** {doc}`development/direct-build`: the optional direct-Make
-  T21/L10 build and two-day run used by documentation CI, with a runtime
-  parameter table and operational timestep/run-length equations.
-- **Planned:** permanent sources, generated build/run directories, module
-  selection, and serial/MPI and mixed-layer/LSG build variants.
-- **Planned:** regression tests, numerical references, reproducibility,
-  compatibility policy, and the limits of short-run validation.
-- **Available:** {doc}`development/documentation`: build and review this
-  manual, add chapters, and maintain the worked example.
+- {doc}`development/architecture`: lifecycle, module variants, array layout,
+  and MPI extension rules migrated from User's Guide chapters 2–3.
+- {doc}`development/testing`: existing regression coverage, provenance, and
+  the limits of short numerical checks.
+- {doc}`development/direct-build`: optional direct-Make/CI example, runtime
+  parameter table, and operational timestep equations. MoSt remains the
+  recommended user build method.
+- {doc}`development/documentation`: build, verify, and extend this manual.
+- {doc}`development/verification`: chapter-by-chapter code comparison,
+  historical differences, runtime evidence, and issue-only follow-up.
+- {doc}`sources`: original material and authorship.
 
-Primary material: User's Guide module and parallelization chapters,
-`AGENTS.md`, `tests/README.md`, and the current Makefile.
+## Scope and remaining validation
 
-### How chapters will be migrated
+All seven practical User's Guide chapters and appendices A–C have current
+counterparts or an explicit historical disposition in the verification
+ledger. This does not mean every old paragraph, screenshot, symbol from a
+derivation, platform recipe, optional rain implementation, or code switch
+has been independently tested.
 
-1. Record the original section or repository file and the code that defines
-   current behavior. Preserve attribution when adapting the User's Guide.
-2. Rewrite the chapter around a user task. Check commands, parameter names,
-   defaults, units, and compatibility against the current sources.
-3. Check extracted tables and figures against the PDF. Mark unresolved
-   points explicitly rather than guessing. The historical guide's namelists
-   are not an authoritative list for today's executable.
-4. Build with warnings treated as errors, follow the internal links, and run
-   examples with the stated inputs. Document validation scope.
-5. Add the completed page to the navigation and update this coverage plan.
+The generated namelist inventory covers active declarations for default
+modules, all three planet variants, the real coupler, and LSG. Explanatory
+default/unit tables cover selected controls; specialized fields still require
+the cited code paths. The output inventory enumerates literal writers, not
+all dynamic diagnostic code values. Converter labels are recorded as labels,
+not silently certified as physical units.
 
-The original PDFs and text files remain available while migration proceeds.
-The {doc}`sources` page tracks the initial material and current exclusions.
+Additional runtime validation remains useful for interactive GUI operation,
+other planet/column configurations, burn7 with its legacy dependency, and
+compiled PDF layout. These limits are recorded explicitly rather than being
+filled with unverified claims. The Reference Manual's full scientific
+formulation remains a separate future project.

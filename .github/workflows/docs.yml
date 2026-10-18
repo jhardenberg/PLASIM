@@ -8,12 +8,14 @@ on:
       - 'plasim/doc/**'
       - 'plasim/src/**'
       - 'plasim/dat/T21/**'
+      - 'lsg/src/**'
+      - 'tools/**'
       - 'README.md'
       - 'FAQ.md'
       - 'CHANGELOG.md'
       - 'tests/README.md'
-      - 'scripts/README_burn.txt'
-      - 'postprocessor/README_POSTPROCESSOR'
+      - 'scripts/**'
+      - 'postprocessor/**'
       - '.github/workflows/docs.yml'
   push:
     branches: [master, main]
@@ -21,12 +23,14 @@ on:
       - 'plasim/doc/**'
       - 'plasim/src/**'
       - 'plasim/dat/T21/**'
+      - 'lsg/src/**'
+      - 'tools/**'
       - 'README.md'
       - 'FAQ.md'
       - 'CHANGELOG.md'
       - 'tests/README.md'
-      - 'scripts/README_burn.txt'
-      - 'postprocessor/README_POSTPROCESSOR'
+      - 'scripts/**'
+      - 'postprocessor/**'
       - '.github/workflows/docs.yml'
 
 permissions:
@@ -48,6 +52,8 @@ jobs:
           python -m pip install -r plasim/doc/requirements.txt
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential gfortran
+      - name: Check source inventories
+        run: python plasim/doc/generate_reference.py --check
       - name: Build HTML and LaTeX sources
         run: |
           python -m sphinx -W --keep-going -n -b html plasim/doc plasim/doc/_build/html

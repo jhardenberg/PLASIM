@@ -32,27 +32,6 @@ even when invoked with `-c`; that option avoids opening a display, but does
 not remove the build-time header or link-library requirements. A model
 built with **Run with GUI** disabled uses GUI stubs.
 
-### GNU Fortran precision-file workaround
-
-With a compiler that reports only a major version through
-`gfortran -dumpversion` (for example, GNU Fortran 15), the existing
-`configure.sh` version check can print an `expr`/integer-comparison error
-and omit `most_precision_options`. A subsequent model build may report
-`REAL(8)`/`REAL(4)` argument mismatches in `radmod.f90`.
-
-For GNU Fortran, create the missing file in the repository root before
-building the model, and select **Double Precision** (or use the configuration
-below, which enables it):
-
-```sh
-printf '%s\n' 'MOST_PREC=-fdefault-real-8' > most_precision_options
-```
-
-This is a workaround for the existing compiler detection, not a change to
-the model sources. If a model build was already attempted without the flag,
-preserve needed outputs and clear its generated files with `./cleanplasim`
-before rebuilding; see {doc}`experiments` for what that command removes.
-
 ## Choose an experiment in the graphical interface
 
 Start MoSt from the repository root:
@@ -130,16 +109,7 @@ under `output/`, and stores restart products under `restart/`. For example,
 the default experiment name produces `output/MOST_DIAG.0001.txt`. The suffix
 `0001` is the script's segment counter, not the calendar year. Check the
 diagnostics for the configured date, timestep, and any abort message, and
-confirm that the expected converted files are nonempty. The script does
-not comprehensively check conversion failures, so its exit status alone
-does not establish that postprocessing succeeded.
-
-Conversely, this script can return status 1 after a successful mixed-layer
-run: its final optional LSG-file check is false when no LSG restart is
-present. This was observed with the supplied one-year setup even though all
-twelve months completed and the atmospheric, ocean, and ice NetCDF files and
-restart were written. Check the diagnostics and products to distinguish this
-script-status issue from a model or conversion failure.
+confirm that the expected converted files are nonempty.
 
 For a long experiment, first move the prepared setup to a dedicated
 directory as described in {doc}`experiments`. One year from an initial state
@@ -163,6 +133,6 @@ Adapted from section 1.1 of the University of Hamburg's *Planet Simulator
 User's Guide*, version 16.0, with current behavior checked against the
 repository README/FAQ, {repo}`configure.sh`, and {repo}`most.c` (`main`,
 `ReadSettings`, `BuildScripts`, `SaveExit`, and `WriteRunScript`). The
-configuration-file example and compiler workaround describe this checkout;
-they are additions to the historical guide. Full author attribution is in
+configuration-file example describes this checkout and is an addition to the
+historical guide. Full author attribution is in
 {doc}`experiments` and the original guide on the {doc}`../sources` page.

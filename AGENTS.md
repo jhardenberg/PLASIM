@@ -64,6 +64,15 @@ Report any checks that could not be completed and why.
 
 ## Documentation and changelog
 
+- When migrating or writing documentation, compare each described interface,
+  default, unit, file format, and workflow with the actual code. Record the
+  source files/routines used for verification in the manual's verification
+  ledger. Treat historical manuals as source material, not current authority.
+- Bugs discovered during documentation work belong in GitHub issues. Search
+  for existing reports, then open a focused issue with code evidence and
+  reproduction details when needed. Do not fix them or turn their workarounds
+  into manual instructions in the documentation PR; handle fixes separately
+  unless the user explicitly requests otherwise.
 - Update the affected Sphinx documentation in `plasim/doc` in the same PR
   as user-visible developments: features, commands, dependencies, namelist
   parameters/defaults/units, calendars, output, restart compatibility, and

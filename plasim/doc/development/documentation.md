@@ -45,6 +45,18 @@ bash plasim/doc/examples/headless-earth.sh
 git diff --check
 ```
 
+Accepted namelist names, literal raw writer calls, and converter metadata
+have checked-in generated inventories. Refresh and check them with:
+
+```sh
+python3 plasim/doc/generate_reference.py
+python3 plasim/doc/generate_reference.py --check
+```
+
+The generator extracts interfaces; it does not infer effective defaults or
+physical semantics. Review initialization, units, conditions, and conversions
+against the code and update {doc}`verification` as part of the same change.
+
 The example requires `gfortran`, `cc`, and `make`. It creates and retains a
 fresh temporary workspace rather than writing build/run files into the
 checkout. Inspect it before removing that workspace when finished.
@@ -83,7 +95,11 @@ PDF publication and visual review are follow-up work for the larger manual.
    configuration scope. Identify input migrations and distinguish compiled
    settings from runtime controls.
 3. Add provenance in the chapter and update {doc}`../sources` when needed.
-   Check behavior against current code rather than copying old defaults.
+   Compare every described interface/default/unit/workflow with the current
+   code rather than copying old defaults. Record routines and runtime/source
+   verification scope in {doc}`verification`. Update stale descriptions to
+   current behavior. File implementation bugs separately as issues; do not
+   fix them or add workaround instructions in the documentation migration.
 4. Keep executable examples in `examples/` and include them with
    `literalinclude`, so the displayed procedure and the executed file agree.
 5. Run the strict build and affected examples. Review navigation, equations,
