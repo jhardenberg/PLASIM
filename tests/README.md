@@ -29,6 +29,14 @@ The fixed random seed is needed for the restart comparisons. These tests
 exercise the serial model; additional MPI coverage is described below. T42
 tests remain separate follow-up work.
 
+Two additional two-day serial runs enable cloud radiative diagnostics
+(`ndiagcf=1`), one with classic radiation and one with spectral radiation.
+Every restart record must match the corresponding diagnostic-off run byte
+for byte within the same build. The tests also read the seven clear-sky
+flux diagnostics (Service codes 101–107) and require finite values and
+nonzero output for each code, so disabling diagnostic output cannot satisfy
+the state-invariance check.
+
 The numerical baselines come from the current `master` model, built with
 `gfortran -O0 -fdefault-real-8`. They are intentionally tolerant of small
 compiler and platform differences. A passing test supports short run
@@ -97,6 +105,26 @@ fractions must also be positive and sum to one. Both classic and spectral
 mixed-layer runs compare every restart record byte for byte between a
 continuous two-day MPI run and two one-day MPI runs.
 
+An additional mixed-layer MPI test uses nondefault soil heat capacity
+(`soilcap=1.2e6`), tidally locked illumination, and a substellar longitude
+of 90 degrees instead of the default 180 degrees. The three cases share
+one serial build and one MPI build. Each case is compared with its matching
+serial reference after one timestep and after two days, including soil
+temperature, surface albedos, ocean state, and atmospheric spectral fields.
+The startup comparison uses the existing strict limits (`atol=1e-10`,
+`rtol=1e-8`) and catches all three omissions in the unfixed code.
+
+For these new nondefault cases only, the two-day comparison uses
+`atol=1e-8`, `rtol=1e-6`. Ubuntu/GNU Fortran 13 passes the strict startup
+checks but develops differences around `1.5e-5 K` in surface temperature,
+`2.3e-9` in humidity, and `9e-9` in albedo by day two. This is consistent
+with growth of reduction roundoff in nonlinear calculations. The longer-run
+limits allow small drift (about `0.0003 K` at 300 K), while the strict
+startup checks independently protect parameter distribution. Serial controls
+also check that each input changes the solution, including the longitude
+shift. These tests exercise the shared initialization through Earth; Mars
+and Exo setups are not run.
+
 Every value in selected gridpoint and global spectral fields is compared
 with the serial reference, with absolute tolerance `1e-10` and relative
 tolerance `1e-8` for double-precision restart data. For LSG this includes the
@@ -112,6 +140,31 @@ To run only the MPI tests:
 python3 -m unittest discover -s tests -p 'test_mpi.py' -v
 ```
 
-Known gap: `cal2step` currently ignores hour and minute for the simplified
-360 day calendar, so the calendar test checks that path at midnight. This is
-a preexisting model issue to address separately.
+## Calendar tests
+
+[`calendar_test.f90`](calendar_test.f90) is compiled in both single and double
+precision with runtime bounds checking. Separate cases check calendar origins,
+month/year boundaries, Gregorian century rules, subdaily conversion, every
+perpetual date in 360-, 365-, and 660-day calendars, and monthly climatology
+interpolation (including December/January padding). Invalid perpetual days
+must stop with a clear range diagnostic.
+
+For simplified calendars, `cal2step` converts hours/minutes using the configured
+`solar_day` in seconds. Non-aligned positive times truncate to the preceding
+timestep. The inverse interface has only minute resolution, so exact round
+trips are tested where the timestep is representable in whole minutes,
+including a 48-hour solar day. Arbitrary planetary day lengths can lose
+subminute time in `step2cal30`.
+
+Gregorian perpetual dates deliberately use a fixed 365-day climatology:
+day 60 is March 1, independently of any earlier dated conversion. Ordinary
+Gregorian dates still include February 29 in leap years. Simplified perpetual
+dates use the configured equal-length months. These conventions also apply
+to the separate perpetual ocean and ice settings when they request monthly
+interpolation. Valid day numbers range from 1 to `n_days_per_year`.
+
+To run only the calendar tests:
+
+```sh
+python3 -m unittest discover -s tests -p test_model.py -k CalendarTests -v
+```

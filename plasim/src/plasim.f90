@@ -261,6 +261,8 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       call mpbci(ndheat)     ! switch for heating due to momentum dissipation
       call mpbci(nsponge)    ! switch for top sponge layer
 
+      call mpbcl(ltidally_locked) ! fixed substellar illumination
+
       call mpbcr(acpd    )   ! Specific heat for dry air
       call mpbcr(adv     )
       call mpbcr(akap    )
@@ -288,6 +290,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 !      call mpbcr(tropical_year)
 !      call mpbcr(sidereal_year)
       call mpbcr(rotspd)
+      call mpbcr(tl_substellar) ! substellar longitude [degrees]
       call mpbcr(eccen)
       call mpbcr(obliq)
       call mpbcr(mvelp)
