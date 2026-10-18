@@ -16,7 +16,7 @@ from test_model import build_model, doubles, prepare_run, records, run_model
 
 class FieldComparison:
     def assert_values_close(self, actual, expected, *, atol, rtol, label,
-                            field_norm=False) -> None:
+                            field_norm=False, unit_fraction=False) -> None:
         self.assertEqual(len(actual), len(expected), label)
         self.assertTrue(all(map(math.isfinite, actual)), label)
         self.assertTrue(all(map(math.isfinite, expected)), label)
@@ -26,6 +26,12 @@ class FieldComparison:
             # rank-local contributions. Coupling amplifies their roundoff.
             # Scale relative error by the physical field, including its zeros.
             peak = max(map(abs, expected))
+            if unit_fraction:
+                self.assertTrue(all(0.0 <= v <= 1.0 for v in actual), label)
+                self.assertTrue(all(0.0 <= v <= 1.0 for v in expected), label)
+                # Albedo and ice fraction have a fixed physical scale of one,
+                # independent of the largest value in this particular run.
+                peak = 1.0
             reference_rms = math.sqrt(math.fsum(b*b for b in expected)
                                       / len(expected))
             error_rms = math.sqrt(math.fsum(d*d for d in differences)
@@ -56,6 +62,17 @@ class MPIComparisonTests(FieldComparison, unittest.TestCase):
         self.assert_values_close([2e-9, 0.8], [0.0, 0.8],
                                  atol=1e-10, rtol=1e-8, label="albedo",
                                  field_norm=True)
+
+    def test_coupled_comparison_uses_fraction_range(self) -> None:
+        self.assert_values_close([9e-9, 0.8, 0.8], [0.0, 0.8, 0.8],
+                                 atol=1e-10, rtol=1e-8, label="albedo",
+                                 field_norm=True, unit_fraction=True)
+
+    def test_coupled_comparison_rejects_invalid_fraction(self) -> None:
+        with self.assertRaises(AssertionError):
+            self.assert_values_close([1.0 + 1e-9], [1.0],
+                                     atol=1e-10, rtol=1e-8, label="albedo",
+                                     field_norm=True, unit_fraction=True)
 
     def test_coupled_comparison_rejects_local_error(self) -> None:
         with self.assertRaises(AssertionError):
@@ -113,6 +130,7 @@ class MPITests(FieldComparison, unittest.TestCase):
                 self.assert_values_close(
                     doubles(actual[field]), doubles(expected[field]),
                     atol=1e-10, rtol=1e-8, label=field, field_norm=lsg,
+                    unit_fraction=lsg and field in ("dalb", "dicec"),
                 )
 
         if lsg:

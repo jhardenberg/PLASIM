@@ -136,6 +136,12 @@ max(abs(MPI - serial)) <= 1e-10 + 1e-8 * max(abs(serial))
 RMS(MPI - serial)      <= 1e-10 + 1e-8 * RMS(serial)
 ```
 
+For albedo and ice concentration, the maximum-error scale is their physical
+unit range (1), rather than the largest value in a snapshot. Both serial
+and MPI values must also remain in `[0, 1]`. Their RMS bound is still based
+on the actual reference RMS. This avoids making the maximum-error allowance
+depend on whether this particular run reaches full snow albedo or ice cover.
+
 The serial Legendre transform pairs opposite latitudes, while the parallel
 transform sums rank-local contributions. These different summation orders
 introduce roundoff, which the coupled heat-flux calculation can amplify.
@@ -147,8 +153,9 @@ of the error in the whole field. The coupled criterion therefore scales the
 maximum error by the field maximum, while the additional RMS bound prevents
 a large maximum from hiding a distributed bias. This changes the coupled
 MPI acceptance criterion; it does not change the physical model or saved
-reference tolerances. Small comparison tests check that it rejects both a
-localized corruption and a distributed bias.
+reference tolerances. Small comparison tests check fraction normalization
+and rejection of invalid fractions, localized corruption, and distributed
+bias.
 
 Diagnostic one-, two-, and four-rank runs on macOS/GNU Fortran 15.2.0
 confirmed growth of coupled roundoff over two ocean steps. For two ranks,
