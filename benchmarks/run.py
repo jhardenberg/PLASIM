@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, TimeoutError as FutureTimeout, wait
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -21,6 +21,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -55,35 +56,114 @@ def capture(command: list[str], cwd: Path | None = None) -> str:
     return result.stdout.strip()
 
 
-def execute(command: list[str], cwd: Path, log: Path, env: dict, timeout: int) -> float:
+class ExecutionControl:
+    """Track child process groups so a failed/interrupted batch can stop them all."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.processes = set()
+        self.cancelled = False
+
+    def start(self, command, **kwargs):
+        with self.lock:
+            if self.cancelled:
+                raise RuntimeError("Benchmark batch cancelled")
+            process = subprocess.Popen(command, **kwargs)
+            self.processes.add(process)
+            return process
+
+    def discard(self, process):
+        with self.lock:
+            self.processes.discard(process)
+
+    @staticmethod
+    def signal_group(process, sig):
+        try:
+            os.killpg(process.pid, sig)
+        except ProcessLookupError:
+            pass
+
+    def cancel(self):
+        with self.lock:
+            self.cancelled = True
+            processes = list(self.processes)
+        for process in processes:
+            self.signal_group(process, signal.SIGTERM)
+        # A single grace period for the whole batch, including MPI children.
+        deadline = time.monotonic() + 5
+        for process in processes:
+            try:
+                process.wait(timeout=max(0, deadline - time.monotonic()))
+            except subprocess.TimeoutExpired:
+                pass
+        for process in processes:
+            self.signal_group(process, signal.SIGKILL)
+
+
+def execute(command: list[str], cwd: Path, log: Path, env: dict, timeout: int,
+            control: ExecutionControl | None = None) -> float:
     """Time the process/launcher only; stop its process group on timeout."""
+    control = control if control is not None else ExecutionControl()
     with log.open("wb") as output:
         start = time.perf_counter()
-        process = subprocess.Popen(command, cwd=cwd, stdout=output, stderr=output,
-                                   env=env, start_new_session=True)
-        # A blocking wait in a worker avoids Popen.wait(timeout)'s polling
-        # delay, which can visibly bias timings of short model runs.
-        with ThreadPoolExecutor(max_workers=1) as worker:
-            finished = worker.submit(process.wait)
-            try:
-                code = finished.result(timeout=timeout)
-            except BaseException as error:
+        process = control.start(command, cwd=cwd, stdout=output, stderr=output,
+                                env=env, start_new_session=True)
+        try:
+            # A blocking wait in a worker avoids Popen.wait(timeout)'s polling
+            # delay, which can visibly bias timings of short model runs.
+            with ThreadPoolExecutor(max_workers=1) as worker:
+                finished = worker.submit(process.wait)
                 try:
-                    os.killpg(process.pid, signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
-                try:
-                    finished.result(timeout=5)
-                except FutureTimeout:
-                    os.killpg(process.pid, signal.SIGKILL)
-                    finished.result()
-                if isinstance(error, FutureTimeout):
-                    raise RuntimeError(f"Command timed out after {timeout}s; see {log}") from error
-                raise
-        elapsed = time.perf_counter() - start
+                    code = finished.result(timeout=timeout)
+                except BaseException as error:
+                    control.signal_group(process, signal.SIGTERM)
+                    try:
+                        finished.result(timeout=5)
+                    except FutureTimeout:
+                        control.signal_group(process, signal.SIGKILL)
+                        finished.result()
+                    # The launcher can exit before descendants do. Kill any
+                    # remaining group members even when its wait succeeded.
+                    control.signal_group(process, signal.SIGKILL)
+                    if isinstance(error, FutureTimeout):
+                        raise RuntimeError(f"Command timed out after {timeout}s; see {log}") from error
+                    raise
+            elapsed = time.perf_counter() - start
+        finally:
+            control.discard(process)
     if code:
         raise RuntimeError(f"Command exited {code}; see {log}")
     return elapsed
+
+
+def schedule(jobs, max_cores: int, parallel: bool, control: ExecutionControl):
+    """Run (core cost, callable) jobs without exceeding the shared rank budget."""
+    pending = list(jobs)
+    if any(cost < 1 or cost > max_cores for cost, _ in pending):
+        raise ValueError("Every job must fit within the core budget")
+    workers = min(len(pending), max_cores) if parallel else 1
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
+        active = {}
+        used = 0
+        try:
+            while pending or active:
+                # First fitting job: independent small cases can fill free slots
+                # while a larger MPI case waits for enough capacity.
+                for job in pending[:]:
+                    cost, function = job
+                    if used + cost <= max_cores and (parallel or not active):
+                        active[executor.submit(function)] = cost
+                        used += cost
+                        pending.remove(job)
+                done, _ = wait(active, return_when=FIRST_COMPLETED)
+                for future in done:
+                    used -= active.pop(future)
+                    future.result()
+        except BaseException:
+            control.cancel()
+            for future in active:
+                future.cancel()
+            raise
 
 
 def read_records(path: Path) -> dict[str, bytes]:
@@ -245,6 +325,11 @@ def arguments():
     parser.add_argument("--resolutions", nargs="+", choices=RESOLUTIONS, default=list(RESOLUTIONS))
     parser.add_argument("--cases", nargs="+", choices=CASES, default=list(CASES))
     parser.add_argument("--ranks", nargs="+", type=int, default=[1], help="MPI sizes; 1 uses a serial build")
+    parser.add_argument("--parallel", action="store_true",
+                        help="Run independent cases concurrently (timings include contention)")
+    available = len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else (os.cpu_count() or 1)
+    parser.add_argument("--max-cores", type=int, default=available,
+                        help="Maximum simultaneous serial processes/MPI ranks (default: available logical CPUs)")
     parser.add_argument("--days", type=int, default=120)
     parser.add_argument("--repeats", type=int, default=5)
     parser.add_argument("--warmups", type=int, default=1)
@@ -269,6 +354,10 @@ def arguments():
         args.work_dir = args.work_dir.resolve()
     if args.days < 1 or args.repeats < 1 or args.warmups < 0 or args.timeout < 1:
         parser.error("days/repeats/timeout must be positive; warmups must be nonnegative")
+    if args.max_cores < 1:
+        parser.error("max-cores must be positive")
+    if max(args.ranks) > args.max_cores:
+        parser.error("each selected MPI rank count must fit within --max-cores")
     for resolution in args.resolutions:
         for ranks in args.ranks:
             if ranks < 1 or ranks & (ranks-1) or RESOLUTIONS[resolution][0] % ranks:
@@ -327,7 +416,8 @@ def main():
               "settings": {"days": args.days, "repeats": args.repeats, "warmups": args.warmups,
                            "coupling_days": args.coupling_days, "io": args.io,
                            "timers": not args.no_timers, "fflags": args.fflags,
-                           "cflags": args.cflags, "precision_flags": "-fdefault-real-8"},
+                           "cflags": args.cflags, "precision_flags": "-fdefault-real-8",
+                           "parallel": args.parallel, "max_cores": args.max_cores},
               "work_directory": None, "kept_work": args.keep_work, "cases": []}
     args.output.mkdir(parents=True, exist_ok=False)
     if args.work_dir:
@@ -338,12 +428,62 @@ def main():
         "parent": str(work.parent.resolve()), "filesystem_device": work.stat().st_dev}
     result_path = args.output / "results.json"
 
+    report_lock = threading.RLock()
+
     def save():
-        result_path.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n")
+        with report_lock:
+            result_path.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n")
+
+    control = ExecutionControl()
+
+    def run_case(entry, executable, template, case_output):
+        name, resolution, ranks = entry["name"], entry["resolution"], entry["ranks"]
+        lsg = entry["case"].startswith("lsg")
+        for index in range(args.warmups + args.repeats):
+            warmup = index < args.warmups
+            label = f"{'warmup' if warmup else 'sample'}-{index+1:02d}"
+            run = work / f"{name}-{label}"
+            shutil.copytree(template, run)
+            command = ([*args.launcher, "-n", str(ranks)] if ranks > 1 else []) + [str(executable)]
+            print(f"Running {name}: {label}, {args.days} simulated days", flush=True)
+            started_utc = datetime.now(timezone.utc).isoformat()
+            try:
+                wall = execute(command, run, case_output / (label + ".stdout.log"), env, args.timeout, control)
+            finally:
+                if (run / "plasim_diag").exists():
+                    shutil.copy2(run / "plasim_diag", case_output / (label + ".diag.log"))
+            finished_utc = datetime.now(timezone.utc).isoformat()
+            diag = (run / "plasim_diag").read_text(errors="replace")
+            if ranks > 1:
+                seen = {int(r) for r in re.findall(r"^\* CPU\s+(\d+)", diag, re.M)}
+                if seen != set(range(ranks)):
+                    raise RuntimeError(f"Unexpected MPI rank diagnostics: {seen}")
+            state = state_summary(run, resolution, args.days, lsg, args.coupling_days, diag)
+            sample = {"warmup": warmup, "wall_seconds": wall,
+                      "started_utc": started_utc, "finished_utc": finished_utc,
+                      "simulated_years_per_wall_day": (args.days/360)*86400/wall,
+                      "command": command, "timers": timers(diag), "state": state}
+            with report_lock:
+                entry["samples"].append(sample)
+                save()
+            if not args.keep_work:
+                shutil.rmtree(run)
+        measured = [s["wall_seconds"] for s in entry["samples"] if not s["warmup"]]
+        median = statistics.median(measured)
+        summary = {"median_wall_seconds": median, "min_wall_seconds": min(measured),
+                   "max_wall_seconds": max(measured),
+                   "stdev_wall_seconds": statistics.stdev(measured) if len(measured) > 1 else None,
+                   "median_absolute_deviation_seconds": statistics.median(abs(t-median) for t in measured),
+                   "simulated_years_per_wall_day": (args.days/360)*86400/median}
+        print(f"  {name}: median {median:.3f} s, range {min(measured):.3f}–{max(measured):.3f} s", flush=True)
+        with report_lock:
+            entry["summary"] = summary
+            save()
 
     try:
         save()
         builds = {}
+        jobs = []
         for resolution in args.resolutions:
             for ranks in args.ranks:
                 for case in args.cases:
@@ -364,40 +504,11 @@ def main():
                              "input_sha256": tree_digest(list(template.iterdir()), template),
                              "namelists": configs, "build": build_info, "samples": []}
                     report["cases"].append(entry)
-                    for index in range(args.warmups + args.repeats):
-                        warmup = index < args.warmups
-                        label = f"{'warmup' if warmup else 'sample'}-{index+1:02d}"
-                        run = work / f"{name}-{label}"
-                        shutil.copytree(template, run)
-                        command = ([*args.launcher, "-n", str(ranks)] if ranks > 1 else []) + [str(executable)]
-                        print(f"Running {name}: {label}, {args.days} simulated days", flush=True)
-                        try:
-                            wall = execute(command, run, case_output / (label + ".stdout.log"), env, args.timeout)
-                        finally:
-                            if (run / "plasim_diag").exists():
-                                shutil.copy2(run / "plasim_diag", case_output / (label + ".diag.log"))
-                        diag = (run / "plasim_diag").read_text(errors="replace")
-                        if ranks > 1:
-                            seen = {int(r) for r in re.findall(r"^\* CPU\s+(\d+)", diag, re.M)}
-                            if seen != set(range(ranks)):
-                                raise RuntimeError(f"Unexpected MPI rank diagnostics: {seen}")
-                        state = state_summary(run, resolution, args.days, lsg, args.coupling_days, diag)
-                        sample = {"warmup": warmup, "wall_seconds": wall,
-                                  "simulated_years_per_wall_day": (args.days/360)*86400/wall,
-                                  "command": command, "timers": timers(diag), "state": state}
-                        entry["samples"].append(sample)
-                        save()
-                        if not args.keep_work:
-                            shutil.rmtree(run)
-                    measured = [s["wall_seconds"] for s in entry["samples"] if not s["warmup"]]
-                    median = statistics.median(measured)
-                    entry["summary"] = {"median_wall_seconds": median, "min_wall_seconds": min(measured),
-                                        "max_wall_seconds": max(measured),
-                                        "stdev_wall_seconds": statistics.stdev(measured) if len(measured) > 1 else None,
-                                        "median_absolute_deviation_seconds": statistics.median(abs(t-median) for t in measured),
-                                        "simulated_years_per_wall_day": (args.days/360)*86400/median}
-                    print(f"  median {median:.3f} s, range {min(measured):.3f}–{max(measured):.3f} s", flush=True)
-                    save()
+                    jobs.append((ranks, lambda e=entry, x=executable, t=template, o=case_output:
+                                 run_case(e, x, t, o)))
+        save()
+        # Complete all builds and template preparation before timed runs.
+        schedule(jobs, args.max_cores, args.parallel, control)
         report["status"] = "complete"
         save()
         with (args.output / "samples.csv").open("w", newline="") as stream:

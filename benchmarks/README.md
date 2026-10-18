@@ -1,8 +1,8 @@
 # PlaSim performance benchmarks
 
-These standalone Python scripts measure performance changes. They do not
-import the test harness, belong to unittest discovery, set pass/fail speed
-thresholds, or run in the test CI job. No model source is modified.
+These standalone Python scripts measure performance changes. Benchmark workloads
+are outside model regression discovery and test CI, use no pass/fail speed
+thresholds, and do not import the regression harness. No model source is modified.
 
 Use Python 3.9+, GNU Fortran (`gfortran`), a C compiler (`cc`), and `make`.
 MPI runs also need `mpif90` and `mpiexec`. Linux and macOS are the initial
@@ -91,6 +91,50 @@ and MPI environment settings are recorded, alongside the workspace parent and
 filesystem device. Record additional OS settings and job-scheduler allocations
 with the experiment.
 
+## Parallel execution and core limit
+
+Run independent benchmark cases concurrently with a maximum of eight CPU slots:
+
+```sh
+python3 benchmarks/run.py --output benchmarks/results/parallel \
+  --parallel --max-cores 8 --ranks 1 2 4
+```
+
+`--max-cores N` limits the **sum of MPI ranks in active runs**, counting a
+serial run as one. For example, two four-rank cases fill an eight-slot budget.
+A selected rank count larger than the limit is rejected before building.
+The default limit is the number of logical CPUs available through Linux
+process affinity, or the machine's logical CPU count on other hosts.
+Set it explicitly to match your job allocation, particularly in containers
+or schedulers where CPU quotas are not reflected in process affinity.
+This is a process/rank budget, not CPU pinning or a limit on physical cores;
+launcher/helper processes and the Python coordinator add some overhead.
+Concurrent MPI launchers may bind to overlapping CPUs: use an external
+allocation/launcher that partitions CPUs if disjoint binding is required.
+
+Without `--parallel`, cases run one at a time; `--max-cores` still bounds the
+selected MPI rank count. Builds use one compiler process at a time and all
+finish before model runs begin, so compilation does not overlap measurements.
+Each concurrent case has private inputs, outputs, and ocean matrices. Its
+warmups finish before its measured repeats, and repeats remain sequential.
+A failure, timeout, or Ctrl-C stops the batch and terminates active process
+groups. Completed samples remain in the failed result report.
+
+Parallel mode is useful for completing the workload matrix sooner. Its per-case
+timings include CPU, memory, and I/O contention and are unsuitable for claiming
+isolated model or MPI speedups. The one-file summary suppresses MPI scaling
+ratios in this mode. Use sequential mode on a quiet allocated machine for
+performance comparisons. Scheduling mode and core budget are recorded;
+comparisons reject different policies/budgets and, in parallel mode, different
+workload matrices/order or repetition counts unless `--allow-mismatch` is set.
+Even matching parallel settings do not guarantee identical overlap between runs.
+
+To check the scheduler itself without compiling the model:
+
+```sh
+python3 -m unittest discover -s benchmarks -p 'test_runner.py' -v
+```
+
 ## Coupling frequency and output
 
 The default LSG coupling interval is **ten days**, expressed with the correct
@@ -142,7 +186,7 @@ this protocol. Output directories must be new, preventing accidental overwrite.
 The comparison requires compatible runner versions, recorded environments,
 compiler flags, workspace storage, timing/output settings, and runtime inputs. It compares only
 matching resolution/configuration/rank cases and identifies omitted cases.
-Different repetition counts are allowed and reported. `--allow-mismatch`
+Different repetition counts are allowed and reported for sequential runs. `--allow-mismatch`
 explicitly permits a descriptive comparison when changing build flags or
 hardware intentionally; such a result cannot isolate a code-only effect.
 
@@ -168,6 +212,7 @@ component may have negligible whole-model impact.
   unreliable across a month boundary; the external monotonic wall timer is
   the primary metric.
 - **Results:** `results.json` records metadata, namelists, input/source hashes,
+  scheduling policy/core budget, sample start/end timestamps,
   all warm-up/measured samples, wall-time median/min/max/standard deviation/MAD,
   throughput, component timers, and selected final-state summaries/hashes.
   `samples.csv`, build logs, stdout logs, and model diagnostic logs are retained.

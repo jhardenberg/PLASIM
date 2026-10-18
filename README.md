@@ -153,7 +153,8 @@ The default pressure levels are `20,30,50,70,100,150,200,250,300,400,500,600,700
 
 A separate [benchmark suite](benchmarks/README.md) measures repeated optimized
 T21/T42 runs with mixed-layer and real LSG oceans, classic/spectral radiation,
-and selectable MPI rank counts. It records timings and build/input metadata
+and selectable MPI rank counts. Use `--parallel --max-cores N` to run independent
+benchmark cases within a shared rank budget. It records timings and build/input metadata
 and compares source revisions. Benchmarks are run manually, outside regression
 tests and test CI; their state summaries do not replace correctness checks.
 

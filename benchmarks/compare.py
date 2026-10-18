@@ -32,12 +32,15 @@ def median(case: dict) -> float:
 
 
 def summary(report: dict):
+    parallel = report["settings"].get("parallel", False)
+    if parallel:
+        print("Concurrent cases share CPU/memory/I/O; isolated MPI scaling is not reported.")
     cases = {(case["resolution"], case["case"], case["ranks"]): case for case in report["cases"]}
     print("Case                         n   Median(s)    Min–max(s)         Speedup/p1  Efficiency")
     for key, case in cases.items():
         values = measured(case)
         serial = cases.get((*key[:2], 1))
-        speedup = median(serial)/median(case) if serial else None
+        speedup = median(serial)/median(case) if serial and not parallel else None
         scaling = f"{speedup:10.3f}x  {100*speedup/key[2]:8.1f}%" if speedup else "        n/a        n/a"
         print(f"{case['name']:28} {len(values):2} {median(case):10.3f} "
               f"{min(values):8.3f}–{max(values):8.3f} {scaling}")
@@ -54,6 +57,16 @@ def compare(baseline: dict, candidate: dict, allow_mismatch: bool) -> list[dict]
                     "fflags", "cflags", "precision_flags"):
         if baseline["settings"][setting] != candidate["settings"][setting]:
             differences.append(f"setting {setting}: {baseline['settings'][setting]!r} vs {candidate['settings'][setting]!r}")
+    for setting, default in (("parallel", False), ("max_cores", None)):
+        if baseline["settings"].get(setting, default) != candidate["settings"].get(setting, default):
+            differences.append(f"scheduling setting {setting}")
+    if baseline["settings"].get("parallel") or candidate["settings"].get("parallel"):
+        # Other workloads/repetitions determine contention even for matched cases.
+        if ([case["name"] for case in baseline["cases"]] !=
+                [case["name"] for case in candidate["cases"]] or
+                baseline["settings"]["repeats"] != candidate["settings"]["repeats"]):
+            differences.append("parallel workload matrix/order or repetition count")
+        print("Concurrent timings include shared-resource contention; ratios do not isolate code speedups.")
     reference = {case["name"]: case for case in baseline["cases"]}
     proposed = {case["name"]: case for case in candidate["cases"]}
     common = reference.keys() & proposed.keys()
