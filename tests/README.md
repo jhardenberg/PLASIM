@@ -141,6 +141,13 @@ diagnostic lists ranks 0 and 1 and that both two-day runs reach the expected
 final step. The mixed-layer and coupled LSG configurations each have a
 separate serial reference run with identical input files.
 
+An additional mixed-layer run enables spectral radiation (`nstartemp=1`).
+All configurations check that the replicated `zsolars` restart record stores
+exactly two double-precision values and agrees with serial; the spectral
+fractions must also be positive and sum to one. Both classic and spectral
+mixed-layer runs compare every restart record byte for byte between a
+continuous two-day MPI run and two one-day MPI runs.
+
 An additional mixed-layer MPI test uses nondefault soil heat capacity
 (`soilcap=1.2e6`), tidally locked illumination, and a substellar longitude
 of 90 degrees instead of the default 180 degrees. The three cases share
@@ -199,9 +206,9 @@ the largest returned-heat-flux difference after two days was about
 `7.6e-10 W/m2`, with a serial field maximum near `2646 W/m2`; Linux CI had
 reported a `1.5e-7 W/m2` difference at a point near `-6.76 W/m2`.
 The dated LSG Service fields retain their pointwise absolute tolerance
-`1e-5` and relative tolerance `1e-6` for 32-bit output. MPI restart
-consistency and scaling performance are not covered; CI exercises two
-ranks, while the four-rank run was a local diagnostic.
+`1e-5` and relative tolerance `1e-6` for 32-bit output. Coupled LSG restart
+consistency under MPI and scaling performance are not covered; CI exercises
+two ranks, while the four-rank run was a local diagnostic.
 
 To run only the MPI tests:
 
