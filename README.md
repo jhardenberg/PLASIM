@@ -1,7 +1,7 @@
 [![DOI](https://zenodo.org/badge/101884206.svg)](https://zenodo.org/badge/latestdoi/101884206)
 ![Stand with Ukraine](https://badgen.net/badge/stand%20with/UKRAINE/?color=0057B8&labelColor=FFD700)
 
-# PlaSim
+# PLASIM-TNG (The Next Generation)
 
 PlaSim is the Planet Simulator, a general circulation model used in meteorology and Earth sciences. This repository was originally a streamlined fork of [Hartmut Borth's PLASIM repository](https://github.com/HartmutBorth/PLASIM) and is now maintained independently. It contains the components needed to build and run PlaSim, its LSG ocean configuration, MoSt (the model starter), postprocessors, and tests.
 
