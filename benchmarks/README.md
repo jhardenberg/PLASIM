@@ -91,6 +91,52 @@ and MPI environment settings are recorded, alongside the workspace parent and
 filesystem device. Record additional OS settings and job-scheduler allocations
 with the experiment.
 
+## Combine separately collected serial and MPI results
+
+To reuse an existing serial run, collect only the MPI sizes you need:
+
+```sh
+python3 benchmarks/run.py --output benchmarks/results/mpi-only \
+  --ranks 2 4 8 --max-cores 8
+python3 benchmarks/compare.py --summary \
+  benchmarks/results/serial benchmarks/results/mpi-only
+```
+
+Use the same source checkout, machine, compiler, input settings (including
+`--days`, coupling and output policy), warmups, and timing options as the
+serial run. Omit `--parallel` for isolated MPI efficiency measurements.
+The new run does not repeat rank 1. `--summary` accepts two or more result
+files/directories and matches each MPI case to its serial resolution/ocean/
+radiation baseline. It prints all timings and, where conditions permit,
+speedup and efficiency. You can also collect ranks 2, 4, and 8 in separate
+runs and supply all their files to the same command.
+
+The tool checks model/runner digests, runtime inputs, shared environment and
+compiler settings. Serial and MPI compiler/launcher entries may differ as
+expected; Fortran versions must agree, and separate MPI reports must agree
+on their MPI wrapper and launcher. Different sequential core budgets and
+repetition counts are allowed. Duplicate cases are rejected; samples from
+repeated experiments are never silently pooled. Collect runs under the same
+external CPU allocation/binding and comparable machine load.
+
+If either a case or its serial baseline used concurrent cases (`--parallel`),
+its efficiency is shown as `n/a`. Those timings remain available in the table.
+For other incompatible conditions, `--allow-mismatch` explicitly permits a
+timing-only summary and suppresses all scaling ratios.
+
+To retain the combined table as a new JSON file:
+
+```sh
+python3 benchmarks/compare.py --summary \
+  benchmarks/results/serial benchmarks/results/mpi-only \
+  --output benchmarks/results/scaling-summary.json
+```
+
+This exports summary rows and their originating report paths; original raw
+samples and metadata remain in their existing result files. The exported
+summary is not a raw `results.json` input. Two inputs **without** `--summary`
+still perform the existing before/after source-revision comparison.
+
 ## Parallel execution and core limit
 
 Run independent benchmark cases concurrently with a maximum of eight CPU slots:

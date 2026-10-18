@@ -31,20 +31,99 @@ def median(case: dict) -> float:
     return statistics.median(measured(case))
 
 
-def summary(report: dict):
-    parallel = report["settings"].get("parallel", False)
-    if parallel:
-        print("Concurrent cases share CPU/memory/I/O; isolated MPI scaling is not reported.")
-    cases = {(case["resolution"], case["case"], case["ranks"]): case for case in report["cases"]}
+def summary_conditions(reference: dict, candidate: dict) -> list[str]:
+    """Conditions shared by serial/MPI reports, allowing their different tools."""
+    differences = []
+    if reference["suite_sha256"] != candidate["suite_sha256"]:
+        differences.append("benchmark runner SHA-256")
+    if reference["source"]["model_sha256"] != candidate["source"]["model_sha256"]:
+        differences.append("model-source SHA-256")
+    for setting in ("days", "warmups", "coupling_days", "io", "timers",
+                    "fflags", "cflags", "precision_flags"):
+        if reference["settings"][setting] != candidate["settings"][setting]:
+            differences.append(f"setting {setting}")
+    before, after = reference["environment"], candidate["environment"]
+    for setting in ("machine", "thread_environment", "runtime_environment", "workspace_storage"):
+        if before.get(setting) != after.get(setting):
+            differences.append(f"environment {setting}")
+    for tool in ("make", "cc"):
+        if before["tools"][tool] != after["tools"][tool]:
+            differences.append(f"tool {tool}")
+    # A serial report records fc; an MPI-only report records mpifc instead.
+    # Wrappers have different paths, but must expose the same Fortran version.
+    def versions(env):
+        return {value["version"] for key, value in env["tools"].items()
+                if key in ("fc", "mpifc")}
+    if versions(before) != versions(after):
+        differences.append("Fortran compiler version")
+    if "mpifc" in before["tools"] and "mpifc" in after["tools"]:
+        if (before["tools"]["mpifc"] != after["tools"]["mpifc"] or
+                before["tools"]["launcher"] != after["tools"]["launcher"] or
+                before["launcher"] != after["launcher"]):
+            differences.append("MPI compiler/launcher")
+    return differences
+
+
+def summarize(reports: list[dict], allow_mismatch: bool = False) -> list[dict]:
+    cases, origins, inputs = {}, {}, {}
+    differences = []
+    for index, report in enumerate(reports):
+        if index:
+            differences.extend(f"report {index+1}: {item}"
+                               for item in summary_conditions(reports[0], report))
+        for case in report["cases"]:
+            key = (case["resolution"], case["case"], case["ranks"])
+            if key in cases:
+                raise ValueError(f"Duplicate resolution/configuration/rank case: {case['name']}. "
+                                 "Choose one report per case; samples are not pooled.")
+            group = key[:2]
+            if group in inputs and inputs[group] != case["input_sha256"]:
+                differences.append(f"runtime inputs for {group[0]}-{group[1]}")
+            inputs[group] = case["input_sha256"]
+            cases[key], origins[key] = case, index
+    mpi_reports = [(index, report) for index, report in enumerate(reports)
+                   if "mpifc" in report["environment"].get("tools", {})]
+    if mpi_reports:
+        for index, report in mpi_reports[1:]:
+            differences.extend(f"report {index+1}: {item}"
+                               for item in summary_conditions(mpi_reports[0][1], report))
+    differences = list(dict.fromkeys(differences))
+    if differences:
+        details = "\n".join("- " + difference for difference in differences)
+        if not allow_mismatch:
+            raise ValueError("Incompatible summary conditions:\n" + details +
+                             "\nUse --allow-mismatch to display timings without scaling ratios.")
+        print("Configuration differences explicitly allowed; scaling is unavailable:\n" + details)
+    if any(report["settings"].get("parallel", False) for report in reports):
+        print("Concurrent cases share CPU/memory/I/O; isolated MPI scaling is not reported "
+              "for rows using a concurrent run or serial baseline.")
     print("Case                         n   Median(s)    Min–max(s)         Speedup/p1  Efficiency")
-    for key, case in cases.items():
+    rows = []
+    for key in sorted(cases):
+        case, index = cases[key], origins[key]
         values = measured(case)
-        serial = cases.get((*key[:2], 1))
-        speedup = median(serial)/median(case) if serial and not parallel else None
-        scaling = f"{speedup:10.3f}x  {100*speedup/key[2]:8.1f}%" if speedup else "        n/a        n/a"
+        serial_key = (*key[:2], 1)
+        serial = cases.get(serial_key)
+        serial_report = reports[origins[serial_key]] if serial else None
+        eligible = (serial is not None and not differences and
+                    not reports[index]["settings"].get("parallel", False) and
+                    not serial_report["settings"].get("parallel", False))
+        speedup = median(serial)/median(case) if eligible else None
+        efficiency = 100*speedup/key[2] if speedup is not None else None
+        scaling = f"{speedup:10.3f}x  {efficiency:8.1f}%" if eligible else "        n/a        n/a"
         print(f"{case['name']:28} {len(values):2} {median(case):10.3f} "
               f"{min(values):8.3f}–{max(values):8.3f} {scaling}")
-    print("Scaling compares separately built serial/MPI binaries; it includes launch and initialization costs.")
+        rows.append({"name": case["name"], "resolution": key[0], "case": key[1], "ranks": key[2],
+                     "source_report": index+1, "measured_samples": len(values),
+                     "median_wall_seconds": median(case), "min_wall_seconds": min(values),
+                     "max_wall_seconds": max(values), "speedup": speedup,
+                     "efficiency_percent": efficiency, "configuration_differences": differences})
+    print("Scaling includes launch and initialization costs; independently collected runs can differ in machine load.")
+    return rows
+
+
+def summary(report: dict):
+    return summarize([report])
 
 
 def compare(baseline: dict, candidate: dict, allow_mismatch: bool) -> list[dict]:
@@ -117,22 +196,27 @@ def compare(baseline: dict, candidate: dict, allow_mismatch: bool) -> list[dict]
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("baseline", type=Path)
-    parser.add_argument("candidate", nargs="?", type=Path, help="Omit to summarize one run and its MPI scaling")
+    parser.add_argument("inputs", nargs="+", type=Path, help="Result files or directories")
+    parser.add_argument("--summary", action="store_true",
+                        help="Summarize cases across one or more files, including serial/MPI scaling")
     parser.add_argument("--allow-mismatch", action="store_true")
-    parser.add_argument("--output", type=Path, help="Write a new JSON comparison file")
+    parser.add_argument("--output", type=Path, help="Write a new JSON summary or comparison file")
     args = parser.parse_args()
-    baseline = load(args.baseline)
-    if args.candidate is None:
-        if args.output:
-            parser.error("--output requires two runs")
-        summary(baseline)
+    if not args.summary and len(args.inputs) > 2:
+        parser.error("use --summary to combine more than two result files")
+    reports = [load(path) for path in args.inputs]
+    if args.summary or len(reports) == 1:
+        for index, path in enumerate(args.inputs, 1):
+            print(f"Report {index}: {path}")
+        rows = summarize(reports, args.allow_mismatch)
+        output = {"kind": "benchmark_summary", "reports": [str(path) for path in args.inputs],
+                  "cases": rows}
     else:
-        rows = compare(baseline, load(args.candidate), args.allow_mismatch)
-        if args.output:
-            with args.output.open("x") as stream:
-                json.dump(rows, stream, indent=2, allow_nan=False)
-                stream.write("\n")
+        output = compare(reports[0], reports[1], args.allow_mismatch)
+    if args.output:
+        with args.output.open("x") as stream:
+            json.dump(output, stream, indent=2, allow_nan=False)
+            stream.write("\n")
 
 
 if __name__ == "__main__":

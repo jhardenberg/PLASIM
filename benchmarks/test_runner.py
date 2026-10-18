@@ -138,5 +138,99 @@ class ComparisonTests(unittest.TestCase):
         self.assertIn('n/a', stream.getvalue())
 
 
+class MultiReportSummaryTests(unittest.TestCase):
+    def report(self, ranks, seconds, parallel=False):
+        report = ComparisonTests().report()
+        report.update(schema_version=1, status='complete', source={'model_sha256': 'same-model'})
+        report['settings'].update(parallel=parallel, max_cores=max(1, ranks))
+        tool = lambda name: {'path': '/bin/' + name, 'version': name + ' version'}
+        tools = {'make': tool('make'), 'cc': tool('cc')}
+        tools['fc' if ranks == 1 else 'mpifc'] = {'path': '/bin/fortran', 'version': 'GNU Fortran 15'}
+        if ranks > 1:
+            tools['launcher'] = tool('mpiexec')
+        report['environment'] = dict(machine={'hostname': 'same-host'}, tools=tools,
+                                     launcher=[] if ranks == 1 else ['mpiexec'],
+                                     thread_environment={'OMP_NUM_THREADS': '1'},
+                                     runtime_environment={}, workspace_storage={'parent': '/tmp'})
+        case = report['cases'][0]
+        case.update(name=f'T21-mixed-p{ranks}', ranks=ranks)
+        sample = case['samples'][0]
+        sample['wall_seconds'] = seconds
+        # A deliberately slow warmup must not affect ratios or sample counts.
+        case['samples'].insert(0, dict(sample, warmup=True, wall_seconds=1000))
+        return report
+
+    def summarize(self, reports, allow_mismatch=False):
+        with contextlib.redirect_stdout(io.StringIO()):
+            return compare.summarize(reports, allow_mismatch)
+
+    def test_split_serial_and_mpi_reports_produce_scaling(self):
+        serial = self.report(1, 80)
+        mpi = self.report(2, 40)
+        mpi['cases'].extend(self.report(4, 25)['cases'] + self.report(8, 20)['cases'])
+        rows = self.summarize([serial, mpi])
+        self.assertEqual([r['ranks'] for r in rows], [1, 2, 4, 8])
+        self.assertEqual([r['speedup'] for r in rows], [1, 2, 3.2, 4])
+        self.assertEqual([r['efficiency_percent'] for r in rows], [100, 100, 80, 50])
+        self.assertTrue(all(r['measured_samples'] == 1 for r in rows))
+        self.assertEqual(rows[-1]['source_report'], 2)
+
+    def test_concurrent_serial_baseline_suppresses_ratios(self):
+        for reports in ([self.report(1, 80, True), self.report(2, 40)],
+                        [self.report(1, 80), self.report(2, 40, True)]):
+            with self.subTest(parallel=[r['settings']['parallel'] for r in reports]):
+                rows = self.summarize(reports)
+                self.assertIsNone(rows[1]['efficiency_percent'])
+                self.assertIsNone(rows[1]['speedup'])
+
+    def test_incompatible_conditions_and_inputs_rejected(self):
+        serial = self.report(1, 80)
+        for change in ('source', 'input', 'days', 'machine', 'compiler'):
+            mpi = self.report(2, 40)
+            if change == 'source':
+                mpi['source']['model_sha256'] = 'different'
+            elif change == 'input':
+                mpi['cases'][0]['input_sha256'] = 'different'
+            elif change == 'days':
+                mpi['settings']['days'] += 1
+            elif change == 'machine':
+                mpi['environment']['machine']['hostname'] = 'different'
+            else:
+                mpi['environment']['tools']['mpifc']['version'] = 'different'
+            with self.subTest(change=change):
+                with self.assertRaisesRegex(ValueError, 'Incompatible summary conditions'):
+                    self.summarize([serial, mpi])
+                rows = self.summarize([serial, mpi], True)
+                self.assertTrue(all(r['speedup'] is None for r in rows))
+
+    def test_checks_launcher_between_separate_mpi_files(self):
+        reports = [self.report(1, 80), self.report(2, 40), self.report(4, 25)]
+        reports[2]['environment']['launcher'].append('--bind-to=none')
+        with self.assertRaisesRegex(ValueError, 'MPI compiler/launcher'):
+            self.summarize(reports)
+
+    def test_duplicates_are_not_silently_pooled(self):
+        with self.assertRaisesRegex(ValueError, 'Duplicate'):
+            self.summarize([self.report(1, 80), self.report(1, 70)])
+
+    def test_cli_multi_summary_export_and_existing_comparison(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            serial, mpi, output = [directory / name for name in ('serial.json', 'mpi.json', 'summary.json')]
+            serial.write_text(compare.json.dumps(self.report(1, 80)))
+            mpi.write_text(compare.json.dumps(self.report(2, 40)))
+            args = ['compare.py', '--summary', str(serial), str(mpi), '--output', str(output)]
+            with patch.object(sys, 'argv', args), contextlib.redirect_stdout(io.StringIO()):
+                compare.main()
+            exported = compare.json.loads(output.read_text())
+            self.assertEqual(exported['kind'], 'benchmark_summary')
+            self.assertEqual(exported['cases'][1]['efficiency_percent'], 100)
+            self.assertEqual(exported['reports'], [str(serial), str(mpi)])
+            # Without --summary, two inputs still mean source-revision comparison.
+            with patch.object(sys, 'argv', ['compare.py', str(serial), str(serial)]), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                compare.main()
+
+
 if __name__ == '__main__':
     unittest.main()
