@@ -1,9 +1,9 @@
 [![DOI](https://zenodo.org/badge/101884206.svg)](https://zenodo.org/badge/latestdoi/101884206)
 ![Stand with Ukraine](https://badgen.net/badge/stand%20with/UKRAINE/?color=0057B8&labelColor=FFD700)
 
-# PlaSIm-LSG TNG (The Next Generation)
+# PlaSim-LSG TNG (The Next Generation)
 
-PlaSIm-LSG TNG (The Next Generation) builds on and improves the original Planet Simulator (PlaSim), a general circulation model used in meteorology and Earth sciences. This version is maintained in [jhardenberg/PLASIM](https://github.com/jhardenberg/PLASIM). This repository was originally a streamlined fork of [Hartmut Borth's PLASIM repository](https://github.com/HartmutBorth/PLASIM) and is now maintained independently. It contains the components needed to build and run PlaSIm-LSG TNG, its LSG ocean configuration, MoSt (the model starter), postprocessors, and tests.
+PlaSim-LSG TNG (The Next Generation) builds on and improves the original Planet Simulator (PlaSim), a general circulation model used in meteorology and Earth sciences. This version is maintained in [jhardenberg/PLASIM](https://github.com/jhardenberg/PLASIM). This repository was originally a streamlined fork of [Hartmut Borth's PLASIM repository](https://github.com/HartmutBorth/PLASIM) and is now maintained independently. It contains the components needed to build and run PlaSim-LSG TNG, its LSG ocean configuration, MoSt (the model starter), postprocessors, and tests.
 
 Running and interpreting the model requires some knowledge of meteorology and climatology, as well as familiarity with Linux, C, and Fortran. Start with the [Sphinx user manual](docs/index.md). The original [User's Guide](plasim/doc/PS_UsersGuide.pdf) is retained for historical context; the scientific [Reference Manual](plasim/doc/PS_ReferenceManual.pdf) remains separate. See also the [FAQ](FAQ.md) and [changelog](CHANGELOG.md).
 
