@@ -72,6 +72,7 @@
       return
       end
 
+!     Serial counterparts of mpshiftgp_north / mpshiftgp_south used in mkradv
       subroutine mpshiftgp_north(pin,pout) ! shift global grid 1 row north
       use pumamod
       real pin(NLON,NLPP)

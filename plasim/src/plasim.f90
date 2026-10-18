@@ -2400,6 +2400,11 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 !     =========================
 !     SUBROUTINE GATHER_PROG_SP
 !     =========================
+!     Gather the distributed prognostic spectral arrays (sdp, szp, stp,
+!     spp, sqp) across all MPI ranks in a single mpgallsp collective
+!     instead of 5 separate calls. When lgather_sqt is .true. (at the
+!     end of spectrala), also gather sqt into sqt_glob so mkdqtgp in
+!     rainstep does not need a mid-physics MPI collective after radstep.
 
       subroutine gather_prog_sp(lgather_sqt)
       use pumamod

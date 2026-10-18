@@ -373,7 +373,6 @@
       real :: zfldo(NLON*NLAT)
       real :: zlsgloc(NHOR,7)
       real :: zlsggl(NLON*NLAT,7)
-      integer :: klsg
 !
 !     dbug arrays
 !
@@ -431,42 +430,23 @@
 !     do the lsg coupling
 !
       if (nlsg > 0) then
-       zlsgloc(:,1) = ytaux(:)
-       zlsgloc(:,2) = ytauy(:)
-       zlsgloc(:,3) = ypme(:)
-       zlsgloc(:,4) = yroff(:)
-       klsg = 4
-       if (nlsg >= 2) then
-        klsg = klsg + 1
-        zlsgloc(:,klsg) = yheat(:)
-       endif
-       if (mod(nstep,naomod) == naomod-1) then
-        klsg = klsg + 1
-        zlsgloc(:,klsg) = yicesnow(:)
-        if (nlsg < 2) then
-         klsg = klsg + 1
-         zlsgloc(:,klsg) = ysst(:,1)
-        endif
-       endif
-       call mpgagp(zlsggl,zlsgloc,klsg)
+!      Gather all 7 LSG coupling fields to root in a single MPI collective
+       zlsgloc(:,1) = ysst(:,1)
+       zlsgloc(:,2) = ytaux(:)
+       zlsgloc(:,3) = ytauy(:)
+       zlsgloc(:,4) = ypme(:)
+       zlsgloc(:,5) = yroff(:)
+       zlsgloc(:,6) = yicesnow(:)
+       zlsgloc(:,7) = yheat(:)
+       call mpgagp(zlsggl,zlsgloc,7)
        if (mypid == nroot) then
-        ztaux(:) = zlsggl(:,1)
-        ztauy(:) = zlsggl(:,2)
-        zpme(:)  = zlsggl(:,3)
-        zroff(:) = zlsggl(:,4)
-        klsg = 4
-        if (nlsg >= 2) then
-         klsg = klsg + 1
-         zheat(:) = zlsggl(:,klsg)
-        endif
-        if (mod(nstep,naomod) == naomod-1) then
-         klsg = klsg + 1
-         zice(:) = zlsggl(:,klsg)
-         if (nlsg < 2) then
-          klsg = klsg + 1
-          zsst(:) = zlsggl(:,klsg)
-         endif
-        endif
+        if (nlsg < 2) zsst(:) = zlsggl(:,1)
+        ztaux(:) = zlsggl(:,2)
+        ztauy(:) = zlsggl(:,3)
+        zpme(:)  = zlsggl(:,4)
+        zroff(:) = zlsggl(:,5)
+        zice(:)  = zlsggl(:,6)
+        zheat(:) = zlsggl(:,7)
        endif
        call ntomin(nstep,ndatim(5),ndatim(4),ndatim(3),ndatim(2)        &
      &            ,ndatim(1))

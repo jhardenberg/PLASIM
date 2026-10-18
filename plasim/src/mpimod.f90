@@ -217,6 +217,9 @@
 !     =========================
 !     SUBROUTINE MPSHIFTGP_NORTH
 !     =========================
+!     Shift a 2D gridpoint field 1 latitude row north (pout(:,j) = pin(:,j+1))
+!     by exchanging only the boundary latitude row with neighboring MPI ranks
+!     instead of gathering and scattering the full global grid in mkradv.
 
       subroutine mpshiftgp_north(pin,pout) ! shift global grid 1 row north
       use mpimod
@@ -246,6 +249,8 @@
 !     =========================
 !     SUBROUTINE MPSHIFTGP_SOUTH
 !     =========================
+!     Shift a 2D gridpoint field 1 latitude row south (pout(:,j) = pin(:,j-1))
+!     by exchanging only the boundary latitude row with neighboring MPI ranks.
 
       subroutine mpshiftgp_south(pin,pout) ! shift global grid 1 row south
       use mpimod
