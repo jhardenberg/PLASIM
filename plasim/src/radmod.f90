@@ -592,7 +592,8 @@
 !     solcdec : constant solar declination
 !     no3     : switch for ozon 1=on/0=off
 !     co2     : co2 concentration (ppmv)
-!     iyrbp   : Year before present (1950 AD); default = 2000 AD
+!     iyrbp   : Years before 1950 AD; defaults to current model year
+!               at initialization, unless overridden in radmod_nl
 !     nswr    : switch for short wave radiation (dbug) 1=on/0=off
 !     nlwr    : switch for long wave radiation (dbug) 1=on/0=off
 !     nsol    : switch for solar insolation (dbug) 1=on/0=off
@@ -693,7 +694,10 @@
 !
 !**   1) read and print version & namelist parameters
 !
-      iyrbp = 1950 - n_start_year
+!     Use the restart date when continuing an experiment. Orbital elements
+!     are held for this invocation; radini is not called at year boundaries.
+      call ntomin(nstep,imin,ihou,iday,imon,iyea)
+      iyrbp = 1950 - iyea
 
       if (mypid==NROOT) then
          open(11,file=radmod_namelist)
@@ -784,6 +788,10 @@
       endif
       call orb_params(iyrad, eccen, obliq, mvelp                          &
      &               ,obliqr, lambm0, mvelpp, log_print, mypid, nroot,nud)
+      if (nfixorb == 0 .and. mypid == NROOT) then
+         write(nud,*) 'Berger orbit is recalculated at initialization only.'
+         write(nud,*) 'For transient orbits, restart at each year boundary.'
+      endif
 
 !
 !     read climatological ozone

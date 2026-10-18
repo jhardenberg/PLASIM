@@ -14,7 +14,81 @@ from test_lsg import floats, lsg_output_records, prepare_coupled_run
 from test_model import build_model, doubles, prepare_run, records, run_model
 
 
-class MPITests(unittest.TestCase):
+class FieldComparison:
+    def assert_values_close(self, actual, expected, *, atol, rtol, label,
+                            field_norm=False, unit_fraction=False) -> None:
+        self.assertEqual(len(actual), len(expected), label)
+        self.assertTrue(all(map(math.isfinite, actual)), label)
+        self.assertTrue(all(map(math.isfinite, expected)), label)
+        differences = [abs(a - b) for a, b in zip(actual, expected)]
+        if field_norm:
+            # Serial transforms pair opposite latitudes; MPI transforms sum
+            # rank-local contributions. Coupling amplifies their roundoff.
+            # Scale relative error by the physical field, including its zeros.
+            peak = max(map(abs, expected))
+            if unit_fraction:
+                self.assertTrue(all(0.0 <= v <= 1.0 for v in actual), label)
+                self.assertTrue(all(0.0 <= v <= 1.0 for v in expected), label)
+                # Albedo and ice fraction have a fixed physical scale of one,
+                # independent of the largest value in this particular run.
+                peak = 1.0
+            reference_rms = math.sqrt(math.fsum(b*b for b in expected)
+                                      / len(expected))
+            error_rms = math.sqrt(math.fsum(d*d for d in differences)
+                                  / len(differences))
+            worst = max(range(len(differences)), key=differences.__getitem__)
+            self.assertLessEqual(
+                differences[worst], atol + rtol * peak,
+                f"{label}[{worst}]: max error {differences[worst]}, "
+                f"reference max {peak}, error RMS {error_rms}, "
+                f"reference RMS {reference_rms}",
+            )
+            # A large field maximum must not hide a distributed bias.
+            self.assertLessEqual(
+                error_rms, atol + rtol * reference_rms,
+                f"{label}: error RMS {error_rms}, reference RMS {reference_rms}",
+            )
+            return
+        limits = [atol + rtol * abs(b) for b in expected]
+        worst = max(range(len(actual)), key=lambda i: differences[i] / limits[i])
+        self.assertLessEqual(
+            differences[worst], limits[worst],
+            f"{label}[{worst}]: MPI {actual[worst]} vs serial {expected[worst]}",
+        )
+
+
+class MPIComparisonTests(FieldComparison, unittest.TestCase):
+    def test_coupled_comparison_handles_small_values(self) -> None:
+        self.assert_values_close([2e-9, 0.8], [0.0, 0.8],
+                                 atol=1e-10, rtol=1e-8, label="albedo",
+                                 field_norm=True)
+
+    def test_coupled_comparison_uses_fraction_range(self) -> None:
+        self.assert_values_close([9e-9, 0.8, 0.8], [0.0, 0.8, 0.8],
+                                 atol=1e-10, rtol=1e-8, label="albedo",
+                                 field_norm=True, unit_fraction=True)
+
+    def test_coupled_comparison_rejects_invalid_fraction(self) -> None:
+        with self.assertRaises(AssertionError):
+            self.assert_values_close([1.0 + 1e-9], [1.0],
+                                     atol=1e-10, rtol=1e-8, label="albedo",
+                                     field_norm=True, unit_fraction=True)
+
+    def test_coupled_comparison_rejects_local_error(self) -> None:
+        with self.assertRaises(AssertionError):
+            self.assert_values_close([1e-4, 0.8], [0.0, 0.8],
+                                     atol=1e-10, rtol=1e-8, label="albedo",
+                                     field_norm=True)
+
+    def test_coupled_comparison_rejects_distributed_bias(self) -> None:
+        with self.assertRaisesRegex(AssertionError, "error RMS"):
+            self.assert_values_close([1.0 + 8e-9, 8e-9, 8e-9, 8e-9],
+                                     [1.0, 0.0, 0.0, 0.0],
+                                     atol=1e-10, rtol=1e-8, label="field",
+                                     field_norm=True)
+
+
+class MPITests(FieldComparison, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         for program in ("mpif90", "mpiexec"):
@@ -59,7 +133,7 @@ class MPITests(unittest.TestCase):
                     run_model(mpi_exe, parallel, launcher=["mpiexec", "-n", "2"])
                     expected = records(serial / "plasim_status")
                     actual = records(parallel / "plasim_status")
-                    self.assertEqual(struct.unpack("=i", actual["nstep"])[0], 11520 + steps)
+                    self.assertEqual(actual["nstep"], control_state["nstep"])
                     # Verify that each input changes the serial solution, so an
                     # ignored namelist setting cannot make the comparison pass.
                     response = "dsoilt" if name == "soilcap" else "st"
@@ -74,18 +148,6 @@ class MPITests(unittest.TestCase):
                             )
             self.assertNotEqual(serial_responses["tidal-lock"],
                                 serial_responses["substellar-longitude"])
-
-    def assert_values_close(self, actual, expected, *, atol, rtol, label) -> None:
-        self.assertEqual(len(actual), len(expected), label)
-        self.assertTrue(all(map(math.isfinite, actual)), label)
-        self.assertTrue(all(map(math.isfinite, expected)), label)
-        differences = [abs(a - b) for a, b in zip(actual, expected)]
-        limits = [atol + rtol * abs(b) for b in expected]
-        worst = max(range(len(actual)), key=lambda i: differences[i] / limits[i])
-        self.assertLessEqual(
-            differences[worst], limits[worst],
-            f"{label}[{worst}]: MPI {actual[worst]} vs serial {expected[worst]}",
-        )
 
     def compare_configuration(self, *, lsg: bool) -> None:
         name = "lsg" if lsg else "mixed-layer"
@@ -105,7 +167,7 @@ class MPITests(unittest.TestCase):
         expected = records(serial / "plasim_status")
         actual = records(parallel / "plasim_status")
         for field, value in (("nlat", 32), ("nlon", 64), ("nlev", 10),
-                             ("nstep", 11584)):
+                             ("nstep", 23040064)):
             self.assertEqual(struct.unpack("=i", actual[field])[0], value, field)
         self.assertEqual(actual["dls"], expected["dls"])
         # Parallel reductions can change roundoff; compare every value in both
@@ -118,13 +180,14 @@ class MPITests(unittest.TestCase):
             with self.subTest(configuration=name, field=field):
                 self.assert_values_close(
                     doubles(actual[field]), doubles(expected[field]),
-                    atol=1e-10, rtol=1e-8, label=field,
+                    atol=1e-10, rtol=1e-8, label=field, field_norm=lsg,
+                    unit_fraction=lsg and field in ("dalb", "dicec"),
                 )
 
         if lsg:
             ocean = lsg_output_records(parallel / "lsg_output")
             reference = lsg_output_records(serial / "lsg_output")
-            self.assertEqual({key[2] for key in ocean}, {10101, 10102})
+            self.assertEqual({key[2] for key in ocean}, {20000101, 20000102})
             self.assertEqual(ocean.keys(), reference.keys())
             for key in ocean:
                 with self.subTest(ocean_record=key):
