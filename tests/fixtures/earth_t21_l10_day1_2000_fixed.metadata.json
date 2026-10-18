@@ -1,0 +1,73 @@
+{
+  "source_commit": "d4802a1d1dfcac38cd8773bdf3723c94d50f968f",
+  "compiler": "GNU Fortran (Homebrew GCC 15.2.0_1) 15.2.0",
+  "flags": "-O0 -fdefault-real-8",
+  "configuration": "T21/L10, 360-day calendar, kick=0, ngui=0, seed=1; N_START_YEAR and NFIXORB omitted (defaults 2000 and 1)",
+  "fixture": {
+    "name": "earth_t21_l10_day1_2000_fixed.restart.gz",
+    "sha256_uncompressed": "dbc5d5203168b0a9952de7984cd63c605cb8b74ceaf3b2be79054b2afa9c9345"
+  },
+  "day1_comparison": {
+    "dt": {
+      "old_mean": 278.65404043758207,
+      "new_mean": 278.6623857125268,
+      "max_absolute_change": 1.1260301953820147
+    },
+    "dq": {
+      "old_mean": 0.009139531431414856,
+      "new_mean": 0.009142303068041657,
+      "max_absolute_change": 0.00013842383678315615
+    },
+    "dalb": {
+      "old_mean": 0.20989992771738836,
+      "new_mean": 0.20993872208045092,
+      "max_absolute_change": 0.01009439692098002
+    },
+    "dls": {
+      "old_mean": 0.32861328125,
+      "new_mean": 0.32861328125,
+      "max_absolute_change": 0.0
+    },
+    "sz": {
+      "old_mean": 0.003384843906985082,
+      "new_mean": 0.0033848917502204137,
+      "max_absolute_change": 9.853060185370782e-05
+    },
+    "sd": {
+      "old_mean": -3.366298110345983e-05,
+      "new_mean": -3.374987904547446e-05,
+      "max_absolute_change": 0.00010546267250336491
+    },
+    "st": {
+      "old_mean": -5.2125166566661405e-06,
+      "new_mean": -5.213437778827685e-06,
+      "max_absolute_change": 2.010187790582596e-05
+    },
+    "sq": {
+      "old_mean": 1.2830217462863244e-06,
+      "new_mean": 1.2832891809085201e-06,
+      "max_absolute_change": 5.887022489484077e-06
+    },
+    "sp": {
+      "old_mean": 4.02669839398655e-05,
+      "new_mean": 4.0271668424314265e-05,
+      "max_absolute_change": 1.6979379094012747e-06
+    }
+  },
+  "day2_means": {
+    "dt": 277.6631607036074,
+    "dq": 0.009060760038343291,
+    "dls": 0.32861328125
+  },
+  "lsg_day2_means": {
+    "-2": 286.6789921914663,
+    "-5": 34.271900261109,
+    "-52": -0.023646818469276836,
+    "-53": 0.005032887393991585,
+    "-18": -47.42810275075589
+  },
+  "lsg_atmosphere_day2_means": {
+    "dt": 277.60831214214403,
+    "yfldo": -30.8461166877992
+  }
+}

@@ -78,12 +78,12 @@ class LSGTests(unittest.TestCase):
         return prepare_coupled_run(cls.work, name, days=days)
 
     def test_coupled_t21_two_day_regression(self) -> None:
-        self.assertEqual({key[2] for key in self.ocean}, {10101, 10102})
+        self.assertEqual({key[2] for key in self.ocean}, {20000101, 20000102})
         for key, data in self.ocean.items():
             with self.subTest(record=key):
                 self.assertTrue(all(map(math.isfinite, floats(data))))
 
-        for date in (10101, 10102):
+        for date in (20000101, 20000102):
             for code in (-40, -2, -5):  # Wet mask, temperature, and salinity.
                 self.assertEqual(
                     {level for c, level, d in self.ocean if c == code and d == date},
@@ -93,30 +93,30 @@ class LSGTests(unittest.TestCase):
             self.assertEqual(set(mask), {0.0, 1.0})
             self.assertEqual(sum(mask), 3447)
 
-        # Surface wet-point means from master d2eef95, gfortran 15.2, -O0.
+        # Surface wet-point means from d4802a1, gfortran 15.2, -O0.
         # Check both the ocean state and the atmospheric forcing received by LSG.
-        mask = floats(self.ocean[-40, 1, 10102])
+        mask = floats(self.ocean[-40, 1, 20000102])
         for code, expected, tolerance in (
-            (-2, 286.678575, 0.05),     # Potential temperature (K).
-            (-5, 34.271895, 0.005),     # Salinity (per mille).
-            (-52, -0.0236787, 0.001),   # Zonal stress from PlaSim (Pa).
-            (-53, 0.00502879, 0.001),   # Meridional stress from PlaSim (Pa).
-            (-18, -47.37544, 2.0),      # LSG heat flux to the mixed layer (W/m2).
+            (-2, 286.678992, 0.05),     # Potential temperature (K).
+            (-5, 34.271900, 0.005),     # Salinity (per mille).
+            (-52, -0.02364682, 0.001),   # Zonal stress from PlaSim (Pa).
+            (-53, 0.005032887, 0.001),   # Meridional stress from PlaSim (Pa).
+            (-18, -47.428103, 2.0),      # LSG heat flux to the mixed layer (W/m2).
         ):
             with self.subTest(code=code):
-                wet = [v for v, m in zip(floats(self.ocean[code, 1, 10102]), mask)
+                wet = [v for v, m in zip(floats(self.ocean[code, 1, 20000102]), mask)
                        if m == 1.0]
                 self.assertAlmostEqual(math.fsum(wet) / len(wet), expected,
                                        delta=tolerance)
         for code in (-2, -5):
-            self.assertNotEqual(self.ocean[code, 1, 10101],
-                                self.ocean[code, 1, 10102])
+            self.assertNotEqual(self.ocean[code, 1, 20000101],
+                                self.ocean[code, 1, 20000102])
 
         atmosphere = records(self.continuous / "plasim_status")
-        self.assertEqual(struct.unpack("=i", atmosphere["nstep"])[0], 11584)
+        self.assertEqual(struct.unpack("=i", atmosphere["nstep"])[0], 23040064)
         # yfldo checks the return path: LSG heat flux interpolated onto PlaSim.
         for field, expected, tolerance in (
-            ("dt", 277.594045, 0.3), ("yfldo", -30.81046, 2.0),
+            ("dt", 277.608312, 0.3), ("yfldo", -30.846117, 2.0),
         ):
             values = doubles(atmosphere[field])
             self.assertTrue(all(map(math.isfinite, values)), field)
@@ -137,7 +137,7 @@ class LSGTests(unittest.TestCase):
                                  (self.continuous / filename).read_bytes())
         self.assertEqual(
             lsg_output_records(split / "lsg_output"),
-            {key: data for key, data in self.ocean.items() if key[2] == 10102},
+            {key: data for key, data in self.ocean.items() if key[2] == 20000102},
         )
 
 

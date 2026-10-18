@@ -33,6 +33,49 @@ In the MoSt GUI, select **Planet Simulator** and use **Save & Run** to build and
 
 Configuration and builds create files under `plasim/bld`, `plasim/bin`, and `plasim/run`. Edit permanent model sources in [`plasim/src`](plasim/src). Running `./cleanplasim` removes the generated build, binary, and run files before rebuilding; save any run output you need first.
 
+### Orbital parameters and experiment dates
+
+New Earth experiments default to start year **2000** and `NFIXORB=1`, both
+when launched directly and through MoSt. `N_START_YEAR` is set in
+`plasim_namelist` (`plasim_nl`); `NFIXORB` is set in
+`planet_namelist` (`planet_nl`). This holds the prescribed eccentricity
+(`ECCEN`), obliquity (`OBLIQ`), and longitude of perihelion (`MVELP`) fixed.
+The seasonal and diurnal cycles still follow the model calendar. Saved MoSt
+configurations and existing namelists retain their explicit settings.
+
+With `NFIXORB=0`, the model computes Berger orbital elements **once at
+radiation initialization**, using the current model year. A cold start uses
+`N_START_YEAR`; a restart uses the year of the restored model timestep,
+even if `N_START_YEAR` is unchanged. An explicit `IYRBP` in
+`radmod_namelist` overrides this epoch: the orbital year is `1950 - IYRBP`.
+`IYRBP` has no effect when `NFIXORB=1`.
+
+**There is currently no automatic orbital update at a year boundary within
+one executable invocation.** For example, a continuous 2000–2009 run with
+`NFIXORB=0` retains the elements calculated for 2000 throughout. Running the
+same experiment as one-year chunks, each continued from `plasim_restart`,
+recalculates the elements for 2000, 2001, and so on, unless `IYRBP` explicitly
+fixes the orbital epoch. MoSt normally creates annual chunks without the
+simulation GUI; selecting that GUI instead runs all requested years in one
+invocation. Check the generated run script and `N_RUN_YEARS` rather than
+assuming an update interval. The computed epoch and elements are printed in
+`plasim_diag` at each initialization.
+
+This initialization-only behavior is a known limitation for transient
+orbital experiments: changing restart frequency can change the forcing and
+trajectory. Use annual restarts for yearly orbital updates, or prescribe a
+fixed orbit for time-independent forcing. Automatic annual updates remain
+an open design question in [issue #9](https://github.com/jhardenberg/PLASIM/issues/9).
+
+Existing inputs that omit either setting now inherit its new default.
+To retain the previous Earth setup, explicitly set `N_START_YEAR=1` in
+`plasim_namelist` and `NFIXORB=0` in `planet_namelist`.
+Restart-file formats are unchanged, but continuing an existing
+`NFIXORB=0` experiment now uses its restart year instead of its original
+start year. To reproduce its previous orbital forcing, set `IYRBP` to
+`1950 - original_start_year` (for example, `IYRBP=-50` for an original start
+year of 2000), or retain any existing explicit `IYRBP` value.
+
 ## Platform notes
 
 ### Ubuntu and other Linux distributions
@@ -166,14 +209,16 @@ Run the regression suite from the repository root:
 python3 -m unittest discover -s tests -v
 ```
 
-The tests require Python 3, `gfortran`, `cc`, and `make`. MPI tests additionally require `mpif90` and `mpiexec`; they are skipped locally if those tools are absent. CI installs Open MPI. Tests build headless T21/L10 PlaSim binaries in temporary directories using `make_plasim`; generated files are not written into the checkout. The suite checks Gregorian and 360-day calendars, a deterministic two-day run with broad numerical baselines, byte equality between continuous and restarted two-day runs, selected Earth state values against a saved one-day `master` restart, legacy restart loading, and classic namelist inputs. A fixed random seed is required for restart comparisons.
+The tests require Python 3, `gfortran`, `cc`, and `make`. MPI tests additionally require `mpif90` and `mpiexec`; they are skipped locally if those tools are absent. CI installs Open MPI. Tests build headless T21/L10 PlaSim binaries in temporary directories using `make_plasim`; generated files are not written into the checkout. The suite checks Gregorian and 360-day calendars, a deterministic two-day run with broad numerical baselines, byte equality between continuous and restarted two-day runs, selected Earth state values against a saved one-day reference for the new defaults, legacy restart loading, and classic namelist inputs. A fixed random seed is required for restart comparisons.
 
 The suite also builds and runs the real PlaSim–LSG coupled model. Its two-day test uses daily coupling to exercise two ocean steps, checks ocean state and fluxes in both directions, and verifies that restarting both components reproduces a continuous run. See the [coupled test setup](tests/README.md#coupled-plasim-and-lsg-tests) for inputs, baselines, and scope.
 
 Separate [MPI tests](tests/README.md#mpi-tests) run both ocean configurations on two ranks and compare their atmospheric state, ocean state, and coupled fluxes with matching serial runs.
 
-The broad baselines come from the `master` model built with `gfortran -O0 -fdefault-real-8` and tolerate small compiler and platform differences. Passing these short-run regression tests does not establish long-term scientific validity. T42 and other MPI rank counts remain future work.
+The current broad baselines come from source commit `d4802a1`, using the year-2000 fixed-orbit defaults and `gfortran -O0 -fdefault-real-8` and tolerate small compiler and platform differences. Passing these short-run regression tests does not establish long-term scientific validity. T42 and other MPI rank counts remain future work.
 
-The fixture [`tests/fixtures/earth_t21_l10_day1_360.restart.gz`](tests/fixtures/earth_t21_l10_day1_360.restart.gz) is a one-day T21/L10 Earth restart from unmodified commit `88e68db5302d1db3c0ad636444eadda833738d52`, built with Homebrew GNU Fortran 15.2.0 and the same headless setup as `tests/test_model.py`. Its uncompressed SHA-256 is `6b851dcb07544493620992e82ce6af4fab573fdccaa6af94f102788665dac42c`. The elementwise state comparison uses absolute and relative tolerance `1e-6`. This fixture uses the model's default 360-day calendar; the MoSt-generated 365-day setup is not yet covered by this strict comparison. The legacy restart and namelist checks are compatibility gates, so intentional changes to classic inputs should update the policy and tests together.
+The current one-day Earth reference is [`earth_t21_l10_day1_2000_fixed.restart.gz`](tests/fixtures/earth_t21_l10_day1_2000_fixed.restart.gz), generated from commit `d4802a1` with the intentional year-2000, fixed-orbit defaults. The older [`earth_t21_l10_day1_360.restart.gz`](tests/fixtures/earth_t21_l10_day1_360.restart.gz) remains an input for legacy-restart continuation, with its original year-1, Berger-orbit settings made explicit in that test. The elementwise state comparison retains absolute and relative tolerance `1e-6`. Both references use the 360-day calendar; the MoSt-generated 365-day setup is not covered by the strict state comparison. See [reference provenance and comparisons](tests/README.md#earth-reference-data) for source commits, compiler settings, checksums, and the recorded changes.
 
-GitHub Actions runs the suite on pushes to `master` or `main`, by manual dispatch, and on pull requests targeting those branches when the exact `run tests` label is present. Later commits rerun a labeled PR. One known calendar gap remains: `cal2step` ignores hours and minutes under the simplified 360-day calendar, so that path is tested at midnight.
+GitHub Actions runs the suite on pushes to `master` or `main`, by manual dispatch, and on pull requests targeting those branches when the exact `run tests` label is present. Later commits rerun a labeled PR.
+
+[Calendar tests](tests/README.md#calendar-tests) also cover subdaily times with configured planetary day lengths, perpetual dates, and monthly climatology interpolation. Gregorian perpetual dates use a fixed 365-day climatology (day 60 is March 1); ordinary dated runs retain leap years.
