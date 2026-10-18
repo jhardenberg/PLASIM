@@ -256,16 +256,16 @@ class PlaSimTests(unittest.TestCase):
         )
 
     def test_dynamic_orbit_uses_restart_year(self) -> None:
-        """Cross a year boundary and compare restarted and fresh orbits."""
-        for calendar, december_days in ((360, 30), (365, 31)):
+        """Cross New Year in a few steps and compare restarted and fresh orbits."""
+        for calendar in (360, 365):
             with self.subTest(calendar=calendar):
-                def prepare(name, *, year=2000, month=12, days):
-                    run = self.prepare_run(f"orbit-{calendar}-{name}", days=days)
+                def prepare(name, *, year=2000, month=12, steps=1):
+                    run = self.prepare_run(f"orbit-{calendar}-{name}", days=0)
                     (run / "plasim_namelist").write_text(
                         "&plasim_nl\n"
                         f" n_start_year={year}, n_start_month={month}, "
                         f"n_days_per_year={calendar}, n_run_years=0, "
-                        f"n_run_months=0, n_run_days={days}, "
+                        f"n_run_months=0, n_run_days=0, n_run_steps={steps}, "
                         "kick=0, ngui=0, seed=1\n/\n", encoding="ascii",
                     )
                     (run / "planet_namelist").write_text(
@@ -273,7 +273,30 @@ class PlaSimTests(unittest.TestCase):
                     )
                     return run
 
-                continuous = prepare("continuous", days=december_days + 1)
+                fresh = prepare("fresh", year=2001, month=1)
+                self.run_model(fresh)
+                self.assertEqual(re.findall(
+                    r"Year AD\s*=\s*(\d+)",
+                    (fresh / "plasim_diag").read_text(),
+                ), ["2001"])
+
+                # There is no start-day namelist input. Move only the clock in
+                # a temporary restart to one step before Jan 1, avoiding a
+                # month of integration. These checks concern orbital epochs,
+                # not the physical trajectory of this artificial checkpoint.
+                checkpoint = self.work / f"orbit-{calendar}-boundary.restart"
+                shutil.copy2(fresh / "plasim_status", checkpoint)
+                with checkpoint.open("r+b") as stream:
+                    self.assertEqual(_record(stream).strip(), b"nstep")
+                    data_offset = stream.tell() + 4  # skip the record marker
+                    saved_step = _record(stream)
+                    self.assertEqual(len(saved_step), 4)
+                    january_step = struct.unpack("=i", saved_step)[0] - 1
+                    stream.seek(data_offset)
+                    stream.write(struct.pack("=i", january_step - 1))
+
+                continuous = prepare("continuous", steps=2)
+                shutil.copy2(checkpoint, continuous / "plasim_restart")
                 self.run_model(continuous)
                 diagnostic = (continuous / "plasim_diag").read_text()
                 # Record the current limitation: no recalculation inside a run.
@@ -281,20 +304,18 @@ class PlaSimTests(unittest.TestCase):
                                  ["2000"])
                 self.assertIn("initialization only", diagnostic)
 
-                split = prepare("split", days=december_days)
+                split = prepare("split")
+                shutil.copy2(checkpoint, split / "plasim_restart")
                 self.run_model(split)
+                self.assertEqual(struct.unpack(
+                    "=i", records(split / "plasim_status")["nstep"]
+                )[0], january_step)
                 (split / "plasim_status").replace(split / "plasim_restart")
-                namelist = split / "plasim_namelist"
-                namelist.write_text(namelist.read_text().replace(
-                    f"n_run_days={december_days}", "n_run_days=1"
-                ), encoding="ascii")
                 self.run_model(split)
                 diagnostic = (split / "plasim_diag").read_text()
                 self.assertEqual(re.findall(r"Year AD\s*=\s*(\d+)", diagnostic),
                                  ["2001"])
 
-                fresh = prepare("fresh", year=2001, month=1, days=1)
-                self.run_model(fresh)
                 pattern = (r"\* (?:Eccentricity|Obliquity \(deg\)|"
                            r"Long of perh\(deg\))\s*=\s*([\d.+-]+)")
                 restarted_orbit = re.findall(pattern, diagnostic)
@@ -307,6 +328,9 @@ class PlaSimTests(unittest.TestCase):
                 ))
                 self.assertEqual(records(split / "plasim_status")["nstep"],
                                  records(continuous / "plasim_status")["nstep"])
+                self.assertEqual(struct.unpack(
+                    "=i", records(continuous / "plasim_status")["nstep"]
+                )[0], january_step + 1)
 
                 # An explicit orbital epoch must still override the restart date.
                 (split / "plasim_status").replace(split / "plasim_restart")

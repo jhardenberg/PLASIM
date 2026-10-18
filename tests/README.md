@@ -33,6 +33,13 @@ even when `N_START_YEAR` is unchanged, matches a fresh run's orbital elements
 for that year, and still respects an explicit `IYRBP` override. They also
 record the current initialization-only limitation in a continuous run and
 check prescribed `NFIXORB=1` elements at different start years.
+The year-boundary test runs only six timesteps per calendar. It creates a
+temporary restart from a one-step January run, shifts only its `nstep` clock
+to one timestep before January 1, and compares a continuous two-step crossing
+with two one-step invocations. This checks date selection and orbital
+initialization, not the physical evolution of the artificial checkpoint;
+ordinary restart-state equality is covered separately above. No saved
+reference fixture is modified.
 The fixed random seed is needed for the restart comparisons. These tests
 exercise the serial model; additional MPI coverage is described below. T42
 tests remain separate follow-up work.
