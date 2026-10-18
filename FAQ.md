@@ -1,6 +1,6 @@
 # Frequently asked questions
 
-These answers update the older `FAQ` for the current PlaSim-focused repository. For the supported workflows, start with the [README](README.md) and the [Planet Simulator User's Guide](plasim/doc/PS_UsersGuide.pdf).
+These answers update the older `FAQ` for the current PlaSim-focused repository. For current workflows, start with the [README](README.md) and the [Sphinx user manual](plasim/doc/index.md). The original [User's Guide](plasim/doc/PS_UsersGuide.pdf) is retained for historical context.
 
 The developing Sphinx manual starts with the recommended [MoSt workflow](plasim/doc/user/most.md), including headless preparation, followed by [experiment directories and long simulations](plasim/doc/user/experiments.md). An [alternative direct-Make build](plasim/doc/development/direct-build.md) and [documentation build instructions](plasim/doc/development/documentation.md) are in its separate developer part.
 
@@ -18,7 +18,7 @@ Run MoSt from the repository root as `./most.x` after `./configure.sh`, and chec
 
 ## The model rejects a namelist variable. What does that mean?
 
-The variable is not recognized by the version of the model being run. Check the spelling, the namelist group, and whether the file was written for another PlaSim version. The old FAQ specifically mentions `NRESTART` in older namelists; remove or update unsupported options before retrying. The [legacy namelist regression tests](README.md#tests) cover selected classic inputs, but not every historical option.
+The variable is not recognized by the version of the model being run. Check the spelling, the namelist group, and whether the file was written for another PlaSim version. The old FAQ specifically mentions `NRESTART` in older namelists; remove or update unsupported options before retrying. Use the [detailed namelist tables](plasim/doc/reference/parameters/index.md) and [legacy-input crosswalk](plasim/doc/reference/parameters/legacy.md) to check current names, units, defaults, and migration guidance. The [legacy namelist regression tests](README.md#tests) cover selected classic inputs, but not every historical option.
 
 ## I edited Fortran source, but the model behaves as before. Why?
 

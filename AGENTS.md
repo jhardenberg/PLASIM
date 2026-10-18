@@ -88,6 +88,10 @@ Report any checks that could not be completed and why.
   (`most.x`, including its headless option) for user compilation and run
   preparation; present direct-Make builds as an additional developer option.
 - Follow `plasim/doc/development/documentation.md` when editing the manual.
+  Maintain each affected row in `plasim/doc/reference/parameters/` alongside
+  summary tables and input migrations. Run `python3 plasim/doc/generate_reference.py
+  --check` for source inventories and complete parameter membership coverage;
+  this does not replace checking the row's defaults, units, and semantics.
   Run the strict Sphinx HTML build with warnings treated as errors, check links, and run
   affected examples when commands or behavior change. Edit MyST sources and
   example scripts, not generated `_build` files; use `literalinclude` to keep

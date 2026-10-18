@@ -19,7 +19,7 @@ and runtime checks below are deliberately distinguished.
 | Chapter 7: columns/soundings | User: column-oriented experiments | Actual `plasim_nl`, advection/diffusion branches, sounding calls and `GUI_sounding.cfg`: `COLUMN`/`YMODE` macro absent; current individual controls and display scaling described without old performance claims. |
 | Appendix A: symbols/constants | Reference: units; user: planets | Shared dimension formulas and current planet presets replace rounded old constants. Derivation-only notation stays with the excluded scientific Reference Manual. |
 | Appendix B: output codes | Reference: output and raw writer inventory | Literal current `writegp`/`writesp`/`mpwritegph` calls, 32-bit output, metadata block, conditional level fields, accumulation and reset. Raw output is separated from converter metadata. |
-| Appendix C: namelists | Reference: namelists and accepted-name inventory | Every active default/planet/coupler/LSG namelist declaration extracted; selected defaults checked in initialization, with moved/removed fields and planet/MoSt overrides documented. |
+| Appendix C and chapter 2 parameter tables | Reference: overview, detailed tables, legacy crosswalk, and accepted-name inventory | Every active default/planet/coupler/LSG member has a descriptive row: type/dimensions, units, pre-read default, active use, overrides, and retained/inactive controls. Old entries absent from current interfaces have explicit migration dispositions. |
 | Ice-output sheet | Reference: output and writer inventory | `icestep`/`iceout`: current arrays and extra code 792 included; diagnostic residual expression retained without asserting universal closure of old budget equalities. |
 | `variable_list.txt` | Reference: raw output and conversion metadata | Actual level arguments, writers, metadata, and conversion expressions compared; old text is retained as historical data, not an unchecked canonical table. |
 | README and FAQ | User chapters and troubleshooting | Current workflow, orbital/default/restart migrations, postprocessors, test policy, and supported versus historical recipes integrated. |
@@ -37,9 +37,41 @@ ocean timestep, and tests rather than treating a stub build as coupled.
 
 This is a practical source-checked migration, not an independent scientific
 review of the physical parameterizations. The complete mathematical
-Reference Manual remains excluded. Detailed meanings of specialized inputs
-still require reading their cited initialization and calculation paths;
-the extracted membership list does not infer unknown units or defaults.
+Reference Manual remains excluded. The detailed namelist tables explain all
+302 input entries across 14 interfaces (348 memberships including the three
+planet variants); the extracted list and coverage check establish membership,
+not independent verification of scientific meaning or valid combinations.
+
+## Detailed parameter checks
+
+- `plasim_nl`: shared declarations, `readnl`, `initpm`/`dayseccheck`, `master`,
+  `noise`, `setzt`, spectral tendencies, output and GUI calls. Recorded
+  resolution-dependent presets, duration interaction, array-wide day/second
+  detection, and accepted flags without active calculation branches.
+- `planet_nl`: all three `planet_ini` variants plus rotation/calendar and
+  radiation initialization; one explanatory table includes all preset differences.
+- `landmod_nl`/`vegmod_nl`: declarations, `landini`, `tands`, `mktsoil`,
+  `wandr`, `soilini`/`soilstep`, `vegini`/`vegstep`, surface loads, and restart
+  restoration. Checked thermal depths, water thresholds, spectral arrays,
+  carbon coefficients, acceleration, and initialization precedence.
+- Flux/misc/surface: `fluxini`, `surflx`, `vdiff`, `miscini`/`mknudge`, and
+  `surfini`. Recorded the actual wind-floor expressions, rotation-based
+  nudging conversion, orography truncation, and retained surface flag.
+- Radiation/rain: declarations and pre-read tuning in `radini`/`rainini`,
+  `solarini`, `solang`, `mko3`, `swr`, `lwr`, `kuo`, `mkclouds`, and
+  precipitation evaporation. Distinguished coefficients, fractions, angles,
+  absorber conventions, spectrum shapes, and level-dependent defaults.
+- Sea/ice/ocean: initialization and stepping, actual step counters,
+  output/modulo intervals, climatology interpolation, flux corrections,
+  horizontal/vertical diffusion, and LSG exchange. Local timing defaults
+  are inherited before the corresponding namelist reads.
+- Coupler/LSG: `clsgini`, getters/setters, `cinter`/`cinter2`, `conserve`,
+  `croffc`, correction/blend routines, `inipar`, `inigr`, BBL, `set_quick`,
+  `readbou`, and step/output calls. Recorded inactive standalone-era controls,
+  required output interval, shipped-file overrides, and diffusion presets.
+
+These are source checks; documenting all accepted controls does not mean
+each nondefault parameter combination has been exercised at runtime.
 
 ## Runtime evidence and limits
 
@@ -52,7 +84,8 @@ the extracted membership list does not infer unknown units or defaults.
 | GUI | Reader/field/plot behavior checked from source; interactive X11 operation not exercised. |
 | burn7 | Source/interface review; legacy NetCDF C++ dependency unavailable for runtime validation. |
 | Other planets/columns | Relevant inputs and paths checked from source; no claim of new climate validation or a runtime-tested column recipe. |
-| Sphinx | Strict HTML and LaTeX-source builds, reference-inventory consistency, and 890 local links/anchors/downloads passed. External checking reached valid pages but GitHub throttled some requests with HTTP 429; a complete external-link pass was not obtained. Compiled PDF layout not validated. |
+| Parameter coverage | All 348 memberships across the 16 reviewed source variants have descriptive rows. Isolated checker trials reject missing, extra, duplicate, and incomplete rows. Types/units/defaults/semantics were reviewed separately against code, not inferred by the checker. |
+| Sphinx | Strict HTML and LaTeX-source builds, reference-inventory consistency, and 1326 local links/anchors/downloads passed. Detailed table layouts reviewed in HTML. External checking reached valid pages but GitHub throttled some requests with HTTP 429; a complete external-link pass was not obtained. Compiled PDF layout not validated. |
 
 ## Issue-only follow-up
 
@@ -64,6 +97,7 @@ workaround instructions are part of the migration:
 - [#53](https://github.com/jhardenberg/PLASIM/issues/53): NetCDF-to-SRA grid selection.
 - [#54](https://github.com/jhardenberg/PLASIM/issues/54): SRA-to-NetCDF timestamps.
 - [#55](https://github.com/jhardenberg/PLASIM/issues/55): converter code/unit metadata.
+- [#56](https://github.com/jhardenberg/PLASIM/issues/56): inconsistent wind-speed dimensions in the two `ZUMIN` uses.
 
 When extending this ledger, identify the source routine and the behavior
 actually checked. Update descriptions to match code when old information

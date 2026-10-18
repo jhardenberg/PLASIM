@@ -52,7 +52,7 @@ jobs:
           python -m pip install -r plasim/doc/requirements.txt
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential gfortran
-      - name: Check source inventories
+      - name: Check source inventories and parameter coverage
         run: python plasim/doc/generate_reference.py --check
       - name: Build HTML and LaTeX sources
         run: |

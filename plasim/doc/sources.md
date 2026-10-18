@@ -7,6 +7,12 @@ PDF is retained, including its figures and historical context. Current
 behavior is determined by code review and the checks recorded in
 {doc}`development/verification`.
 
+The original module parameter tables and appendix C are carried into
+{doc}`reference/parameters/index`, with current inputs explained individually
+and removed/moved entries accounted for in the legacy crosswalk. Their old
+defaults and descriptions are compared with initialization and calculation
+paths rather than copied unchanged.
+
 | Material | Current use |
 | --- | --- |
 | {download}`User's Guide <PS_UsersGuide.pdf>` (70 pages) | Chapters 1–7 and appendices A–C mapped to current practical/user/developer/reference chapters in the ledger; obsolete instructions are replaced or identified as historical. |

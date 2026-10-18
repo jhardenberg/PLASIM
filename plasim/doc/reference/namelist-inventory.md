@@ -5,8 +5,9 @@ This inventory is extracted from active Fortran `namelist` declarations.
 It includes the default rain/vegetation implementations, all three planet
 modules, the coupler, and LSG. An accepted name does not establish its
 effective default, units, availability in MoSt, or a valid combination.
-See {doc}`namelists` for usage and selected controls. Initialization code
-can override declarations; planet-specific lists must not be interchanged.
+See {doc}`parameters/index` for detailed tables and {doc}`namelists` for
+the overview. Initialization code can override declarations;
+planet-specific lists must not be interchanged.
 
 ## `plasim_nl` — `plasim.f90`
 

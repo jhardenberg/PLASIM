@@ -9,6 +9,7 @@ confusing an old namelist, a raw field, and a converted NetCDF variable.
 :maxdepth: 1
 
 namelists
+parameters/index
 namelist-inventory
 output
 raw-output

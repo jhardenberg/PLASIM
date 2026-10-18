@@ -60,6 +60,10 @@ which initializes the soil field capacity before `landmod_nl` is read.
 Surface datasets and restart state can determine spatial fields in addition
 to these scalar controls.
 
+For every land input's meaning, units, defaults, and interactions, see the
+{doc}`detailed land tables <../reference/parameters/landmod>` and
+{doc}`vegetation tables <../reference/parameters/vegmod>`.
+
 SIMBA is now in `simba.f90` with its own `vegmod_nl`. The `NVEG` switch in
 `plasim_nl` controls vegetation execution; a compiled SIMBA module does not
 mean that vegetation feedbacks are active. In particular, MoSt writes its
@@ -69,8 +73,9 @@ converted using fixed 365-day Earth years in the current land initialization.
 ## Fluxes, moisture, and nudging
 
 The main flux switches `NEVAP`, `NSHFL`, `NSTRESS`, and `NVDIFF` default to
-1 in `fluxmod`. `ZUMIN` is the minimum surface-exchange wind speed in m/s;
-its name is `zumin`, not the old guide's `zumin_d` spelling.
+1 in `fluxmod`. The wind-floor input is named `ZUMIN`, not the old guide's
+`zumin_d` spelling. Its current surface and vertical-diffusion expressions
+use different speed conventions; see {doc}`../reference/parameters/fluxmod`.
 
 In `miscmod_nl`, `NFIXER=1` enables the negative-humidity correction.
 `NUDGE=0` leaves temperature nudging off; `NUDGE=1` reads the `dtnudge`

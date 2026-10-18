@@ -46,12 +46,19 @@ git diff --check
 ```
 
 Accepted namelist names, literal raw writer calls, and converter metadata
-have checked-in generated inventories. Refresh and check them with:
+have checked-in generated inventories. The same checker verifies that each
+accepted namelist member has exactly one complete row in its detailed table,
+including each compiled planet variant. Refresh and check them with:
 
 ```sh
 python3 plasim/doc/generate_reference.py
 python3 plasim/doc/generate_reference.py --check
 ```
+
+Edit the descriptive tables in `reference/parameters/` by hand. Add a row
+when introducing an accepted input; remove or migrate it when an interface
+changes. The coverage check does not infer types, defaults, units, or meaning
+from the row, so passing it alone is not semantic validation.
 
 The generator extracts interfaces; it does not infer effective defaults or
 physical semantics. Review initialization, units, conditions, and conversions
@@ -93,7 +100,9 @@ PDF publication and visual review are follow-up work for the larger manual.
    MoSt as the recommended user build/preparation method.
 2. Give parameters their file/group, type, units, current default, and
    configuration scope. Identify input migrations and distinguish compiled
-   settings from runtime controls.
+   settings from runtime controls. Maintain the detailed row and the legacy
+   crosswalk as well as any summary; explain initialization/restart precedence
+   and inputs that are accepted but inactive in the selected implementation.
 3. Add provenance in the chapter and update {doc}`../sources` when needed.
    Compare every described interface/default/unit/workflow with the current
    code rather than copying old defaults. Record routines and runtime/source

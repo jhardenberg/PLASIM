@@ -5,3 +5,25 @@ div.math {
     max-width: 100%;
     overflow-x: auto;
 }
+
+/* Keep detailed input descriptions visible beside their types and defaults. */
+table.docutils.parameter-table {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+table.parameter-table th:nth-child(1) { width: 18%; }
+table.parameter-table th:nth-child(2) { width: 20%; }
+table.parameter-table th:nth-child(3) { width: 18%; }
+table.parameter-table th:nth-child(4) { width: 44%; }
+
+table.parameter-table td,
+table.parameter-table th,
+table.parameter-table span.pre {
+    overflow-wrap: anywhere;
+}
+
+table.parameter-table span.pre {
+    white-space: normal;
+}

@@ -21,7 +21,7 @@ Reference Manual is excluded.
 | Inspection and graphics | {doc}`user/visualization`: tested CDO inspection and current versus historical graphics paths. |
 | Columns and soundings | {doc}`user/column`: individual current controls, absent historical macro, and sounding interface. |
 | Practical FAQ | {doc}`user/troubleshooting`: current workflow and compatibility checks. |
-| Configuration reference | {doc}`reference/namelists` plus the complete accepted-name inventory for the reviewed implementations. |
+| Configuration reference | {doc}`reference/namelists` overview, {doc}`reference/parameters/index` with individual inputs, and the complete accepted-name inventory. |
 | Output reference | {doc}`reference/output`, literal writer inventory, and separate conversion metadata vocabulary. |
 | Definitions | {doc}`reference/units`: current dimensions, selected constants, and unit/representation distinctions. |
 
@@ -48,9 +48,11 @@ derivation, platform recipe, optional rain implementation, or code switch
 has been independently tested.
 
 The generated namelist inventory covers active declarations for default
-modules, all three planet variants, the real coupler, and LSG. Explanatory
-default/unit tables cover selected controls; specialized fields still require
-the cited code paths. The output inventory enumerates literal writers, not
+modules, all three planet variants, the real coupler, and LSG. Detailed tables
+cover all 302 parameter entries across 14 interfaces, with 348 memberships
+when the three planet variants are counted separately. Coverage checks catch
+missing, extra, duplicate, and incomplete table rows; semantic verification
+still requires human review of the cited code paths. The output inventory enumerates literal writers, not
 all dynamic diagnostic code values. Converter labels are recorded as labels,
 not silently certified as physical units.
 
