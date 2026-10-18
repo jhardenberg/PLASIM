@@ -1,16 +1,19 @@
-# Run a two-day headless Earth experiment
+# Alternative direct-Make build and CI example
 
-This example compiles a serial Earth model at T21 horizontal resolution
+The recommended user workflow is {doc}`../user/most`. This optional
+developer example shows how the CI build works by calling Make directly.
+
+It compiles a serial Earth model at T21 horizontal resolution
 (64 longitudes × 32 latitudes) with 10 atmospheric levels. It uses the
 checked-in T21 boundary data and the mixed-layer ocean configuration without
-LSG coupling. It is a short installation check and a starting point for
-understanding runtime controls, not a spun-up climate experiment.
+LSG coupling. It is a short build/run check and a way to inspect runtime controls,
+not a spun-up climate experiment.
 
 The workflow adapts the build/run separation described in the original
 User's Guide, chapter 1, to the headless build used by the current regression
 suite. It invokes the model directly, so you do not need to build MoSt or
-install X11. The graphical workflow described by the repository README has
-additional requirements.
+install X11. MoSt remains the standard way to select and build user experiments,
+including when its configuration-file mode is used without a display.
 
 ## Requirements and working directories
 

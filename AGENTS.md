@@ -75,8 +75,11 @@ Report any checks that could not be completed and why.
   the remaining work in the outline. Keep coverage and source attribution
   current. The scientific Reference Manual remains outside this migration
   phase unless explicitly requested.
-- Follow `plasim/doc/building.md` when editing the manual. Run the strict
-  Sphinx HTML build with warnings treated as errors, check links, and run
+- Keep the manual's user and developer parts distinct. Recommend MoSt
+  (`most.x`, including its headless option) for user compilation and run
+  preparation; present direct-Make builds as an additional developer option.
+- Follow `plasim/doc/development/documentation.md` when editing the manual.
+  Run the strict Sphinx HTML build with warnings treated as errors, check links, and run
   affected examples when commands or behavior change. Edit MyST sources and
   example scripts, not generated `_build` files; use `literalinclude` to keep
   displayed examples consistent with the runnable files.

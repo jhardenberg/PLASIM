@@ -2,7 +2,7 @@
 
 These answers update the older `FAQ` for the current PlaSim-focused repository. For the supported workflows, start with the [README](README.md) and the [Planet Simulator User's Guide](plasim/doc/PS_UsersGuide.pdf).
 
-A [worked headless Earth chapter](plasim/doc/running/headless.md) is now available in the developing Sphinx manual. It compiles and runs a serial T21/L10 model directly without MoSt or X11; see the [documentation build instructions](plasim/doc/building.md) for the HTML version.
+The developing Sphinx manual starts with the recommended [MoSt workflow](plasim/doc/user/most.md), including headless preparation, followed by [experiment directories and long simulations](plasim/doc/user/experiments.md). An [alternative direct-Make build](plasim/doc/development/direct-build.md) and [documentation build instructions](plasim/doc/development/documentation.md) are in its separate developer part.
 
 ## `configure.sh` cannot find `make`, Fortran, or another compiler. What do I need?
 

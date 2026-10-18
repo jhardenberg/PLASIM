@@ -1,5 +1,8 @@
 # Build and maintain the documentation
 
+This chapter belongs to Part II, for contributors maintaining the manual.
+For compiling and running PlaSim as a user, start with {doc}`../user/most`.
+
 The documentation sources live in `plasim/doc`, beside the original PDFs.
 Chapters use MyST Markdown with Sphinx roles and directives for navigation,
 equations, references, downloads, and source-code inclusion. The initial
@@ -50,7 +53,7 @@ The documentation workflow builds HTML and LaTeX sources with warnings
 treated as errors, runs this exact example, and uploads the HTML as a CI
 artifact. It does not publish a public site. The model's broader regression
 suite remains a separate workflow; see the {download}`test guide
-<../../tests/README.md>` for its scope and invocation.
+<../../../tests/README.md>` for its scope and invocation.
 
 ## LaTeX and future PDF builds
 
@@ -71,12 +74,15 @@ PDF publication and visual review are follow-up work for the larger manual.
 
 ## Add or update a chapter
 
-1. Update the coverage status in {doc}`outline` and add the page to the
-   `index.md` toctree when it is ready for readers.
+1. Update the coverage status in {doc}`../outline` and add the page to the
+   appropriate `index.md` toctree when it is ready for readers. User workflows
+   belong in Part I (`user/`); implementation, testing, alternative builds,
+   and documentation maintenance belong in Part II (`development/`). Keep
+   MoSt as the recommended user build/preparation method.
 2. Give parameters their file/group, type, units, current default, and
    configuration scope. Identify input migrations and distinguish compiled
    settings from runtime controls.
-3. Add provenance in the chapter and update {doc}`sources` when needed.
+3. Add provenance in the chapter and update {doc}`../sources` when needed.
    Check behavior against current code rather than copying old defaults.
 4. Keep executable examples in `examples/` and include them with
    `literalinclude`, so the displayed procedure and the executed file agree.
