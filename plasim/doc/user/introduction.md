@@ -17,7 +17,9 @@ unless a historical source is explicitly identified.
   for different kinds of stars, and illumination for worlds that always
   face their star with the same side.
 - **Refined model physics:** updates to radiation and land-surface processes,
-  vegetation treatment, and coupling with the deep ocean.
+  and vegetation treatment.
+- **Tuned, working LSG coupling:** coupling with the LSG deep-ocean model
+  for simulations in which the atmosphere and deep ocean evolve together.
 - **Easier experiment preparation and analysis:** graphical or headless
   setup through MoSt, plus tools to convert results directly to NetCDF for
   analysis.

@@ -31,6 +31,9 @@ The opening pages identify PlaSim TNG and its `jhardenberg/PLASIM`
 repository. Their brief improvement summary follows the changelog's
 planetary, physics/ocean-coupling, workflow, and testing developments;
 historical authorship remains attributed to the original model.
+The LSG highlight reflects the tuned vertical-diffusion settings in
+`lsg/src/lsgmod.f90`, the exchanges in `plasim/src/cpl.f90`, and the real
+coupled-model regression coverage in `tests/test_lsg.py`.
 
 The planet/radiation chapter checks the selected `p_*` modules, `readnl`,
 `radini` and stellar-spectrum code against recent README/changelog entries:
