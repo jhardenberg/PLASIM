@@ -27,6 +27,11 @@ and runtime checks below are deliberately distinguished.
 
 ## Recent development coverage
 
+The opening pages identify PlaSim TNG and its `jhardenberg/PLASIM`
+repository. Their brief improvement summary follows the changelog's
+planetary, physics/ocean-coupling, workflow, and testing developments;
+historical authorship remains attributed to the original model.
+
 The planet/radiation chapter checks the selected `p_*` modules, `readnl`,
 `radini` and stellar-spectrum code against recent README/changelog entries:
 year-2000/fixed-orbit defaults; initialization-time orbital epoch and IYRBP;
@@ -85,7 +90,7 @@ each nondefault parameter combination has been exercised at runtime.
 | burn7 | Source/interface review; legacy NetCDF C++ dependency unavailable for runtime validation. |
 | Other planets/columns | Relevant inputs and paths checked from source; no claim of new climate validation or a runtime-tested column recipe. |
 | Parameter coverage | All 348 memberships across the 16 reviewed source variants have descriptive rows. Isolated checker trials reject missing, extra, duplicate, and incomplete rows. Types/units/defaults/semantics were reviewed separately against code, not inferred by the checker. |
-| Sphinx | Strict HTML and LaTeX-source builds, reference-inventory consistency, and 2981 local links/anchors/downloads passed. Read the Docs theme, grouped sidebar navigation, breadcrumbs, and detailed table layouts reviewed in HTML; each chapter has exactly one toctree parent. External checking reached valid pages but GitHub throttled some requests with HTTP 429; a complete external-link pass was not obtained. Compiled PDF layout not validated. |
+| Sphinx | Strict HTML and LaTeX-source builds, reference-inventory consistency, and 2985 local links/anchors/downloads passed. Read the Docs theme, PlaSim TNG opening pages, grouped sidebar navigation, breadcrumbs, and detailed table layouts reviewed in HTML; each chapter has exactly one toctree parent. External checking reached valid pages but GitHub throttled some requests with HTTP 429; a complete external-link pass was not obtained. Compiled PDF layout not validated. |
 
 ## Issue-only follow-up
 

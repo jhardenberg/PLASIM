@@ -2,8 +2,10 @@
 
 ## Project and layout
 
-PlaSim is a Fortran climate model with a mixed-layer ocean and optional LSG
-coupling. Read `README.md` and `tests/README.md` before changing a workflow.
+PlaSim TNG (The Next Generation) is a Fortran climate model with a mixed-layer
+ocean and optional LSG coupling. Use this name for the maintained model while
+preserving historical attributions and existing file/command names.
+Read `README.md` and `tests/README.md` before changing a workflow.
 
 - `plasim/src`: permanent model sources and the `make_plasim` build rules.
 - `plasim/dat`: atmospheric boundary data and configuration files.

@@ -1,9 +1,41 @@
 # Introduction
 
-PlaSim (Planet Simulator) is a general circulation model used for
-meteorology, climate, and planetary experiments. Its atmosphere exchanges
-heat, water, and momentum with land, vegetation, sea ice, and an ocean.
-The model can use a mixed-layer ocean or the coupled LSG deep ocean.
+**PlaSim TNG (The Next Generation)** is an independently maintained
+development of the original Planet Simulator (PlaSim), created at the
+University of Hamburg. It builds on and improves that model for climate
+and planetary experiments.
+
+This guide applies specifically to the version in the
+**[jhardenberg/PLASIM repository](https://github.com/jhardenberg/PLASIM)**.
+Several PlaSim versions exist; their features and settings can differ.
+The shorter name “PlaSim” elsewhere in this guide refers to this version
+unless a historical source is explicitly identified.
+
+## What is new in PlaSim TNG?
+
+- **More flexibility beyond Earth:** expanded planetary settings, radiation
+  for different kinds of stars, and illumination for worlds that always
+  face their star with the same side.
+- **Refined model physics:** updates to radiation and land-surface processes,
+  vegetation treatment, and coupling with the deep ocean.
+- **Easier experiment preparation and analysis:** graphical or headless
+  setup through MoSt, plus tools to convert results directly to NetCDF for
+  analysis.
+- **Stronger checks on model behavior:** fixes to calendars, restart handling,
+  and parallel execution, supported by automated tests that help catch
+  regressions.
+- **Updated documentation:** a searchable user and developer manual, with
+  current workflows and detailed descriptions of model inputs.
+
+These highlights summarize developments recorded in the
+{download}`changelog <../../../CHANGELOG.md>`, which gives the full history
+and compatibility notes.
+
+## Explore the model
+
+The atmosphere exchanges heat, water, and momentum with land, vegetation,
+sea ice, and an ocean. The model can use a mixed-layer ocean or the coupled
+LSG deep ocean.
 
 Start with the component overview to understand the available choices.
 Then follow {doc}`getting-started` to prepare a first experiment through

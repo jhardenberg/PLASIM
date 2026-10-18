@@ -1,6 +1,6 @@
 """Sphinx configuration for the evolving PlaSim user documentation."""
 
-project = "PlaSim"
+project = "PlaSim TNG"
 author = "PlaSim contributors"
 extensions = ["myst_parser", "sphinx.ext.mathjax", "sphinx.ext.extlinks"]
 source_suffix = {".md": "markdown", ".rst": "restructuredtext"}
@@ -9,7 +9,7 @@ exclude_patterns = ["_build", ".venv", "__pycache__"]
 nitpicky = True
 
 html_theme = "sphinx_rtd_theme"
-html_title = "PlaSim user and developer manual"
+html_title = "PlaSim TNG user and developer manual"
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
 html_theme_options = {
@@ -19,6 +19,6 @@ html_theme_options = {
 }
 extlinks = {"repo": ("https://github.com/jhardenberg/PLASIM/blob/master/%s", "%s")}
 
-latex_documents = [("index", "plasim-user-guide.tex", "PlaSim User and Developer Manual",
+latex_documents = [("index", "plasim-user-guide.tex", "PlaSim TNG User and Developer Manual",
                     author, "manual")]
 latex_elements = {"papersize": "a4paper", "pointsize": "11pt"}
