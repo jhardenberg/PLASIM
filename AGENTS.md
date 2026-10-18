@@ -13,6 +13,7 @@ Read `README.md` and `tests/README.md` before changing a workflow.
 - `most.c` and `configure.sh`: model configuration and build setup.
 - `postprocessor` and `scripts`: output conversion and experiment helpers.
 - `tests`: Python `unittest` regression tests and reference data.
+- `benchmarks`: standalone performance workloads, reports, and comparisons.
 - `docs`: Sphinx/MyST user documentation and runnable examples.
 - `plasim/doc`: historical manuals and reference material.
 

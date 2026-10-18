@@ -27,6 +27,10 @@ configurations, tolerances, limitations, and commands to select subsets.
 That file remains the detailed testing reference, not a second independent
 set of numerical expectations.
 
+For repeated performance measurements and serial/MPI comparisons, use
+{doc}`benchmarking`. The standalone benchmark suite records timings and
+execution checks separately from these regression tests.
+
 The current Earth fixture uses year 2000, a fixed orbit, and a 360-day
 calendar; its metadata records the source commit, compiler, flags, and
 checksum. The older year-1/Berger fixture remains a legacy input. Do not

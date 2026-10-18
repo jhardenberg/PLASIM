@@ -9,8 +9,8 @@ physics and ocean coupling, easier workflows, and stronger automated checks.
 
 See the {doc}`introduction <user/introduction>` for a brief overview of what
 is new. The first part explains how to configure, build, and run experiments
-with MoSt. The second part covers development, the alternative direct-Make
-example used by CI, and documentation maintenance.
+with MoSt. The second part covers development, performance benchmarking,
+the alternative direct-Make example used by CI, and documentation maintenance.
 
 ```{note}
 This manual migrates the practical User's Guide and repository instructions,
@@ -43,6 +43,7 @@ user/troubleshooting
 
 development/architecture
 development/testing
+development/benchmarking
 development/direct-build
 development/documentation
 development/verification

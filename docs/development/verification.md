@@ -39,6 +39,14 @@ The LSG highlight reflects the tuned vertical-diffusion settings in
 `lsg/src/lsgmod.f90`, the exchanges in `plasim/src/cpl.f90`, and the real
 coupled-model regression coverage in `tests/test_lsg.py`.
 
+The benchmarking chapter adapts `benchmarks/README.md`. Source checks cover
+`run.py`'s `arguments`, `build`, `prepare`, `execute`, `schedule`,
+`state_summary`, `continuation_differences`, and result-writing paths, plus
+`compare.py`'s loading, comparison, summary-compatibility, and scaling paths.
+Timer descriptions also check `mksecond` in `plasim/src/plasim.f90` and the
+root-rank timer calls in `radmod.f90`. These checks establish the documented
+protocol and reporting behavior; timings are not new performance claims.
+
 The planet/radiation chapter checks the selected `p_*` modules, `readnl`,
 `radini` and stellar-spectrum code against recent README/changelog entries:
 year-2000/fixed-orbit defaults; initialization-time orbital epoch and IYRBP;
@@ -93,11 +101,12 @@ each nondefault parameter combination has been exercised at runtime.
 | MoSt preparation | `configure.sh` built MoSt; supplied headless configuration prepared the expected executable, Gregorian/year-2000 inputs, and run script without starting a simulation. Local compiler setup was affected by separately tracked issue #51. |
 | MoSt annual run | Twelve months of 2000 completed; atmospheric/ocean/ice NetCDF output and restart were nonempty; CDO confirmed twelve monthly atmospheric records and final state was finite. Script status is separately tracked in issue #52. |
 | Converter checks | CDO inspection on real annual output plus synthetic grid/time/code cases. Discrepancies are filed in separate issues, without implementation changes here. |
+| Benchmarking | Exact optional T21 smoke script built and ran serial mixed-layer and real LSG cases for ten days each. Checked finite selected state, atmospheric step count, one LSG step, summary/comparison commands, and continuation without repeating completed samples. All 18 existing runner tests passed. T42, spectral, MPI, and concurrent model benchmarks were reviewed from source rather than newly run for this chapter; no speedup or scaling claim is made. |
 | GUI | Reader/field/plot behavior checked from source; interactive X11 operation not exercised. |
 | burn7 | Source/interface review; legacy NetCDF C++ dependency unavailable for runtime validation. |
 | Other planets/columns | Relevant inputs and paths checked from source; no claim of new climate validation or a runtime-tested column recipe. |
 | Parameter coverage | All 348 memberships across the 16 reviewed source variants have descriptive rows. Isolated checker trials reject missing, extra, duplicate, and incomplete rows. Types/units/defaults/semantics were reviewed separately against code, not inferred by the checker. |
-| Sphinx | Strict HTML and LaTeX-source builds, reference-inventory consistency, and 3322 local link targets (including anchors/downloads) plus 296 asset references passed after relocation to `docs/`. Read the Docs theme, PlaSim TNG opening pages, grouped sidebar navigation, breadcrumbs, and detailed table layouts reviewed in HTML; each chapter has exactly one toctree parent. External checking reached valid pages but GitHub throttled some requests with HTTP 429; a complete external-link pass was not obtained. Compiled PDF layout not validated. |
+| Sphinx | Strict HTML and LaTeX-source builds, reference-inventory consistency, and 3407 local link targets (including anchors/downloads) plus 302 asset references across 50 HTML pages passed, including the benchmarking chapter. Read the Docs theme, PlaSim TNG opening pages, grouped sidebar navigation, breadcrumbs, and detailed table layouts reviewed in HTML; each chapter has exactly one toctree parent. External checking reached valid pages but GitHub throttled some requests with HTTP 429; a complete external-link pass was not obtained. Compiled PDF layout not validated. |
 
 ## Issue-only follow-up
 

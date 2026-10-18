@@ -203,6 +203,8 @@ benchmark cases within a shared rank budget; `compare.py --summary` combines
 separately collected serial and MPI results. It records timings and build/input metadata
 and compares source revisions. Benchmarks are run manually, outside regression
 tests and test CI; their state summaries do not replace correctness checks.
+See the manual's [benchmarking chapter](docs/development/benchmarking.md)
+for a small runnable example, timing scope, and revision/MPI comparisons.
 
 ## Tests
 
