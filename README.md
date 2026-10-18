@@ -1,7 +1,7 @@
 [![DOI](https://zenodo.org/badge/101884206.svg)](https://zenodo.org/badge/latestdoi/101884206)
 ![Stand with Ukraine](https://badgen.net/badge/stand%20with/UKRAINE/?color=0057B8&labelColor=FFD700)
 
-# PlaSim TNG
+# PLASIM-LSG TNG (The Next Generation)
 
 PlaSim TNG (The Next Generation) builds on and improves the original Planet Simulator (PlaSim), a general circulation model used in meteorology and Earth sciences. This version is maintained in [jhardenberg/PLASIM](https://github.com/jhardenberg/PLASIM). This repository was originally a streamlined fork of [Hartmut Borth's PLASIM repository](https://github.com/HartmutBorth/PLASIM) and is now maintained independently. It contains the components needed to build and run PlaSim TNG, its LSG ocean configuration, MoSt (the model starter), postprocessors, and tests.
 
@@ -193,6 +193,16 @@ The default pressure levels are `20,30,50,70,100,150,200,250,300,400,500,600,700
 ### Other conversion tools
 
 [`scripts/srv2nc`](scripts/srv2nc) converts PlaSim and LSG Service output to NetCDF4 with CDO. [`scripts/nc2sra`](scripts/nc2sra) and [`scripts/sra2nc`](scripts/sra2nc) convert between NetCDF and Service-format boundary data. The [`scripts` directory](scripts) also contains monthly postprocessing and boundary-data helpers.
+
+## Performance benchmarks
+
+A separate [benchmark suite](benchmarks/README.md) measures repeated optimized
+T21/T42 runs with mixed-layer and real LSG oceans, classic/spectral radiation,
+and selectable MPI rank counts. Use `--parallel --max-cores N` to run independent
+benchmark cases within a shared rank budget; `compare.py --summary` combines
+separately collected serial and MPI results. It records timings and build/input metadata
+and compares source revisions. Benchmarks are run manually, outside regression
+tests and test CI; their state summaries do not replace correctness checks.
 
 ## Tests
 
