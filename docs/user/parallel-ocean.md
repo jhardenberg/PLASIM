@@ -23,7 +23,7 @@ The repository's automated MPI coverage is two ranks at T21/L10 for both
 mixed-layer and LSG configurations, with additional spectral/nondefault
 parameter cases. Roundoff can grow differently in serial and MPI runs;
 the tests distinguish numerical bounds from restart byte equality. See
-the {download}`test guide <../../../tests/README.md>` for measured tolerances
+the {download}`test guide <../../tests/README.md>` for measured tolerances
 and coverage. MPI availability does not establish scaling performance.
 
 ## Enable the deep-ocean configuration

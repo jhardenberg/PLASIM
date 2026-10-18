@@ -2,7 +2,7 @@
 # Two-day serial T21/L10 Earth run; retain a fresh workspace for inspection.
 set -euo pipefail
 
-repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
+repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 for program in gfortran cc make; do
     if ! command -v "$program" >/dev/null 2>&1; then
         echo "Required program not found: $program" >&2

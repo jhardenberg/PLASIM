@@ -107,7 +107,7 @@ do not combine the two stopping conventions without checking the run logic.
 From the repository root:
 
 ```sh
-bash plasim/doc/examples/headless-earth.sh
+bash docs/examples/headless-earth.sh
 ```
 
 The script prints its workspace path before compiling and reports success
@@ -159,7 +159,7 @@ not prerequisites for this example. Their full Sphinx chapters are
   behavior described in the README/FAQ for `nfixorb=0`.
 
 Do not use this two-day run to infer equilibrium, long-term stability, or a
-validated climate. The existing {download}`test guide <../../../tests/README.md>`
+validated climate. The existing {download}`test guide <../../tests/README.md>`
 describes stronger short-run checks, restart comparisons, and the separate
 MPI and LSG configurations.
 

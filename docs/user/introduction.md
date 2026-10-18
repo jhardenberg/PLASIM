@@ -30,7 +30,7 @@ unless a historical source is explicitly identified.
   current workflows and detailed descriptions of model inputs.
 
 These highlights summarize developments recorded in the
-{download}`changelog <../../../CHANGELOG.md>`, which gives the full history
+{download}`changelog <../../CHANGELOG.md>`, which gives the full history
 and compatibility notes.
 
 ## Explore the model

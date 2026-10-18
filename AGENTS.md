@@ -13,7 +13,8 @@ Read `README.md` and `tests/README.md` before changing a workflow.
 - `most.c` and `configure.sh`: model configuration and build setup.
 - `postprocessor` and `scripts`: output conversion and experiment helpers.
 - `tests`: Python `unittest` regression tests and reference data.
-- `plasim/doc`: Sphinx/MyST user documentation, runnable examples, and historical manuals.
+- `docs`: Sphinx/MyST user documentation and runnable examples.
+- `plasim/doc`: historical manuals and reference material.
 
 Edit permanent sources, not generated copies in `plasim/bld`, `plasim/bin`, or
 `plasim/run`. Build and run tests in temporary directories. Do not commit
@@ -75,12 +76,12 @@ Report any checks that could not be completed and why.
   reproduction details when needed. Do not fix them or turn their workarounds
   into manual instructions in the documentation PR; handle fixes separately
   unless the user explicitly requests otherwise.
-- Update the affected Sphinx documentation in `plasim/doc` in the same PR
+- Update the affected Sphinx documentation in `docs` in the same PR
   as user-visible developments: features, commands, dependencies, namelist
   parameters/defaults/units, calendars, output, restart compatibility, and
   testing workflows. Check the manual even when the code change is small;
   when no documentation update is needed, explain why in the PR description.
-- Consult `plasim/doc/outline.md` and `plasim/doc/sources.md` for migration
+- Consult `docs/outline.md` and `docs/sources.md` for migration
   coverage. Update existing chapters and examples as behavior changes; for
   material not yet migrated, update the relevant repository guide and record
   the remaining work in the outline. Keep coverage and source attribution
@@ -89,9 +90,9 @@ Report any checks that could not be completed and why.
 - Keep the manual's user and developer parts distinct. Recommend MoSt
   (`most.x`, including its headless option) for user compilation and run
   preparation; present direct-Make builds as an additional developer option.
-- Follow `plasim/doc/development/documentation.md` when editing the manual.
-  Maintain each affected row in `plasim/doc/reference/parameters/` alongside
-  summary tables and input migrations. Run `python3 plasim/doc/generate_reference.py
+- Follow `docs/development/documentation.md` when editing the manual.
+  Maintain each affected row in `docs/reference/parameters/` alongside
+  summary tables and input migrations. Run `python3 docs/generate_reference.py
   --check` for source inventories and complete parameter membership coverage;
   this does not replace checking the row's defaults, units, and semantics.
   Run the strict Sphinx HTML build with warnings treated as errors, check links, and run

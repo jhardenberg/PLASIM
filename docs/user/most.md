@@ -61,7 +61,7 @@ with `NFIXORB=1` and requests double precision.
 From the repository root, after configuring MoSt:
 
 ```sh
-cp plasim/doc/examples/most-earth.cfg earth.cfg
+cp docs/examples/most-earth.cfg earth.cfg
 ./most.x -c earth.cfg
 ```
 
@@ -117,8 +117,8 @@ is a workflow example, not an equilibrated or validated climate.
 
 ## Further reading
 
-The root {download}`README <../../../README.md>` and
-{download}`FAQ <../../../FAQ.md>` cover platform notes, postprocessing,
+The root {download}`README <../../README.md>` and
+{download}`FAQ <../../FAQ.md>` cover platform notes, postprocessing,
 namelist compatibility, and orbital configuration. In particular, the
 `NFIXORB=0` orbital calculation occurs at initialization and can depend on
 restart frequency. The fixed-orbit choice here avoids that particular issue.

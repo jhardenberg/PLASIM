@@ -15,15 +15,15 @@ paths rather than copied unchanged.
 
 | Material | Current use |
 | --- | --- |
-| {download}`User's Guide <PS_UsersGuide.pdf>` (70 pages) | Chapters 1–7 and appendices A–C mapped to current practical/user/developer/reference chapters in the ledger; obsolete instructions are replaced or identified as historical. |
-| {download}`README <../../README.md>` | Current MoSt, planetary/orbital, postprocessor, and test context. |
-| {download}`FAQ <../../FAQ.md>` | Dependencies, file paths, rejected inputs, source/build separation, and compatibility advice. |
-| {download}`Changelog <../../CHANGELOG.md>` | Recent features and intentional input/behavior migrations, checked against implementation before adoption. |
-| {download}`Ice-output sheet <codes_in_ice_output.pdf>` | Code families compared with current `iceout`/`icestep`; added fields and diagnostic scope reflected in the output reference. |
-| {download}`Variable list <variable_list.txt>` | Historical names/dimensions/units compared with actual writers and converters; current inventories keep those sources distinct. |
-| {download}`Test guide <../../tests/README.md>` and source tests | Actual temporary builds, fixtures, restart/MPI/LSG checks, and validation limits. |
-| {download}`burn.sh guide <../../scripts/README_burn.txt>` | Historical extraction categories compared with current script expressions. |
-| {download}`Postprocessor notes <../../postprocessor/README_POSTPROCESSOR>` and {download}`burn7 quick reference <../../postprocessor/burn7qr.pdf>` | Compared with today's `burn7.cpp` options, parser, metadata, and Makefiles. |
+| {download}`User's Guide <../plasim/doc/PS_UsersGuide.pdf>` (70 pages) | Chapters 1–7 and appendices A–C mapped to current practical/user/developer/reference chapters in the ledger; obsolete instructions are replaced or identified as historical. |
+| {download}`README <../README.md>` | Current MoSt, planetary/orbital, postprocessor, and test context. |
+| {download}`FAQ <../FAQ.md>` | Dependencies, file paths, rejected inputs, source/build separation, and compatibility advice. |
+| {download}`Changelog <../CHANGELOG.md>` | Recent features and intentional input/behavior migrations, checked against implementation before adoption. |
+| {download}`Ice-output sheet <../plasim/doc/codes_in_ice_output.pdf>` | Code families compared with current `iceout`/`icestep`; added fields and diagnostic scope reflected in the output reference. |
+| {download}`Variable list <../plasim/doc/variable_list.txt>` | Historical names/dimensions/units compared with actual writers and converters; current inventories keep those sources distinct. |
+| {download}`Test guide <../tests/README.md>` and source tests | Actual temporary builds, fixtures, restart/MPI/LSG checks, and validation limits. |
+| {download}`burn.sh guide <../scripts/README_burn.txt>` | Historical extraction categories compared with current script expressions. |
+| {download}`Postprocessor notes <../postprocessor/README_POSTPROCESSOR>` and {download}`burn7 quick reference <../postprocessor/burn7qr.pdf>` | Compared with today's `burn7.cpp` options, parser, metadata, and Makefiles. |
 
 The scientific Reference Manual is intentionally excluded: its chapters,
 derivations, and equation set have not been migrated. Operational equations

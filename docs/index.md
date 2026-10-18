@@ -50,9 +50,9 @@ outline
 sources
 ```
 
-The {download}`repository README <../../README.md>`,
-{download}`FAQ <../../FAQ.md>`, and {download}`original User's Guide
-<PS_UsersGuide.pdf>` remain available, including historical material and
+The {download}`repository README <../README.md>`,
+{download}`FAQ <../FAQ.md>`, and {download}`original User's Guide
+<../plasim/doc/PS_UsersGuide.pdf>` remain available, including historical material and
 figures. Use the current manual for present-day interfaces. The
-{download}`changelog <../../CHANGELOG.md>` records changes to behavior and
+{download}`changelog <../CHANGELOG.md>` records changes to behavior and
 input compatibility.

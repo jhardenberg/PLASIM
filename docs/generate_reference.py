@@ -12,7 +12,7 @@ import re
 import textwrap
 
 DOC = Path(__file__).resolve().parent
-ROOT = DOC.parents[1]
+ROOT = DOC.parent
 SOURCES = [
     "plasim", "p_earth", "p_mars", "p_exo", "fluxmod", "miscmod",
     "surfmod", "landmod", "simba", "radmod", "rainmod", "seamod",
@@ -195,7 +195,7 @@ def main() -> None:
         path = DOC / "reference" / name
         if args.check:
             if not path.exists() or path.read_text() != text:
-                raise SystemExit(f"Outdated {path.relative_to(ROOT)}; run python3 plasim/doc/generate_reference.py")
+                raise SystemExit(f"Outdated {path.relative_to(ROOT)}; run python3 docs/generate_reference.py")
         else:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text)

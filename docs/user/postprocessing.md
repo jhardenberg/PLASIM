@@ -64,7 +64,7 @@ Adjust include/library search paths for the installed dependencies as
 needed. `postprocessor/makefile_MAC` is a platform-specific example; its
 `/opt/local` paths are not universal defaults. Keep compilation and analysis
 products out of commits. Consult the {download}`burn7 quick reference
-<../../../postprocessor/burn7qr.pdf>` alongside the current code.
+<../../postprocessor/burn7qr.pdf>` alongside the current code.
 
 ## Select fields and levels
 
@@ -129,7 +129,7 @@ expressions multiply precipitation by 1000, reverse some upward-flux signs,
 convert cloud fractions to percent, and derive albedo from shortwave fluxes.
 Use the actual expression for the requested field; a familiar variable name
 is not evidence of identical units or sign conventions across both paths.
-The retained {download}`script guide <../../../scripts/README_burn.txt>`
+The retained {download}`script guide <../../scripts/README_burn.txt>`
 provides its historical field categories. Current script configuration and
 open supporting-tool issues are tracked separately from this manual.
 

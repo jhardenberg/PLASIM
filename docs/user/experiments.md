@@ -16,7 +16,8 @@ source, data, build, binary, and run directories. Run `configure.sh` and
 | --- | --- | --- |
 | `plasim/src` | Permanent Fortran sources and build rules | Make lasting code changes here. |
 | `plasim/dat` | Initial/boundary data and configuration resources | MoSt selects the data matching the chosen resolution and planet. |
-| `plasim/doc` | This manual and historical documentation | Consult it for supported workflows and input conventions. |
+| `docs` | Sphinx user and developer manual | Consult it for supported workflows and input conventions. |
+| `plasim/doc` | Historical manuals and reference material | Retained source material for the current manual. |
 | `plasim/bld` | Copied sources, generated resolution module, build script, and compilation products | Treat as a generated working area. |
 | `plasim/bin` | Built model executables | MoSt names executables according to the selected configuration. |
 | `plasim/run` | Prepared executable, input data, namelists, and run script | Use for an initial check; copy the setup elsewhere for a lasting experiment. |

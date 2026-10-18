@@ -3,7 +3,8 @@
 This chapter belongs to Part II, for contributors maintaining the manual.
 For compiling and running PlaSim as a user, start with {doc}`../user/most`.
 
-The documentation sources live in `plasim/doc`, beside the original PDFs.
+The Sphinx documentation sources live in `docs` at the repository root.
+The original PDFs and historical reference files remain in `plasim/doc`.
 Chapters use MyST Markdown with Sphinx roles and directives for navigation,
 equations, references, downloads, and source-code inclusion. HTML uses the
 Read the Docs Sphinx theme, installed through `requirements.txt`.
@@ -13,15 +14,15 @@ Read the Docs Sphinx theme, installed through `requirements.txt`.
 Use Python 3.11 or newer. From the repository root:
 
 ```sh
-python3 -m venv plasim/doc/.venv
-plasim/doc/.venv/bin/python -m pip install -r plasim/doc/requirements.txt
-plasim/doc/.venv/bin/python -m sphinx -W --keep-going -n -b html plasim/doc plasim/doc/_build/html
+python3 -m venv docs/.venv
+docs/.venv/bin/python -m pip install -r docs/requirements.txt
+docs/.venv/bin/python -m sphinx -W --keep-going -n -b html docs docs/_build/html
 ```
 
-Open `plasim/doc/_build/html/index.html` in a browser. For a local web preview:
+Open `docs/_build/html/index.html` in a browser. For a local web preview:
 
 ```sh
-python3 -m http.server --bind 127.0.0.1 --directory plasim/doc/_build/html 8000
+python3 -m http.server --bind 127.0.0.1 --directory docs/_build/html 8000
 ```
 
 Visit `http://127.0.0.1:8000` and stop the server with Ctrl-C. MathJax renders
@@ -39,9 +40,9 @@ The strict HTML command above checks cross-references and local download
 targets. Check external links separately when network access is available:
 
 ```sh
-plasim/doc/.venv/bin/python -m sphinx -W --keep-going -b linkcheck plasim/doc plasim/doc/_build/linkcheck
-bash -n plasim/doc/examples/headless-earth.sh
-bash plasim/doc/examples/headless-earth.sh
+docs/.venv/bin/python -m sphinx -W --keep-going -b linkcheck docs docs/_build/linkcheck
+bash -n docs/examples/headless-earth.sh
+bash docs/examples/headless-earth.sh
 git diff --check
 ```
 
@@ -51,8 +52,8 @@ accepted namelist member has exactly one complete row in its detailed table,
 including each compiled planet variant. Refresh and check them with:
 
 ```sh
-python3 plasim/doc/generate_reference.py
-python3 plasim/doc/generate_reference.py --check
+python3 docs/generate_reference.py
+python3 docs/generate_reference.py --check
 ```
 
 Edit the descriptive tables in `reference/parameters/` by hand. Add a row
@@ -72,20 +73,24 @@ The documentation workflow builds HTML and LaTeX sources with warnings
 treated as errors, runs this exact example, and uploads the HTML as a CI
 artifact. It does not publish a public site. The model's broader regression
 suite remains a separate workflow; see the {download}`test guide
-<../../../tests/README.md>` for its scope and invocation.
+<../../tests/README.md>` for its scope and invocation.
+
+Read the Docs uses the root `.readthedocs.yaml`, which selects
+`docs/conf.py` and installs `docs/requirements.txt`. It builds the manual
+separately from the GitHub Actions workflow.
 
 ## LaTeX and future PDF builds
 
 Generate LaTeX sources without a TeX installation:
 
 ```sh
-plasim/doc/.venv/bin/python -m sphinx -W --keep-going -n -b latex plasim/doc plasim/doc/_build/latex
+docs/.venv/bin/python -m sphinx -W --keep-going -n -b latex docs docs/_build/latex
 ```
 
 A complete PDF build additionally needs a TeX toolchain and `latexmk`:
 
 ```sh
-plasim/doc/.venv/bin/python -m sphinx -M latexpdf plasim/doc plasim/doc/_build -W --keep-going -n
+docs/.venv/bin/python -m sphinx -M latexpdf docs docs/_build -W --keep-going -n
 ```
 
 LaTeX-source generation alone does not verify a compiled PDF's layout.
