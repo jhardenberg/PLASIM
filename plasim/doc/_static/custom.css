@@ -1,4 +1,13 @@
 /* Keep wide parameter tables and equations usable in narrow preview panels. */
+.wy-nav-content {
+    max-width: 1100px;
+}
+
+.wy-table-responsive table td,
+.wy-table-responsive table th {
+    white-space: normal;
+}
+
 table.docutils,
 div.math {
     display: block;

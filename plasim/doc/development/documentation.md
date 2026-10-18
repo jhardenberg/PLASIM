@@ -5,8 +5,8 @@ For compiling and running PlaSim as a user, start with {doc}`../user/most`.
 
 The documentation sources live in `plasim/doc`, beside the original PDFs.
 Chapters use MyST Markdown with Sphinx roles and directives for navigation,
-equations, references, downloads, and source-code inclusion. The initial
-HTML theme is Sphinx's built-in Alabaster theme.
+equations, references, downloads, and source-code inclusion. HTML uses the
+Read the Docs Sphinx theme, installed through `requirements.txt`.
 
 ## Build HTML locally
 
@@ -98,6 +98,9 @@ PDF publication and visual review are follow-up work for the larger manual.
    belong in Part I (`user/`); implementation, testing, alternative builds,
    and documentation maintenance belong in Part II (`development/`). Keep
    MoSt as the recommended user build/preparation method.
+   Group related user chapters beneath the introduction, getting-started,
+   configuration, or postprocessing landing pages. Keep each chapter in one
+   toctree so its navigation and breadcrumbs have a clear parent.
 2. Give parameters their file/group, type, units, current default, and
    configuration scope. Identify input migrations and distinguish compiled
    settings from runtime controls. Maintain the detailed row and the legacy
@@ -119,3 +122,4 @@ Sphinx configuration is in `conf.py`; Python dependencies are bounded to
 compatible major versions in `requirements.txt`. The authoring references
 are the [Sphinx guide](https://www.sphinx-doc.org/en/master/usage/quickstart.html)
 and [MyST syntax guide](https://myst-parser.readthedocs.io/en/stable/syntax/roles-and-directives.html).
+Theme navigation options follow the [Read the Docs theme configuration guide](https://sphinx-rtd-theme.readthedocs.io/en/stable/configuring.html).

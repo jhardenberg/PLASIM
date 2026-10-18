@@ -7,6 +7,11 @@ Reference Manual is excluded.
 
 ## Part I: User guide
 
+Chapters are grouped under {doc}`user/introduction`,
+{doc}`user/getting-started`, {doc}`user/configuration`, and
+{doc}`user/analysis`, followed by the configuration/output reference and
+troubleshooting. Each chapter retains its existing URL.
+
 | Topic | Chapter |
 | --- | --- |
 | Recommended compilation/preparation | {doc}`user/most`: MoSt GUI and configuration-file workflows. |

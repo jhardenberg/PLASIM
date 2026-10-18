@@ -8,12 +8,15 @@ root_doc = "index"
 exclude_patterns = ["_build", ".venv", "__pycache__"]
 nitpicky = True
 
-html_theme = "alabaster"
+html_theme = "sphinx_rtd_theme"
 html_title = "PlaSim user and developer manual"
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
-html_theme_options = {"description": "Planet Simulator", "fixed_sidebar": True}
-html_sidebars = {"**": ["about.html", "navigation.html", "searchfield.html"]}
+html_theme_options = {
+    "collapse_navigation": False,
+    "navigation_depth": 4,
+    "titles_only": True,
+}
 extlinks = {"repo": ("https://github.com/jhardenberg/PLASIM/blob/master/%s", "%s")}
 
 latex_documents = [("index", "plasim-user-guide.tex", "PlaSim User and Developer Manual",

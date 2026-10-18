@@ -18,26 +18,21 @@ compile PlaSim**, using either its graphical interface or its headless
 configuration-file option.
 
 ```{toctree}
-:maxdepth: 1
+:maxdepth: 2
+:titlesonly:
 :caption: Part I — User guide
 
-user/most
-user/experiments
-user/components
-user/planets
-user/parallel-ocean
-user/boundary-data
-user/gui
-user/restarts
-user/postprocessing
-user/visualization
-user/column
-user/troubleshooting
+user/introduction
+user/getting-started
+user/configuration
+user/analysis
 reference/index
+user/troubleshooting
 ```
 
 ```{toctree}
 :maxdepth: 1
+:titlesonly:
 :caption: Part II — Developer guide
 
 development/architecture
