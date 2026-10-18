@@ -1,9 +1,9 @@
 # Introduction
 
 **PlaSim TNG (The Next Generation)** is an independently maintained
-development of the original Planet Simulator (PlaSim), created at the
-University of Hamburg. It builds on and improves that model for climate
-and planetary experiments.
+development of the original Planet Simulator (PlaSim). The original model
+was created at the University of Hamburg; PlaSim TNG is developed separately
+and builds on and improves that model for climate and planetary experiments.
 
 This guide applies specifically to the version in the
 **[jhardenberg/PLASIM repository](https://github.com/jhardenberg/PLASIM)**.
