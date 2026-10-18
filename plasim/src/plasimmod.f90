@@ -244,6 +244,8 @@
       real :: szt(NSPP,NLEV) = 0.0 ! Spectral Vorticity   Tendency
       real :: sqt(NSPP,NLEV) = 0.0 ! Spectral S.Humidity  Tendency
       real :: spt(NSPP)      = 0.0 ! Spectral Pressure    Tendency
+      real :: sqt_glob(NESP,NLEV) = 0.0 ! Gathered Spectral S.Humidity Tendency
+      logical :: lsqt_gathered = .false.
 
       real :: sdm(NSPP,NLEV) = 0.0 ! Spectral Divergence  Minus
       real :: stm(NSPP,NLEV) = 0.0 ! Spectral Temperature Minus

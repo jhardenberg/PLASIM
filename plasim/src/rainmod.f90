@@ -242,11 +242,12 @@
       subroutine mkdqtgp
       use rainmod
 !
-      real zsqt(NESP,NLEV)
-!
       if (nqspec == 1) then
-         call mpgallsp(zsqt,sqt,NLEV)
-         call sp2fl(zsqt,dqt,NLEV)
+         if (.not. lsqt_gathered) then
+            call mpgallsp(sqt_glob,sqt,NLEV)
+            lsqt_gathered = .true.
+         endif
+         call sp2fl(sqt_glob,dqt,NLEV)
          call fc2gp(dqt,NLON,NLPP*NLEV)
 !
          do jlev=1,NLEV

@@ -72,6 +72,24 @@
       return
       end
 
+      subroutine mpshiftgp_north(pin,pout) ! shift global grid 1 row north
+      use pumamod
+      real pin(NLON,NLPP)
+      real pout(NLON,NLPP)
+      if (NLPP > 1) pout(:,1:NLPP-1) = pin(:,2:NLPP)
+      pout(:,NLPP) = 0.0
+      return
+      end
+
+      subroutine mpshiftgp_south(pin,pout) ! shift global grid 1 row south
+      use pumamod
+      real pin(NLON,NLPP)
+      real pout(NLON,NLPP)
+      if (NLPP > 1) pout(:,NLPP:2:-1) = pin(:,NLPP-1:1:-1)
+      pout(:,1) = 0.0
+      return
+      end
+
       subroutine mpgacs(pcs) ! gather cross sections
       return
       end

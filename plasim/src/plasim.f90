@@ -2025,11 +2025,8 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       real gphi(NHOR,NLEV)
       real gvpp(NHOR)
       real gpmt(NLON,NLPP)
-      real sdf(NESP,NLEV)
-      real stf(NESP,NLEV)
-      real sqf(NESP,NLEV)
-      real szf(NESP,NLEV)
-      real spf(NESP)
+      real zsf(NESP,4*NLEV+1)
+      real zsp_tend(NSPP,4*NLEV+1)
 
       real zgp(NLON,NLAT)
 
@@ -2117,16 +2114,21 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 !
 !     direct Legendre transformation (fourier domain to spectral domain)
 !
-      call fc2sp(gvpp,spf)
-      call mktend(sdf,stf,szf,gtn,gvz,guz,gke,gut,gvt)
-      call mpsumsc(spf,spt,1)
-      call mpsumsc(stf,stt,NLEV)
-      call mpsumsc(sdf,sdt,NLEV)
-      call mpsumsc(szf,szt,NLEV)
+      call fc2sp(gvpp,zsf(1,1))
+      call mktend(zsf(1,NLEV+2),zsf(1,2),zsf(1,2*NLEV+2),               &
+     &            gtn,gvz,guz,gke,gut,gvt)
       if (nqspec == 1) then
-         call qtend(sqf,gqn,guq,gvq)
-         call mpsumsc(sqf,sqt,NLEV)
+         call qtend(zsf(1,3*NLEV+2),gqn,guq,gvq)
+         call mpsumsc(zsf,zsp_tend,4*NLEV+1)
+         sqt(:,:) = zsp_tend(:,3*NLEV+2:4*NLEV+1)
+         lsqt_gathered = .false.
+      else
+         call mpsumsc(zsf,zsp_tend,3*NLEV+1)
       endif
+      spt(:)   = zsp_tend(:,1)
+      stt(:,:) = zsp_tend(:,2:NLEV+1)
+      sdt(:,:) = zsp_tend(:,NLEV+2:2*NLEV+1)
+      szt(:,:) = zsp_tend(:,2*NLEV+2:3*NLEV+1)
 !
 !     compute entropy
 !
@@ -2166,7 +2168,15 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 
 !     Diagnostic output and GUI calls
 
-      if (ngui>0 .or. mod(nstep,ndiag)==0 .or. mod(nstep,nafter)==0) then
+      if (ngui > 0 .or. mod(nstep,ndiag) == 0) then
+         call mpgacs(csu)
+         call mpgacs(csv)
+         call mpgacs(cst)
+         call mpgacs(csm)
+         call mpgacs(ccc)
+      endif
+
+      if (ngui > 0) then
          call mpgagp(zgp,gp,1);
          call guips(zgp)                ! Send Ps for Hovmoeller
          call guihor("DQVI"//char(0),dqvi,1,1.0,0.0)! Vertically integrated q
@@ -2186,12 +2196,6 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
          call gp2fc(gp,NLON,NLPP)
          call fc2sp(gp,span)
          call mpsum(span,1)
- 
-         call mpgacs(csu)
-         call mpgacs(csv)
-         call mpgacs(cst)
-         call mpgacs(csm)
-         call mpgacs(ccc)
  
          if (mypid == NROOT) then
             zcs(:,:) = csu(:,:)
@@ -2393,6 +2397,43 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       return
       end
 
+!     =========================
+!     SUBROUTINE GATHER_PROG_SP
+!     =========================
+
+      subroutine gather_prog_sp(lgather_sqt)
+      use pumamod
+
+      logical :: lgather_sqt
+      real :: zsp(NSPP,5*NLEV+1)
+      real :: zsf(NESP,5*NLEV+1)
+
+      zsp(:,1:NLEV)          = sdp(:,:)
+      zsp(:,NLEV+1:2*NLEV)   = szp(:,:)
+      zsp(:,2*NLEV+1:3*NLEV) = stp(:,:)
+      zsp(:,3*NLEV+1)        = spp(:)
+      if (nqspec == 1) then
+         zsp(:,3*NLEV+2:4*NLEV+1) = sqp(:,:)
+         if (lgather_sqt) then
+            zsp(:,4*NLEV+2:5*NLEV+1) = sqt(:,:)
+            call mpgallsp(zsf,zsp,5*NLEV+1)
+            sqt_glob(:,:) = zsf(:,4*NLEV+2:5*NLEV+1)
+            lsqt_gathered = .true.
+         else
+            call mpgallsp(zsf,zsp,4*NLEV+1)
+         endif
+         sq(:,:) = zsf(:,3*NLEV+2:4*NLEV+1)
+      else
+         call mpgallsp(zsf,zsp,3*NLEV+1)
+      endif
+      sd(:,:) = zsf(:,1:NLEV)
+      sz(:,:) = zsf(:,NLEV+1:2*NLEV)
+      st(:,:) = zsf(:,2*NLEV+1:3*NLEV)
+      sp(:)   = zsf(:,3*NLEV+1)
+
+      return
+      end subroutine gather_prog_sp
+
 !     ====================
 !     SUBROUTINE SPECTRALA
 !     ====================
@@ -2586,11 +2627,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 !
 !     finaly the partial arrays are gathered from all processors (mpi)
 !
-      call mpgallsp(sd,sdp,NLEV)
-      call mpgallsp(sz,szp,NLEV)
-      call mpgallsp(st,stp,NLEV)
-      call mpgallsp(sp,spp,   1)
-      if (nqspec == 1) call mpgallsp(sq,sqp,NLEV)
+      call gather_prog_sp(.true.)
 !
 !     franks diagnostic
 !
@@ -2756,10 +2793,8 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       subroutine gridpointd
       use pumamod
 !
-      real sdf(NESP,NLEV)
-      real stf(NESP,NLEV)
-      real sqf(NESP,NLEV)
-      real szf(NESP,NLEV)
+      real zsf(NESP,4*NLEV)
+      real zsp(NSPP,4*NLEV)
 
       real zqout(NHOR,NLEV)
       real zgq(NLON,NLAT,NLEV)
@@ -2830,7 +2865,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 !     compute output specific humidity
 !
 
-      if (mod(nstep,nafter)==0 .and. nqspec == 1) then
+      if (mod(nstep,nafter)==0 .and. noutput > 0 .and. nqspec == 1) then
        do jlev=1,NLEV
         zqout(:,jlev)=gq(:,jlev)/exp(gp(:))
         call gp2fc(zqout(1,jlev),NLON,NLPP)
@@ -3012,16 +3047,22 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 !     direct Legendre transformation (fourier domain to spectral domain)
 !
       do jlev = 1 , NLEV
-         call fc2sp(gtdt(1,jlev),stf(1,jlev))
-         if (nqspec == 1) call fc2sp(gqdt(1,jlev),sqf(1,jlev))
+         call fc2sp(gtdt(1,jlev),zsf(1,jlev))
+         if (nqspec == 1) call fc2sp(gqdt(1,jlev),zsf(1,3*NLEV+jlev))
       enddo
 
-      call uv2dv(gudt,gvdt,sdf,szf)
+      call uv2dv(gudt,gvdt,zsf(1,NLEV+1),zsf(1,2*NLEV+1))
 
-      call mpsumsc(stf,stt,NLEV)
-      call mpsumsc(sdf,sdt,NLEV)
-      call mpsumsc(szf,szt,NLEV)
-      if (nqspec == 1) call mpsumsc(sqf,sqt,NLEV)
+      if (nqspec == 1) then
+         call mpsumsc(zsf,zsp,4*NLEV)
+         sqt(:,:) = zsp(:,3*NLEV+1:4*NLEV)
+         lsqt_gathered = .false.
+      else
+         call mpsumsc(zsf,zsp,3*NLEV)
+      endif
+      stt(:,:) = zsp(:,1:NLEV)
+      sdt(:,:) = zsp(:,NLEV+1:2*NLEV)
+      szt(:,:) = zsp(:,2*NLEV+1:3*NLEV)
       if (nqspec == 0) dq(:,:) = dq(:,:) + dqdt(:,:) * deltsec
 
       return
@@ -3360,6 +3401,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
      &              /(1.+delt2*tdissz(jlev)*sakpp(1:NSPP,jlev))
        szt(:,jlev)=zszt1(:,jlev)+zszt2(:,jlev)
       enddo
+      if (nqspec == 1) lsqt_gathered = .false.
 !
 !     energy/entropy diagnostics
 !
@@ -3476,11 +3518,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
          if (nqspec == 1) sqm = sqm + pnu * sqp
       endif
 
-      call mpgallsp(sd,sdp,NLEV)
-      call mpgallsp(sz,szp,NLEV)
-      call mpgallsp(st,stp,NLEV)
-      call mpgallsp(sp,spp,   1)
-      if (nqspec == 1) call mpgallsp(sq,sqp,NLEV)
+      call gather_prog_sp(.false.)
 !
 !     franks diagnostic
 !
@@ -3613,38 +3651,28 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       real zszt1(NSPP,NLEV),zszt2(NSPP,NLEV)
       real zsdt1(NSPP,NLEV),zsdt2(NSPP,NLEV)
 !
-      real zsd(NESP,NLEV),zsz(NESP,NLEV),zsq(NESP,NLEV)
-      real zsdp(NSPP,NLEV),zszp(NSPP,NLEV),zsqp(NSPP,NLEV)
+      real zsp6(NSPP,6*NLEV),zsf6(NESP,6*NLEV)
       real zu(NHOR,NLEV),zun(NHOR,NLEV)
       real zv(NHOR,NLEV),zvn(NHOR,NLEV)
-      real zq(NHOR,NLEV)
 !
       real zdtdt(NHOR,NLEV),zdekin(NHOR,NLEV)
-      real zsde(NSPP,NLEV),zsdef(NESP,NLEV)
-      real zstt1(NSPP,NLEV),zstf1(NESP,NLEV)
-      real zstt2(NSPP,NLEV),zstf2(NESP,NLEV)
+      real zsdef1(NLEV)
+      real zstf12(NESP,2*NLEV),zstt12(NSPP,2*NLEV)
+      real zstf1(NESP,NLEV),zstf2(NESP,NLEV)
 !
-      zsdp(:,:)=sdp(:,:)
-      zszp(:,:)=szp(:,:)
-      if (nqspec == 1) then
-         zsqp(:,:)=sqp(:,:)
-         call mpgallsp(zsq,zsqp,NLEV)
-         call sp2fl(zsq,zq,NLEV)
-         call fc2gp(zq,NLON,NLPP*NLEV)
-      else
-         zq(:,:) = 0.0
-      endif
-      call mpgallsp(zsd,zsdp,NLEV)
-      call mpgallsp(zsz,zszp,NLEV)
-      call dv2uv(zsd,zsz,zu,zv)
+      zsp6(:,1:NLEV)          = sdp(:,:)
+      zsp6(:,NLEV+1:2*NLEV)   = szp(:,:)
+      zsp6(:,2*NLEV+1:3*NLEV) = sdp(:,:) + zsdt1(:,:)*delt2
+      zsp6(:,3*NLEV+1:4*NLEV) = szp(:,:) + zszt1(:,:)*delt2
+      zsp6(:,4*NLEV+1:5*NLEV) = sdp(:,:) + zsdt2(:,:)*delt2
+      zsp6(:,5*NLEV+1:6*NLEV) = szp(:,:) + zszt2(:,:)*delt2
+      call mpgallsp(zsf6,zsp6,6*NLEV)
+
+      call dv2uv(zsf6(1,1),zsf6(1,NLEV+1),zu,zv)
       call fc2gp(zu,NLON,NLPP*NLEV)
       call fc2gp(zv,NLON,NLPP*NLEV)
 !
-      zsdp(:,:)=sdp(:,:)+zsdt1(:,:)*delt2
-      zszp(:,:)=szp(:,:)+zszt1(:,:)*delt2
-      call mpgallsp(zsd,zsdp,NLEV)
-      call mpgallsp(zsz,zszp,NLEV)
-      call dv2uv(zsd,zsz,zun,zvn)
+      call dv2uv(zsf6(1,2*NLEV+1),zsf6(1,3*NLEV+1),zun,zvn)
       call fc2gp(zun,NLON,NLPP*NLEV)
       call fc2gp(zvn,NLON,NLPP*NLEV)
 !
@@ -3653,7 +3681,6 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
        zv(:,jlev)=cv*zv(:,jlev)*SQRT(rcsq(:))
        zun(:,jlev)=cv*zun(:,jlev)*SQRT(rcsq(:))
        zvn(:,jlev)=cv*zvn(:,jlev)*SQRT(rcsq(:))
-       if (nqspec == 1) zq(:,jlev)=zq(:,jlev)*psurf/dp(:)
 
        zdtdt(:,jlev)=-(zun(:,jlev)*zun(:,jlev)                          &
      &                -zu(:,jlev)*zu(:,jlev)                            &
@@ -3665,15 +3692,10 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       zdtdt(:,:)=zdtdt(:,:)/ct/ww
       call gp2fc(zdtdt,NLON,NLPP*NLEV)
       do jlev=1,NLEV
-       call fc2sp(zdtdt(1,jlev),zstf1(1,jlev))
+       call fc2sp(zdtdt(1,jlev),zstf12(1,jlev))
       enddo
-      call mpsumsc(zstf1,zstt1,NLEV)
 !
-      zsdp(:,:)=sdp(:,:)+zsdt2(:,:)*delt2
-      zszp(:,:)=szp(:,:)+zszt2(:,:)*delt2
-      call mpgallsp(zsd,zsdp,NLEV)
-      call mpgallsp(zsz,zszp,NLEV)
-      call dv2uv(zsd,zsz,zun,zvn)
+      call dv2uv(zsf6(1,4*NLEV+1),zsf6(1,5*NLEV+1),zun,zvn)
       call fc2gp(zun,NLON,NLPP*NLEV)
       call fc2gp(zvn,NLON,NLPP*NLEV)
 !
@@ -3688,28 +3710,25 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       enddo
       call gp2fc(zdekin,NLON,NLPP*NLEV)
       do jlev=1,NLEV
-       call fc2sp(zdekin(1,jlev),zsdef(1,jlev))
+       call fc2sp0(zdekin(1,jlev),zsdef1(jlev))
       enddo
-      call mpsumsc(zsdef,zsde,NLEV)
-      call mpgallsp(zsdef,zsde,NLEV)
-      zsdef(2:NESP,:)=0.
-      call sp2fl(zsdef,zdekin,NLEV)
-      call fc2gp(zdekin,NLON,NLPP*NLEV)
+      call mpsumbcr(zsdef1,NLEV)
       do jlev=1,NLEV
+       call sp02gp(zsdef1(jlev),zdekin(1,jlev))
        zdtdt(:,jlev)=-zdekin(:,jlev)                                    &
      &           *0.5/acpd/(1.+adv*dq(:,jlev))/dp(:)*ga/dsigma(jlev) 
       enddo
       zdtdt(:,:)=zdtdt(:,:)/ct/ww
       call gp2fc(zdtdt,NLON,NLPP*NLEV)
       do jlev=1,NLEV
-       call fc2sp(zdtdt(1,jlev),zstf2(1,jlev))
+       call fc2sp(zdtdt(1,jlev),zstf12(1,NLEV+jlev))
       enddo
-      call mpsumsc(zstf2,zstt2,NLEV)
+      call mpsumsc(zstf12,zstt12,2*NLEV)
 !
 !     energy diagnostics
 !
       if(nenergy > 0) then
-       call mpgallsp(zstf1,zstt1,NLEV)       
+       call mpgallsp(zstf1,zstt12(1,1),NLEV)
        zstf1(:,:)=zstf1(:,:)*ct*ww
        call sp2fl(zstf1,zdtdt,NLEV)
        call fc2gp(zdtdt,NLON,NLPP*NLEV)
@@ -3723,7 +3742,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
      &                   *acpd*(1.+adv*dq(:,jlev))*dp(:)/ga*dsigma(jlev)
         endif
        enddo
-       call mpgallsp(zstf2,zstt2,NLEV)
+       call mpgallsp(zstf2,zstt12(1,NLEV+1),NLEV)
        zstf2(:,:)=zstf2(:,:)*ct*ww
        call sp2fl(zstf2,zdtdt,NLEV)
        call fc2gp(zdtdt,NLON,NLPP*NLEV)
@@ -3740,7 +3759,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 
       endif
 !
-      stt(:,:)=stt(:,:)+zstt1(:,:)+zstt2(:,:)
+      stt(:,:)=stt(:,:)+zstt12(:,1:NLEV)+zstt12(:,NLEV+1:2*NLEV)
 !
       return
       end subroutine mkdheat

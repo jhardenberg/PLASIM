@@ -371,6 +371,9 @@
       real :: zheat(NLON*NLAT)
       real :: zice(NLON*NLAT)
       real :: zfldo(NLON*NLAT)
+      real :: zlsgloc(NHOR,7)
+      real :: zlsggl(NLON*NLAT,7)
+      integer :: klsg
 !
 !     dbug arrays
 !
@@ -428,13 +431,43 @@
 !     do the lsg coupling
 !
       if (nlsg > 0) then
-       if(nlsg < 2) call mpgagp(zsst,ysst,1)
-       call mpgagp(ztaux,ytaux,1)
-       call mpgagp(ztauy,ytauy,1)
-       call mpgagp(zpme,ypme,1)
-       call mpgagp(zroff,yroff,1)
-       call mpgagp(zice,yicesnow,1)
-       call mpgagp(zheat,yheat,1)
+       zlsgloc(:,1) = ytaux(:)
+       zlsgloc(:,2) = ytauy(:)
+       zlsgloc(:,3) = ypme(:)
+       zlsgloc(:,4) = yroff(:)
+       klsg = 4
+       if (nlsg >= 2) then
+        klsg = klsg + 1
+        zlsgloc(:,klsg) = yheat(:)
+       endif
+       if (mod(nstep,naomod) == naomod-1) then
+        klsg = klsg + 1
+        zlsgloc(:,klsg) = yicesnow(:)
+        if (nlsg < 2) then
+         klsg = klsg + 1
+         zlsgloc(:,klsg) = ysst(:,1)
+        endif
+       endif
+       call mpgagp(zlsggl,zlsgloc,klsg)
+       if (mypid == nroot) then
+        ztaux(:) = zlsggl(:,1)
+        ztauy(:) = zlsggl(:,2)
+        zpme(:)  = zlsggl(:,3)
+        zroff(:) = zlsggl(:,4)
+        klsg = 4
+        if (nlsg >= 2) then
+         klsg = klsg + 1
+         zheat(:) = zlsggl(:,klsg)
+        endif
+        if (mod(nstep,naomod) == naomod-1) then
+         klsg = klsg + 1
+         zice(:) = zlsggl(:,klsg)
+         if (nlsg < 2) then
+          klsg = klsg + 1
+          zsst(:) = zlsggl(:,klsg)
+         endif
+        endif
+       endif
        call ntomin(nstep,ndatim(5),ndatim(4),ndatim(3),ndatim(2)        &
      &            ,ndatim(1))
        if(mypid == nroot) then
