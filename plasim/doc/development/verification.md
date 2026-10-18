@@ -52,7 +52,7 @@ the extracted membership list does not infer unknown units or defaults.
 | GUI | Reader/field/plot behavior checked from source; interactive X11 operation not exercised. |
 | burn7 | Source/interface review; legacy NetCDF C++ dependency unavailable for runtime validation. |
 | Other planets/columns | Relevant inputs and paths checked from source; no claim of new climate validation or a runtime-tested column recipe. |
-| Sphinx | Strict HTML and LaTeX-source builds, reference-inventory consistency, local anchors/downloads, and external links. Compiled PDF layout not validated. |
+| Sphinx | Strict HTML and LaTeX-source builds, reference-inventory consistency, and 890 local links/anchors/downloads passed. External checking reached valid pages but GitHub throttled some requests with HTTP 429; a complete external-link pass was not obtained. Compiled PDF layout not validated. |
 
 ## Issue-only follow-up
 
