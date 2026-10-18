@@ -303,5 +303,113 @@ class MultiReportSummaryTests(unittest.TestCase):
                 compare.load(empty_path)
 
 
+class ContinuationTests(unittest.TestCase):
+    def test_continue_skips_completed_runs_and_rejects_changed_settings(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            output = directory / 'bench-out'
+            executed = []
+            built = []
+            fail_once = {('T21-mixed-spectral-p1', 'sample-03'), ('T21-lsg-p1', 'warmup-01')}
+
+            def fake_build(args, work, out, resolution, lsg, ranks, env):
+                key = (resolution, lsg, ranks)
+                built.append(key)
+                exe = work / f'plasim-{resolution}-{lsg}-{ranks}.x'
+                exe.write_text('binary')
+                return exe, {'seconds': 0.1, 'sha256': 'exe-sha', 'name': f'{resolution}-{lsg}-{ranks}'}
+
+            def fake_execute(command, cwd, log, env, timeout, control=None):
+                case_name = log.parent.name
+                label = log.name.removesuffix('.stdout.log')
+                executed.append((case_name, label))
+                log.write_text('ok\n')
+                (cwd / 'plasim_diag').write_text('Total CPU time : 1.0\n')
+                if (case_name, label) in fail_once:
+                    fail_once.remove((case_name, label))
+                    raise RuntimeError(f'Command timed out in {case_name}/{label}')
+                return 2.0
+
+            def fake_state(run_dir, resolution, days, lsg, coupling_days, diag):
+                return {'nstep': 100, 'fields': {'st': {'count': 1, 'min': 280.0, 'max': 280.0,
+                                                        'mean': 280.0, 'sha256': 'field-sha'}}}
+
+            base_argv = ['run.py', '--output', str(output), '--work-dir', str(directory),
+                         '--resolutions', 'T21', '--cases', 'mixed', 'mixed-spectral', 'lsg',
+                         '--ranks', '1', '--warmups', '1', '--repeats', '2', '--days', '10',
+                         '--max-cores', '2']
+            with patch.object(sys, 'argv', base_argv), \
+                    patch.object(run, 'build', side_effect=fake_build), \
+                    patch.object(run, 'execute', side_effect=fake_execute), \
+                    patch.object(run, 'state_summary', side_effect=fake_state), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaisesRegex(RuntimeError, 'Command timed out'):
+                    run.main()
+
+            first_report = compare.json.loads((output / 'results.json').read_text())
+            self.assertEqual(first_report['status'], 'partial')
+            self.assertEqual([c['status'] for c in first_report['cases']], ['complete', 'failed', 'failed'])
+            self.assertEqual([len(c['samples']) for c in first_report['cases']], [3, 2, 0])
+
+            # Refuses to continue if any setting or case selection differs, leaving results.json untouched.
+            before_bytes = (output / 'results.json').read_text()
+            for extra in (['--days', '20'], ['--repeats', '3'], ['--fflags=-O2'],
+                          ['--parallel'], ['--max-cores', '4'], ['--cases', 'mixed']):
+                with self.subTest(extra=extra), \
+                        patch.object(sys, 'argv', [*base_argv, *extra]), \
+                        contextlib.redirect_stdout(io.StringIO()):
+                    with self.assertRaisesRegex(RuntimeError, 'Cannot continue .* with different settings'):
+                        run.main()
+                    self.assertEqual((output / 'results.json').read_text(), before_bytes)
+
+            # Continuing with identical settings skips completed cases and already-recorded samples.
+            executed.clear()
+            built.clear()
+            stream = io.StringIO()
+            with patch.object(sys, 'argv', base_argv), \
+                    patch.object(run, 'build', side_effect=fake_build), \
+                    patch.object(run, 'execute', side_effect=fake_execute), \
+                    patch.object(run, 'state_summary', side_effect=fake_state), \
+                    contextlib.redirect_stdout(stream):
+                run.main()
+
+            text = stream.getvalue()
+            self.assertIn('Continuing existing benchmark report', text)
+            self.assertIn('Skipping T21-mixed-p1: already complete (2 measured sample(s))', text)
+            self.assertIn('Skipping T21-mixed-spectral-p1: warmup-01 already recorded', text)
+            self.assertIn('Skipping T21-mixed-spectral-p1: sample-02 already recorded', text)
+            self.assertEqual(executed, [
+                ('T21-mixed-spectral-p1', 'sample-03'),
+                ('T21-lsg-p1', 'warmup-01'),
+                ('T21-lsg-p1', 'sample-02'),
+                ('T21-lsg-p1', 'sample-03'),
+            ])
+            final_report = compare.json.loads((output / 'results.json').read_text())
+            self.assertEqual(final_report['status'], 'complete')
+            self.assertNotIn('error', final_report)
+            self.assertEqual([c['status'] for c in final_report['cases']], ['complete', 'complete', 'complete'])
+            self.assertEqual([len(c['samples']) for c in final_report['cases']], [3, 3, 3])
+
+            # Re-running an already complete report skips all builds and runs.
+            executed.clear()
+            built.clear()
+            with patch.object(sys, 'argv', base_argv), \
+                    patch.object(run, 'build', side_effect=fake_build), \
+                    patch.object(run, 'execute', side_effect=fake_execute), \
+                    patch.object(run, 'state_summary', side_effect=fake_state), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                run.main()
+            self.assertEqual(built, [])
+            self.assertEqual(executed, [])
+
+            # Existing directory without results.json is still rejected.
+            non_report_dir = directory / 'existing-without-json'
+            non_report_dir.mkdir()
+            with patch.object(sys, 'argv', [*base_argv[:2], str(non_report_dir), *base_argv[3:]]), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaises(FileExistsError):
+                    run.main()
+
+
 if __name__ == '__main__':
     unittest.main()

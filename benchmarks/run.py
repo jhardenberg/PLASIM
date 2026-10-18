@@ -326,7 +326,8 @@ def prepare(args, directory: Path, resolution: str, case: str) -> dict:
 def arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=ROOT, help="Checkout to build (default: this repo)")
-    parser.add_argument("--output", type=Path, required=True, help="New directory for results and logs")
+    parser.add_argument("--output", type=Path, required=True,
+                        help="Directory for results and logs (continues if results.json exists)")
     parser.add_argument("--resolutions", nargs="+", choices=RESOLUTIONS, default=list(RESOLUTIONS))
     parser.add_argument("--cases", nargs="+", choices=CASES, default=list(CASES))
     parser.add_argument("--ranks", nargs="+", type=int, default=[1], help="MPI sizes; 1 uses a serial build")
@@ -372,6 +373,43 @@ def arguments():
     for name in ("resolutions", "cases", "ranks"):
         setattr(args, name, list(dict.fromkeys(getattr(args, name))))
     return args
+
+
+def valid_samples(samples: list, warmups: int, repeats: int) -> list[dict]:
+    """Return the valid recorded sample prefix matching the warmup/sample schedule."""
+    kept = []
+    if not isinstance(samples, list):
+        return kept
+    for index, sample in enumerate(samples[:warmups + repeats]):
+        if (not isinstance(sample, dict) or
+                sample.get("warmup") != (index < warmups) or
+                not isinstance(sample.get("wall_seconds"), (int, float)) or
+                sample["wall_seconds"] <= 0 or
+                not math.isfinite(sample["wall_seconds"])):
+            break
+        kept.append(sample)
+    return kept
+
+
+def continuation_differences(existing: dict, current: dict, expected_cases: list[str]) -> list[str]:
+    """Check whether an existing results.json can be continued under current settings."""
+    differences = []
+    if existing.get("source", {}).get("model_sha256") != current["source"]["model_sha256"]:
+        differences.append("model-source SHA-256")
+    for key, value in current["settings"].items():
+        if existing.get("settings", {}).get(key) != value:
+            differences.append(
+                f"setting {key} ({existing.get('settings', {}).get(key)!r} vs {value!r})"
+            )
+    existing_cases = [case.get("name") for case in existing.get("cases", [])]
+    if existing_cases != expected_cases:
+        differences.append(f"case selection ({existing_cases} vs {expected_cases})")
+    before, after = existing.get("environment", {}), current["environment"]
+    for key in ("machine", "tools", "thread_environment", "runtime_environment",
+                "launcher", "workspace_storage"):
+        if before.get(key) != after.get(key):
+            differences.append(f"environment {key}")
+    return differences
 
 
 def main():
@@ -424,14 +462,20 @@ def main():
                            "cflags": args.cflags, "precision_flags": "-fdefault-real-8",
                            "parallel": args.parallel, "max_cores": args.max_cores},
               "work_directory": None, "kept_work": args.keep_work, "cases": []}
-    args.output.mkdir(parents=True, exist_ok=False)
+    result_path = args.output / "results.json"
+    existing = None
+    if args.output.exists():
+        if not result_path.is_file():
+            raise FileExistsError(f"Output directory already exists without results.json: {args.output}")
+        existing = json.loads(result_path.read_text())
+        if existing.get("schema_version") != 1 or not isinstance(existing.get("cases"), list):
+            raise RuntimeError(f"Unsupported existing results file: {result_path}")
     if args.work_dir:
         args.work_dir.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix="plasim-benchmark-", dir=args.work_dir))
     report["work_directory"] = str(work)
     report["environment"]["workspace_storage"] = {
         "parent": str(work.parent.resolve()), "filesystem_device": work.stat().st_dev}
-    result_path = args.output / "results.json"
 
     report_lock = threading.RLock()
 
@@ -454,11 +498,15 @@ def main():
         lsg = entry["case"].startswith("lsg")
         with report_lock:
             entry["status"] = "running"
+            entry.pop("error", None)
             save()
         try:
             for index in range(args.warmups + args.repeats):
                 warmup = index < args.warmups
                 label = f"{'warmup' if warmup else 'sample'}-{index+1:02d}"
+                if index < len(entry["samples"]):
+                    print(f"Skipping {name}: {label} already recorded", flush=True)
+                    continue
                 run = work / f"{name}-{label}"
                 shutil.copytree(template, run)
                 command = ([*args.launcher, "-n", str(ranks)] if ranks > 1 else []) + [str(executable)]
@@ -502,68 +550,112 @@ def main():
               f"range {summary['min_wall_seconds']:.3f}–{summary['max_wall_seconds']:.3f} s", flush=True)
         with report_lock:
             entry["status"] = "complete"
+            entry.pop("error", None)
             entry["summary"] = summary
             save()
 
     try:
-        save()
-        builds = {}
-        jobs = []
+        expected_cases = [f"{resolution}-{case}-p{ranks}"
+                          for resolution in args.resolutions
+                          for ranks in args.ranks
+                          for case in args.cases]
+        if existing is not None:
+            differences = continuation_differences(existing, report, expected_cases)
+            if differences:
+                raise RuntimeError(
+                    f"Cannot continue {result_path} with different settings:\n"
+                    + "\n".join(f"- {item}" for item in differences)
+                )
+            print(f"Continuing existing benchmark report: {result_path}", flush=True)
+            report["created_utc"] = existing.get("created_utc", report["created_utc"])
+            report["suite_sha256"] = existing.get("suite_sha256", report["suite_sha256"])
+            existing_cases = {case["name"]: case for case in existing["cases"]}
+        else:
+            args.output.mkdir(parents=True, exist_ok=False)
+            existing_cases = {}
+
+        planned = []
         for resolution in args.resolutions:
             for ranks in args.ranks:
                 for case in args.cases:
-                    lsg = case.startswith("lsg")
-                    key = (resolution, lsg, ranks)
-                    if key not in builds:
-                        print(f"Building {resolution}, {'LSG' if lsg else 'mixed'}, {ranks} rank(s)", flush=True)
-                        try:
-                            builds[key] = build(args, work, args.output, resolution, lsg, ranks, env)
-                        except Exception as error:
-                            print(f"  Build failed for {resolution}, {'LSG' if lsg else 'mixed'}, {ranks} rank(s): "
-                                  f"{type(error).__name__}: {error}", flush=True)
-                            builds[key] = error
                     name = f"{resolution}-{case}-p{ranks}"
                     case_output = args.output / name
-                    case_output.mkdir()
                     template = work / (name + "-inputs")
                     configs = prepare(args, template, resolution, case)
-                    for filename, text in configs.items():
-                        (case_output / filename).write_text(text)
+                    input_sha256 = tree_digest(list(template.iterdir()), template)
+                    previous = existing_cases.get(name)
+                    if previous is not None and previous.get("input_sha256") != input_sha256:
+                        raise RuntimeError(f"Cannot continue {result_path}: runtime inputs changed for {name}")
+                    samples = valid_samples(previous.get("samples", []), args.warmups, args.repeats) if previous else []
+                    planned.append((resolution, ranks, case, name, case_output, template,
+                                    configs, input_sha256, previous, samples))
+
+        try:
+            save()
+            builds = {}
+            jobs = []
+            for (resolution, ranks, case, name, case_output, template,
+                 configs, input_sha256, previous, samples) in planned:
+                case_output.mkdir(exist_ok=True)
+                for filename, text in configs.items():
+                    (case_output / filename).write_text(text)
+                if len(samples) == args.warmups + args.repeats:
+                    measured = [s["wall_seconds"] for s in samples if not s["warmup"]]
+                    print(f"Skipping {name}: already complete ({args.repeats} measured sample(s))", flush=True)
                     entry = {"name": name, "resolution": resolution, "case": case, "ranks": ranks,
-                             "status": "pending",
-                             "input_sha256": tree_digest(list(template.iterdir()), template),
-                             "namelists": configs, "build": None, "samples": []}
+                             "status": "complete", "input_sha256": input_sha256,
+                             "namelists": configs, "build": previous.get("build") if previous else None,
+                             "samples": samples, "summary": summarize_samples(measured)}
                     report["cases"].append(entry)
-                    if isinstance(builds[key], Exception):
-                        error = builds[key]
-                        entry.update(status="failed", error=f"{type(error).__name__}: {error}")
-                    else:
-                        executable, build_info = builds[key]
-                        entry["build"] = build_info
-                        jobs.append((ranks, lambda e=entry, x=executable, t=template, o=case_output:
-                                     run_case(e, x, t, o)))
-        save()
-        # Complete all builds and template preparation before timed runs.
-        schedule(jobs, args.max_cores, args.parallel, control)
-        with (args.output / "samples.csv").open("w", newline="") as stream:
-            writer = csv.writer(stream)
-            writer.writerow(["case", "warmup", "wall_seconds", "simulated_years_per_wall_day"])
-            for entry in report["cases"]:
-                for sample in entry["samples"]:
-                    writer.writerow([entry["name"], sample["warmup"], sample["wall_seconds"],
-                                     sample["simulated_years_per_wall_day"]])
-        failed_cases = [entry for entry in report["cases"] if entry.get("status") == "failed"]
-        if failed_cases:
-            has_measured = any(not s["warmup"] for c in report["cases"] for s in c["samples"])
-            report["status"] = "partial" if has_measured else "failed"
-            report["error"] = "; ".join(f"{c['name']}: {c['error']}" for c in failed_cases)
-        else:
-            report["status"] = "complete"
-        save()
-    except BaseException as error:
-        report.update(status="failed", error=f"{type(error).__name__}: {error}")
-        save()
-        raise
+                    continue
+                lsg = case.startswith("lsg")
+                key = (resolution, lsg, ranks)
+                if key not in builds:
+                    print(f"Building {resolution}, {'LSG' if lsg else 'mixed'}, {ranks} rank(s)", flush=True)
+                    try:
+                        builds[key] = build(args, work, args.output, resolution, lsg, ranks, env)
+                    except Exception as error:
+                        print(f"  Build failed for {resolution}, {'LSG' if lsg else 'mixed'}, {ranks} rank(s): "
+                              f"{type(error).__name__}: {error}", flush=True)
+                        builds[key] = error
+                entry = {"name": name, "resolution": resolution, "case": case, "ranks": ranks,
+                         "status": "pending", "input_sha256": input_sha256,
+                         "namelists": configs, "build": None, "samples": samples}
+                measured = [s["wall_seconds"] for s in samples if not s["warmup"]]
+                if measured:
+                    entry["summary"] = summarize_samples(measured)
+                report["cases"].append(entry)
+                if isinstance(builds[key], Exception):
+                    error = builds[key]
+                    entry.update(status="failed", error=f"{type(error).__name__}: {error}")
+                else:
+                    executable, build_info = builds[key]
+                    entry["build"] = build_info
+                    jobs.append((ranks, lambda e=entry, x=executable, t=template, o=case_output:
+                                 run_case(e, x, t, o)))
+            save()
+            # Complete all builds and template preparation before timed runs.
+            schedule(jobs, args.max_cores, args.parallel, control)
+            with (args.output / "samples.csv").open("w", newline="") as stream:
+                writer = csv.writer(stream)
+                writer.writerow(["case", "warmup", "wall_seconds", "simulated_years_per_wall_day"])
+                for entry in report["cases"]:
+                    for sample in entry["samples"]:
+                        writer.writerow([entry["name"], sample["warmup"], sample["wall_seconds"],
+                                         sample["simulated_years_per_wall_day"]])
+            failed_cases = [entry for entry in report["cases"] if entry.get("status") == "failed"]
+            if failed_cases:
+                has_measured = any(not s["warmup"] for c in report["cases"] for s in c["samples"])
+                report["status"] = "partial" if has_measured else "failed"
+                report["error"] = "; ".join(f"{c['name']}: {c['error']}" for c in failed_cases)
+            else:
+                report["status"] = "complete"
+                report.pop("error", None)
+            save()
+        except BaseException as error:
+            report.update(status="failed", error=f"{type(error).__name__}: {error}")
+            save()
+            raise
     finally:
         if not args.keep_work:
             shutil.rmtree(work)

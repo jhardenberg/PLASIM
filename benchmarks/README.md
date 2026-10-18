@@ -233,7 +233,9 @@ python3 benchmarks/compare.py benchmarks/results/baseline \
 switch Git branches or change either checkout. Commit identifiers, tracked
 status, model-source digests, and actual runtime-input digests are recorded.
 The two checkouts need the same input layout and namelist options used by
-this protocol. Output directories must be new, preventing accidental overwrite.
+this protocol. An existing output directory is continued only if it contains a
+compatible `results.json` with identical settings, case selection, source,
+inputs, and environment; otherwise it is rejected to prevent accidental overwrite.
 
 The comparison requires compatible runner versions, recorded environments,
 compiler flags, workspace storage, timing/output settings, and runtime inputs. It compares only
@@ -268,9 +270,11 @@ component may have negligible whole-model impact.
   all warm-up/measured samples, wall-time median/min/max/standard deviation/MAD,
   throughput, component timers, and selected final-state summaries/hashes.
   `samples.csv`, build logs, stdout logs, and model diagnostic logs are retained.
-  Partial or failed result files are marked and can still be summarized or
-  compared for any cases that completed measured samples, while reporting
-  skipped or partial cases.
+  Re-running `benchmarks/run.py` on an output directory with an existing
+  `results.json` continues the run if all settings match, skipping completed
+  cases and already recorded samples. Partial or failed result files are marked
+  and can still be summarized or compared for any cases that completed measured
+  samples, while reporting skipped or partial cases.
 - **Sanity checks:** expected grid dimensions and atmosphere step count,
   finite selected state fields, actual MPI rank diagnostics, and LSG completion
   are required. Changed selected-state hashes are shown during comparison.
