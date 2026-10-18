@@ -251,18 +251,57 @@ class PlaSimTests(unittest.TestCase):
 
 
 class CalendarTests(unittest.TestCase):
-    def test_calendar_boundaries(self) -> None:
+    @classmethod
+    def setUpClass(cls) -> None:
         if shutil.which("gfortran") is None:
             raise unittest.SkipTest("gfortran is required")
-        with tempfile.TemporaryDirectory(prefix="plasim-calendar-") as directory:
-            work = Path(directory)
-            executable = work / "calendar_test"
+        temporary = tempfile.TemporaryDirectory(prefix="plasim-calendar-")
+        cls.addClassCleanup(temporary.cleanup)
+        cls.work = Path(temporary.name)
+        cls.executables = {}
+        for precision, flags in (("single", []), ("double", ["-fdefault-real-8"])):
+            build = cls.work / precision
+            build.mkdir()
+            executable = build / "calendar_test"
             command([
-                "gfortran", "-O0", "-o", str(executable),
+                "gfortran", "-O0", "-fcheck=all", *flags, "-o", str(executable),
                 str(SOURCE / "calmod.f90"),
                 str(ROOT / "tests" / "calendar_test.f90"),
-            ], cwd=work)
-            command([str(executable)], cwd=work)
+            ], cwd=build)
+            cls.executables[precision] = executable
+
+    def check_case(self, case: str) -> None:
+        for precision, executable in self.executables.items():
+            with self.subTest(precision=precision):
+                command([str(executable), case], cwd=self.work)
+
+    def test_calendar_boundaries(self) -> None:
+        self.check_case("dates")
+
+    def test_simplified_time_of_day(self) -> None:
+        self.check_case("time")
+
+    def test_simplified_perpetual_dates(self) -> None:
+        self.check_case("perpetual360")
+
+    def test_gregorian_perpetual_dates(self) -> None:
+        self.check_case("perpetual365")
+
+    def test_perpetual_monthly_interpolation(self) -> None:
+        self.check_case("interpolation")
+
+    def test_invalid_perpetual_days(self) -> None:
+        for precision, executable in self.executables.items():
+            for year_days in (360, 365, 660):
+                for day in (-1, 0, year_days + 1):
+                    with self.subTest(precision=precision, year_days=year_days, day=day):
+                        result = subprocess.run(
+                            [str(executable), "invalid", str(year_days), str(day)],
+                            cwd=self.work, text=True, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, timeout=10, check=False,
+                        )
+                        self.assertNotEqual(result.returncode, 0, result.stdout)
+                        self.assertIn("YDAY2MMDD: day of year out of range", result.stdout)
 
 
 if __name__ == "__main__":

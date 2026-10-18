@@ -105,6 +105,31 @@ To run only the MPI tests:
 python3 -m unittest discover -s tests -p 'test_mpi.py' -v
 ```
 
-Known gap: `cal2step` currently ignores hour and minute for the simplified
-360 day calendar, so the calendar test checks that path at midnight. This is
-a preexisting model issue to address separately.
+## Calendar tests
+
+[`calendar_test.f90`](calendar_test.f90) is compiled in both single and double
+precision with runtime bounds checking. Separate cases check calendar origins,
+month/year boundaries, Gregorian century rules, subdaily conversion, every
+perpetual date in 360-, 365-, and 660-day calendars, and monthly climatology
+interpolation (including December/January padding). Invalid perpetual days
+must stop with a clear range diagnostic.
+
+For simplified calendars, `cal2step` converts hours/minutes using the configured
+`solar_day` in seconds. Non-aligned positive times truncate to the preceding
+timestep. The inverse interface has only minute resolution, so exact round
+trips are tested where the timestep is representable in whole minutes,
+including a 48-hour solar day. Arbitrary planetary day lengths can lose
+subminute time in `step2cal30`.
+
+Gregorian perpetual dates deliberately use a fixed 365-day climatology:
+day 60 is March 1, independently of any earlier dated conversion. Ordinary
+Gregorian dates still include February 29 in leap years. Simplified perpetual
+dates use the configured equal-length months. These conventions also apply
+to the separate perpetual ocean and ice settings when they request monthly
+interpolation. Valid day numbers range from 1 to `n_days_per_year`.
+
+To run only the calendar tests:
+
+```sh
+python3 -m unittest discover -s tests -p test_model.py -k CalendarTests -v
+```
