@@ -871,6 +871,7 @@
       real, allocatable :: zprf11(:,:)
       real, allocatable :: zprf12(:,:)
       real, allocatable :: zcc(:,:)
+      real, allocatable :: zalb(:)
       real, allocatable :: zalb1(:)
       real, allocatable :: zalb2(:)
       real, allocatable :: zdtdte(:,:)
@@ -906,9 +907,12 @@
 
       if(ndiagcf > 0) then
        allocate(zcc(NHOR,NLEP))
+       allocate(zalb(NHOR))
        allocate(zalb1(NHOR))
        allocate(zalb2(NHOR))
        zcc(:,:)=dcc(:,:)
+!      SWR adjusts both broadband and spectral surface albedos.
+       zalb(:) = dalb(:)
        zalb1(:) = dsalb(1,:)
        zalb2(:) = dsalb(2,:)
        dcc(:,:)=0.
@@ -918,8 +922,10 @@
        dclforc(:,5)=dfu(:,1)
        dclforc(:,6)=dfu(:,NLEP)
        dcc(:,:)=zcc(:,:)
+       dalb(:) = zalb(:)
        dsalb(1,:) = zalb1(:)
        dsalb(2,:) = zalb2(:)
+       deallocate(zalb)
        deallocate(zalb1)
        deallocate(zalb2)
       end if

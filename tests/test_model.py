@@ -104,7 +104,7 @@ def build_model(build: Path, *, lsg: bool = False, ranks: int = 1) -> Path:
     return build / "plasim.x"
 
 
-def prepare_run(work: Path, name: str, *, days: int) -> Path:
+def prepare_run(work: Path, name: str, *, days: int, steps: int = 0) -> Path:
     run = work / name
     run.mkdir()
     for source in BOUNDARY_DATA.iterdir():
@@ -115,7 +115,7 @@ def prepare_run(work: Path, name: str, *, days: int) -> Path:
         )
     (run / "plasim_namelist").write_text(
         "&plasim_nl\n"
-        f" n_run_years=0, n_run_months=0, n_run_days={days}, "
+        f" n_run_years=0, n_run_months=0, n_run_days={days}, n_run_steps={steps}, "
         "kick=0, ngui=0, seed=1\n/\n", encoding="ascii",
     )
     return run
@@ -182,6 +182,59 @@ class PlaSimTests(unittest.TestCase):
             (split / "plasim_status").read_bytes(),
             (self.continuous / "plasim_status").read_bytes(),
         )
+
+    def check_cloud_diagnostics(self, *, spectral: bool) -> None:
+        name = "spectral" if spectral else "classic"
+        reference = self.continuous
+        if spectral:
+            reference = self.prepare_run(f"{name}-cloud-off", days=2)
+            (reference / "radmod_namelist").write_text(
+                "&radmod_nl\n nstartemp=1\n/\n", encoding="ascii"
+            )
+            self.run_model(reference)
+
+        diagnostic = self.prepare_run(f"{name}-cloud-on", days=2)
+        shutil.copy2(reference / "radmod_namelist", diagnostic)
+        namelist = diagnostic / "plasim_namelist"
+        namelist.write_text(
+            namelist.read_text(encoding="ascii").replace(
+                "&plasim_nl\n", "&plasim_nl\n ndiagcf=1,\n"
+            ), encoding="ascii",
+        )
+        self.run_model(diagnostic)
+
+        # Cloud diagnostic fields are output separately, not saved in restart.
+        # Every saved state record should therefore be unchanged in this build.
+        expected = records(reference / "plasim_status")
+        actual = records(diagnostic / "plasim_status")
+        self.assertEqual(actual.keys(), expected.keys())
+        for field in expected:
+            with self.subTest(radiation=name, field=field):
+                self.assertTrue(actual[field] == expected[field],
+                                f"{field} changed when cloud diagnostics were enabled")
+
+        # Catch disabling the diagnostic calculation or replacing it with zeros.
+        nonzero_codes = set()
+        with (diagnostic / "plasim_output").open("rb") as stream:
+            while (header := _record(stream)) is not None:
+                self.assertEqual(len(header), 32)
+                code, _, _, _, nlon, nlat, _, _ = struct.unpack("=8i", header)
+                data = _record(stream)
+                self.assertIsNotNone(data)
+                if 101 <= code <= 107:
+                    self.assertEqual((nlon, nlat), (64, 32))
+                    self.assertEqual(len(data), nlon * nlat * 4)
+                    values = struct.unpack(f"={nlon * nlat}f", data)
+                    self.assertTrue(all(map(math.isfinite, values)), code)
+                    if any(value != 0.0 for value in values):
+                        nonzero_codes.add(code)
+        self.assertEqual(nonzero_codes, set(range(101, 108)))
+
+    def test_classic_cloud_diagnostics_preserve_state(self) -> None:
+        self.check_cloud_diagnostics(spectral=False)
+
+    def test_spectral_cloud_diagnostics_preserve_state(self) -> None:
+        self.check_cloud_diagnostics(spectral=True)
 
     def test_spectral_restart_matches_continuous_run(self) -> None:
         continuous = self.prepare_run("spectral-continuous", days=2)
@@ -358,18 +411,57 @@ class PlaSimTests(unittest.TestCase):
 
 
 class CalendarTests(unittest.TestCase):
-    def test_calendar_boundaries(self) -> None:
+    @classmethod
+    def setUpClass(cls) -> None:
         if shutil.which("gfortran") is None:
             raise unittest.SkipTest("gfortran is required")
-        with tempfile.TemporaryDirectory(prefix="plasim-calendar-") as directory:
-            work = Path(directory)
-            executable = work / "calendar_test"
+        temporary = tempfile.TemporaryDirectory(prefix="plasim-calendar-")
+        cls.addClassCleanup(temporary.cleanup)
+        cls.work = Path(temporary.name)
+        cls.executables = {}
+        for precision, flags in (("single", []), ("double", ["-fdefault-real-8"])):
+            build = cls.work / precision
+            build.mkdir()
+            executable = build / "calendar_test"
             command([
-                "gfortran", "-O0", "-o", str(executable),
+                "gfortran", "-O0", "-fcheck=all", *flags, "-o", str(executable),
                 str(SOURCE / "calmod.f90"),
                 str(ROOT / "tests" / "calendar_test.f90"),
-            ], cwd=work)
-            command([str(executable)], cwd=work)
+            ], cwd=build)
+            cls.executables[precision] = executable
+
+    def check_case(self, case: str) -> None:
+        for precision, executable in self.executables.items():
+            with self.subTest(precision=precision):
+                command([str(executable), case], cwd=self.work)
+
+    def test_calendar_boundaries(self) -> None:
+        self.check_case("dates")
+
+    def test_simplified_time_of_day(self) -> None:
+        self.check_case("time")
+
+    def test_simplified_perpetual_dates(self) -> None:
+        self.check_case("perpetual360")
+
+    def test_gregorian_perpetual_dates(self) -> None:
+        self.check_case("perpetual365")
+
+    def test_perpetual_monthly_interpolation(self) -> None:
+        self.check_case("interpolation")
+
+    def test_invalid_perpetual_days(self) -> None:
+        for precision, executable in self.executables.items():
+            for year_days in (360, 365, 660):
+                for day in (-1, 0, year_days + 1):
+                    with self.subTest(precision=precision, year_days=year_days, day=day):
+                        result = subprocess.run(
+                            [str(executable), "invalid", str(year_days), str(day)],
+                            cwd=self.work, text=True, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, timeout=10, check=False,
+                        )
+                        self.assertNotEqual(result.returncode, 0, result.stdout)
+                        self.assertIn("YDAY2MMDD: day of year out of range", result.stdout)
 
 
 if __name__ == "__main__":
