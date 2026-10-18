@@ -241,6 +241,7 @@
       call mpbcr(tau_soil)
       call mpbcr(rinifor)
       call mpbcr(rnbiocats)
+      call mpbcr(soilcap)
       call mpbcrn(dsoilz,NLSOIL)
 
       call mpbcrn(dsnowalbmn,2)

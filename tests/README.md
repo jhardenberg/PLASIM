@@ -90,6 +90,26 @@ diagnostic lists ranks 0 and 1 and that both two-day runs reach the expected
 final step. The mixed-layer and coupled LSG configurations each have a
 separate serial reference run with identical input files.
 
+An additional mixed-layer MPI test uses nondefault soil heat capacity
+(`soilcap=1.2e6`), tidally locked illumination, and a substellar longitude
+of 90 degrees instead of the default 180 degrees. The three cases share
+one serial build and one MPI build. Each case is compared with its matching
+serial reference after one timestep and after two days, including soil
+temperature, surface albedos, ocean state, and atmospheric spectral fields.
+The startup comparison uses the existing strict limits (`atol=1e-10`,
+`rtol=1e-8`) and catches all three omissions in the unfixed code.
+
+For these new nondefault cases only, the two-day comparison uses
+`atol=1e-8`, `rtol=1e-6`. Ubuntu/GNU Fortran 13 passes the strict startup
+checks but develops differences around `1.5e-5 K` in surface temperature,
+`2.3e-9` in humidity, and `9e-9` in albedo by day two. This is consistent
+with growth of reduction roundoff in nonlinear calculations. The longer-run
+limits allow small drift (about `0.0003 K` at 300 K), while the strict
+startup checks independently protect parameter distribution. Serial controls
+also check that each input changes the solution, including the longitude
+shift. These tests exercise the shared initialization through Earth; Mars
+and Exo setups are not run.
+
 Every value in selected gridpoint and global spectral fields is compared
 with the serial reference, with absolute tolerance `1e-10` and relative
 tolerance `1e-8` for double-precision restart data. For LSG this includes the
