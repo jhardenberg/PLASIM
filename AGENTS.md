@@ -11,6 +11,7 @@ coupling. Read `README.md` and `tests/README.md` before changing a workflow.
 - `most.c` and `configure.sh`: model configuration and build setup.
 - `postprocessor` and `scripts`: output conversion and experiment helpers.
 - `tests`: Python `unittest` regression tests and reference data.
+- `plasim/doc`: Sphinx/MyST user documentation, runnable examples, and historical manuals.
 
 Edit permanent sources, not generated copies in `plasim/bld`, `plasim/bin`, or
 `plasim/run`. Build and run tests in temporary directories. Do not commit
@@ -63,6 +64,22 @@ Report any checks that could not be completed and why.
 
 ## Documentation and changelog
 
+- Update the affected Sphinx documentation in `plasim/doc` in the same PR
+  as user-visible developments: features, commands, dependencies, namelist
+  parameters/defaults/units, calendars, output, restart compatibility, and
+  testing workflows. Check the manual even when the code change is small;
+  when no documentation update is needed, explain why in the PR description.
+- Consult `plasim/doc/outline.md` and `plasim/doc/sources.md` for migration
+  coverage. Update existing chapters and examples as behavior changes; for
+  material not yet migrated, update the relevant repository guide and record
+  the remaining work in the outline. Keep coverage and source attribution
+  current. The scientific Reference Manual remains outside this migration
+  phase unless explicitly requested.
+- Follow `plasim/doc/building.md` when editing the manual. Run the strict
+  Sphinx HTML build with warnings treated as errors, check links, and run
+  affected examples when commands or behavior change. Edit MyST sources and
+  example scripts, not generated `_build` files; use `literalinclude` to keep
+  displayed examples consistent with the runnable files.
 - Include a `CHANGELOG.md` update in every PR that changes model behavior,
   fixes, tests, build/tooling, or significant documentation or workflows.
   Before opening or updating a PR, explicitly check that its changes are
