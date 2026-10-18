@@ -126,13 +126,39 @@ final step. The mixed-layer and coupled LSG configurations each have a
 separate serial reference run with identical input files.
 
 Every value in selected gridpoint and global spectral fields is compared
-with the serial reference, with absolute tolerance `1e-10` and relative
-tolerance `1e-8` for double-precision restart data. For LSG this includes the
-heat flux returned to PlaSim and all dated ocean Service fields, using
-absolute tolerance `1e-5` and relative tolerance `1e-6` for the latter's
-32-bit output. This allows roundoff from MPI reductions while checking data
-distribution and flux exchange. MPI restart consistency, other rank counts,
-and scaling performance are not covered by these tests.
+with the serial reference. The mixed-layer case uses pointwise absolute
+tolerance `1e-10` and relative tolerance `1e-8` for double-precision restart
+data. The coupled LSG atmosphere, including the returned `yfldo` heat flux,
+uses both a maximum-error bound and an RMS-error bound:
+
+```text
+max(abs(MPI - serial)) <= 1e-10 + 1e-8 * max(abs(serial))
+RMS(MPI - serial)      <= 1e-10 + 1e-8 * RMS(serial)
+```
+
+The serial Legendre transform pairs opposite latitudes, while the parallel
+transform sums rank-local contributions. These different summation orders
+introduce roundoff, which the coupled heat-flux calculation can amplify.
+With the new fixed-orbit defaults, Linux CI exceeded the former pointwise
+limits in albedo, two spectral fields, and returned heat flux, although
+the serial regression, restart equality, and ocean-output comparisons
+passed. Relative errors at individual small coefficients are a poor measure
+of the error in the whole field. The coupled criterion therefore scales the
+maximum error by the field maximum, while the additional RMS bound prevents
+a large maximum from hiding a distributed bias. This changes the coupled
+MPI acceptance criterion; it does not change the physical model or saved
+reference tolerances. Small comparison tests check that it rejects both a
+localized corruption and a distributed bias.
+
+Diagnostic one-, two-, and four-rank runs on macOS/GNU Fortran 15.2.0
+confirmed growth of coupled roundoff over two ocean steps. For two ranks,
+the largest returned-heat-flux difference after two days was about
+`7.6e-10 W/m2`, with a serial field maximum near `2646 W/m2`; Linux CI had
+reported a `1.5e-7 W/m2` difference at a point near `-6.76 W/m2`.
+The dated LSG Service fields retain their pointwise absolute tolerance
+`1e-5` and relative tolerance `1e-6` for 32-bit output. MPI restart
+consistency and scaling performance are not covered; CI exercises two
+ranks, while the four-rank run was a local diagnostic.
 
 To run only the MPI tests:
 
