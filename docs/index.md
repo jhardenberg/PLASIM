@@ -1,6 +1,6 @@
-# PlaSim TNG user and developer manual
+# PlaSIm-LSG TNG user and developer manual
 
-**PlaSim TNG (The Next Generation)** builds on and improves the original
+**PlaSIm-LSG TNG (The Next Generation)** builds on and improves the original
 Planet Simulator (PlaSim), a general circulation model for meteorology,
 climatology, and planetary experiments. This manual documents the version
 maintained in the **[jhardenberg/PLASIM repository](https://github.com/jhardenberg/PLASIM)**.
@@ -20,7 +20,7 @@ scientific Reference Manual and its equation set are outside this phase.
 ```
 
 Start with {doc}`user/most`. **MoSt (`most.x`) is the recommended way to
-compile PlaSim TNG**, using either its graphical interface or its headless
+compile PlaSIm-LSG TNG**, using either its graphical interface or its headless
 configuration-file option.
 
 ```{toctree}

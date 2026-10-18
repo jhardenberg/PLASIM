@@ -1,8 +1,8 @@
 # Introduction
 
-**PlaSim TNG (The Next Generation)** is an independently maintained
+**PlaSIm-LSG TNG (The Next Generation)** is an independently maintained
 development of the original Planet Simulator (PlaSim). The original model
-was created at the University of Hamburg; PlaSim TNG is developed separately
+was created at the University of Hamburg; PlaSIm-LSG TNG is developed separately
 and builds on and improves that model for climate and planetary experiments.
 
 This guide applies specifically to the version in the
@@ -11,7 +11,7 @@ Several PlaSim versions exist; their features and settings can differ.
 The shorter name “PlaSim” elsewhere in this guide refers to this version
 unless a historical source is explicitly identified.
 
-## What is new in PlaSim TNG?
+## What is new in PlaSIm-LSG TNG?
 
 - **More flexibility beyond Earth:** expanded planetary settings, radiation
   for different kinds of stars, and illumination for worlds that always

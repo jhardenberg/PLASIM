@@ -2,7 +2,7 @@
 
 ## Project and layout
 
-PlaSim TNG (The Next Generation) is a Fortran climate model with a mixed-layer
+PlaSIm-LSG TNG (The Next Generation) is a Fortran climate model with a mixed-layer
 ocean and optional LSG coupling. Use this name for the maintained model while
 preserving historical attributions and existing file/command names.
 Read `README.md` and `tests/README.md` before changing a workflow.
