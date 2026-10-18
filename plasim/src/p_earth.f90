@@ -27,7 +27,7 @@ yplanet = "Earth"    ! Planet name
 
 eccen         =     0.016715  ! Eccentricity (AMIP-II value)
 mvelp         =   102.7       ! Longitude of perihelion
-nfixorb       =     0          ! use Berger orbits
+nfixorb       =     1          ! Use prescribed fixed orbital elements
 obliq         =    23.441     ! Obliquity [deg] (AMIP-II)
 rotspd        =     1.0       ! Rotation speed (factor)
 sidereal_day  =    86164.0916 !      23h 56m 04s
