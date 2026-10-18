@@ -29,6 +29,14 @@ The fixed random seed is needed for the restart comparisons. These tests
 exercise the serial model; additional MPI coverage is described below. T42
 tests remain separate follow-up work.
 
+Two additional two-day serial runs enable cloud radiative diagnostics
+(`ndiagcf=1`), one with classic radiation and one with spectral radiation.
+Every restart record must match the corresponding diagnostic-off run byte
+for byte within the same build. The tests also read the seven clear-sky
+flux diagnostics (Service codes 101–107) and require finite values and
+nonzero output for each code, so disabling diagnostic output cannot satisfy
+the state-invariance check.
+
 The numerical baselines come from the current `master` model, built with
 `gfortran -O0 -fdefault-real-8`. They are intentionally tolerant of small
 compiler and platform differences. A passing test supports short run
