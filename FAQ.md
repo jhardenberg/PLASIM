@@ -2,6 +2,8 @@
 
 These answers update the older `FAQ` for the current PlaSim-focused repository. For the supported workflows, start with the [README](README.md) and the [Planet Simulator User's Guide](plasim/doc/PS_UsersGuide.pdf).
 
+A [worked headless Earth chapter](plasim/doc/running/headless.md) is now available in the developing Sphinx manual. It compiles and runs a serial T21/L10 model directly without MoSt or X11; see the [documentation build instructions](plasim/doc/building.md) for the HTML version.
+
 ## `configure.sh` cannot find `make`, Fortran, or another compiler. What do I need?
 
 Install a C compiler, a C++ compiler, a Fortran 90 compiler such as `gfortran`, and `make` (or `gmake`). The graphical MoSt build also needs X11 development headers and libraries. Some Linux distributions do not install development packages by default. MPI compiler wrappers and a launcher are optional for parallel runs. The serial test suite only needs Python 3, `gfortran`, `cc`, and `make`.

@@ -1,0 +1,60 @@
+name: PlaSim documentation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'plasim/doc/**'
+      - 'plasim/src/**'
+      - 'plasim/dat/T21/**'
+      - 'README.md'
+      - 'FAQ.md'
+      - 'CHANGELOG.md'
+      - 'tests/README.md'
+      - 'scripts/README_burn.txt'
+      - 'postprocessor/README_POSTPROCESSOR'
+      - '.github/workflows/docs.yml'
+  push:
+    branches: [master, main]
+    paths:
+      - 'plasim/doc/**'
+      - 'plasim/src/**'
+      - 'plasim/dat/T21/**'
+      - 'README.md'
+      - 'FAQ.md'
+      - 'CHANGELOG.md'
+      - 'tests/README.md'
+      - 'scripts/README_burn.txt'
+      - 'postprocessor/README_POSTPROCESSOR'
+      - '.github/workflows/docs.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  documentation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install documentation dependencies and compilers
+        run: |
+          python -m pip install -r plasim/doc/requirements.txt
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential gfortran
+      - name: Build HTML and LaTeX sources
+        run: |
+          python -m sphinx -W --keep-going -n -b html plasim/doc plasim/doc/_build/html
+          python -m sphinx -W --keep-going -n -b latex plasim/doc plasim/doc/_build/latex
+      - name: Run the documented example
+        run: bash plasim/doc/examples/headless-earth.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plasim-documentation-html
+          path: plasim/doc/_build/html

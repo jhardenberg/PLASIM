@@ -1,0 +1,7 @@
+/* Keep wide parameter tables and equations usable in narrow preview panels. */
+table.docutils,
+div.math {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+}

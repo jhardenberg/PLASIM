@@ -7,6 +7,8 @@ PlaSim is the Planet Simulator, a general circulation model used in meteorology 
 
 Running and interpreting the model requires some knowledge of meteorology and climatology, as well as familiarity with Linux, C, and Fortran. Start with the [Planet Simulator User's Guide](plasim/doc/PS_UsersGuide.pdf) and [Reference Manual](plasim/doc/PS_ReferenceManual.pdf). See also the [FAQ](FAQ.md) and [changelog](CHANGELOG.md).
 
+New [Sphinx user documentation](plasim/doc/index.md) is being developed alongside the historical manuals. The first installment provides a [manual outline](plasim/doc/outline.md) and a [two-day headless Earth example](plasim/doc/running/headless.md). See [build instructions](plasim/doc/building.md) to preview the searchable HTML locally; the scientific Reference Manual is outside this migration phase.
+
 ## Features in this repository
 
 - Model tuning described in Angeloni et al. (submitted to GMD).

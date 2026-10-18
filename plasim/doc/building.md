@@ -1,0 +1,90 @@
+# Build and maintain the documentation
+
+The documentation sources live in `plasim/doc`, beside the original PDFs.
+Chapters use MyST Markdown with Sphinx roles and directives for navigation,
+equations, references, downloads, and source-code inclusion. The initial
+HTML theme is Sphinx's built-in Alabaster theme.
+
+## Build HTML locally
+
+Use Python 3.11 or newer. From the repository root:
+
+```sh
+python3 -m venv plasim/doc/.venv
+plasim/doc/.venv/bin/python -m pip install -r plasim/doc/requirements.txt
+plasim/doc/.venv/bin/python -m sphinx -W --keep-going -n -b html plasim/doc plasim/doc/_build/html
+```
+
+Open `plasim/doc/_build/html/index.html` in a browser. For a local web preview:
+
+```sh
+python3 -m http.server --bind 127.0.0.1 --directory plasim/doc/_build/html 8000
+```
+
+Visit `http://127.0.0.1:8000` and stop the server with Ctrl-C. MathJax renders
+HTML equations; the default renderer loads from a CDN, so equations need
+network access on first viewing. Building the HTML itself does not execute
+the model or need a compiler.
+
+The virtual environment and generated documentation are ignored by Git.
+The root README/FAQ and other source downloads are copied automatically by
+Sphinx's `download` role; no duplicate editable copies are maintained.
+
+## Check links and the worked example
+
+The strict HTML command above checks cross-references and local download
+targets. Check external links separately when network access is available:
+
+```sh
+plasim/doc/.venv/bin/python -m sphinx -W --keep-going -b linkcheck plasim/doc plasim/doc/_build/linkcheck
+bash -n plasim/doc/examples/headless-earth.sh
+bash plasim/doc/examples/headless-earth.sh
+git diff --check
+```
+
+The example requires `gfortran`, `cc`, and `make`. It creates and retains a
+fresh temporary workspace rather than writing build/run files into the
+checkout. Inspect it before removing that workspace when finished.
+
+The documentation workflow builds HTML and LaTeX sources with warnings
+treated as errors, runs this exact example, and uploads the HTML as a CI
+artifact. It does not publish a public site. The model's broader regression
+suite remains a separate workflow; see the {download}`test guide
+<../../tests/README.md>` for its scope and invocation.
+
+## LaTeX and future PDF builds
+
+Generate LaTeX sources without a TeX installation:
+
+```sh
+plasim/doc/.venv/bin/python -m sphinx -W --keep-going -n -b latex plasim/doc plasim/doc/_build/latex
+```
+
+A complete PDF build additionally needs a TeX toolchain and `latexmk`:
+
+```sh
+plasim/doc/.venv/bin/python -m sphinx -M latexpdf plasim/doc plasim/doc/_build -W --keep-going -n
+```
+
+LaTeX-source generation alone does not verify a compiled PDF's layout.
+PDF publication and visual review are follow-up work for the larger manual.
+
+## Add or update a chapter
+
+1. Update the coverage status in {doc}`outline` and add the page to the
+   `index.md` toctree when it is ready for readers.
+2. Give parameters their file/group, type, units, current default, and
+   configuration scope. Identify input migrations and distinguish compiled
+   settings from runtime controls.
+3. Add provenance in the chapter and update {doc}`sources` when needed.
+   Check behavior against current code rather than copying old defaults.
+4. Keep executable examples in `examples/` and include them with
+   `literalinclude`, so the displayed procedure and the executed file agree.
+5. Run the strict build and affected examples. Review navigation, equations,
+   tables, and code blocks in a browser. Add a changelog entry for significant
+   documentation changes.
+
+Sphinx configuration is in `conf.py`; Python dependencies are bounded to
+compatible major versions in `requirements.txt`. The authoring references
+are the [Sphinx guide](https://www.sphinx-doc.org/en/master/usage/quickstart.html)
+and [MyST syntax guide](https://myst-parser.readthedocs.io/en/stable/syntax/roles-and-directives.html).
