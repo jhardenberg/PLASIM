@@ -53,37 +53,64 @@ class SchedulerTests(unittest.TestCase):
             run.schedule([(4, lambda: None)], 2, True, control)
         run.schedule([], 2, True, control)
 
-    def test_failure_and_interrupt_stop_active_process(self):
-        for error in (RuntimeError('deliberate failure'), KeyboardInterrupt()):
-            with self.subTest(error=type(error).__name__), tempfile.TemporaryDirectory() as directory:
-                directory = Path(directory)
-                control = run.ExecutionControl()
-                started = threading.Event()
-                original_start = control.start
+    def test_interrupt_stops_active_process(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            control = run.ExecutionControl()
+            started = threading.Event()
+            original_start = control.start
 
-                def start(*args, **kwargs):
-                    process = original_start(*args, **kwargs)
-                    started.set()
-                    return process
+            def start(*args, **kwargs):
+                process = original_start(*args, **kwargs)
+                started.set()
+                return process
 
-                control.start = start
+            control.start = start
 
-                def sleeper():
-                    run.execute([sys.executable, '-c', 'import time; time.sleep(60)'],
-                                directory, directory / 'sleep.log', os.environ.copy(), 30, control)
+            def sleeper():
+                run.execute([sys.executable, '-c', 'import time; time.sleep(60)'],
+                            directory, directory / 'sleep.log', os.environ.copy(), 30, control)
 
-                def fail():
-                    self.assertTrue(started.wait(5))
-                    raise error
+            def interrupt():
+                self.assertTrue(started.wait(5))
+                raise KeyboardInterrupt()
 
-                begin = time.monotonic()
-                with self.assertRaises(type(error)):
-                    run.schedule([(1, sleeper), (1, fail)], 2, True, control)
-                self.assertLess(time.monotonic() - begin, 10)
-                self.assertTrue(control.cancelled)
-                self.assertFalse(control.processes)
-                with self.assertRaisesRegex(RuntimeError, 'cancelled'):
-                    control.start([sys.executable, '-c', 'pass'])
+            begin = time.monotonic()
+            with self.assertRaises(KeyboardInterrupt):
+                run.schedule([(1, sleeper), (1, interrupt)], 2, True, control)
+            self.assertLess(time.monotonic() - begin, 10)
+            self.assertTrue(control.cancelled)
+            self.assertFalse(control.processes)
+            with self.assertRaisesRegex(RuntimeError, 'cancelled'):
+                control.start([sys.executable, '-c', 'pass'])
+
+    def test_job_failure_allows_remaining_jobs_to_finish(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            control = run.ExecutionControl()
+            started = threading.Event()
+            completed = []
+
+            def active_job():
+                started.set()
+                run.execute([sys.executable, '-c', 'import time; time.sleep(0.1)'],
+                            directory, directory / 'active.log', os.environ.copy(), 10, control)
+                completed.append('active')
+
+            def failing_job():
+                self.assertTrue(started.wait(5))
+                raise RuntimeError('Command timed out after 3600s')
+
+            def pending_job():
+                completed.append('pending')
+
+            errors = run.schedule([(1, active_job), (1, failing_job), (2, pending_job)],
+                                  2, True, control)
+            self.assertEqual(len(errors), 1)
+            self.assertIn('timed out', str(errors[0]))
+            self.assertCountEqual(completed, ['active', 'pending'])
+            self.assertFalse(control.cancelled)
+            self.assertFalse(control.processes)
 
     def test_timeout(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -136,6 +163,22 @@ class ComparisonTests(unittest.TestCase):
             compare.summary(self.report())
         self.assertIn('isolated MPI scaling is not reported', stream.getvalue())
         self.assertIn('n/a', stream.getvalue())
+
+    def test_partial_report_comparison_omits_unmeasured_cases(self):
+        baseline = self.report()
+        baseline['settings']['parallel'] = False
+        second = copy.deepcopy(baseline['cases'][0])
+        second['name'] = 'T42-mixed-p1'
+        baseline['cases'].append(second)
+        candidate = copy.deepcopy(baseline)
+        candidate.update(status='partial', error='T42-mixed-p1: RuntimeError: Command timed out')
+        candidate['cases'][1]['status'] = 'failed'
+        candidate['cases'][1]['samples'] = [dict(warmup=True, wall_seconds=10, state={'fields': {}}, timers={})]
+        stream = io.StringIO()
+        with contextlib.redirect_stdout(stream):
+            rows = compare.compare(baseline, candidate, False)
+        self.assertEqual([r['case'] for r in rows], ['T21-mixed-p1'])
+        self.assertIn('Skipping cases without measured samples: T42-mixed-p1', stream.getvalue())
 
 
 class MultiReportSummaryTests(unittest.TestCase):
@@ -226,10 +269,38 @@ class MultiReportSummaryTests(unittest.TestCase):
             self.assertEqual(exported['kind'], 'benchmark_summary')
             self.assertEqual(exported['cases'][1]['efficiency_percent'], 100)
             self.assertEqual(exported['reports'], [str(serial), str(mpi)])
-            # Without --summary, two inputs still mean source-revision comparison.
+            # Without --summary, two inputs with matching ranks still mean source-revision comparison.
             with patch.object(sys, 'argv', ['compare.py', str(serial), str(serial)]), \
                     contextlib.redirect_stdout(io.StringIO()):
                 compare.main()
+
+    def test_partial_or_failed_mpi_report_loads_and_summarizes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            serial_path, mpi_path, empty_path = [directory / name for name in ('serial.json', 'mpi.json', 'empty.json')]
+            serial = self.report(1, 80)
+            mpi = self.report(2, 40)
+            failed_case = copy.deepcopy(mpi['cases'][0])
+            failed_case.update(name='T42-mixed-p2', resolution='T42', samples=[])
+            warmup_only = copy.deepcopy(mpi['cases'][0])
+            warmup_only.update(name='T42-lsg-p2', resolution='T42', case='lsg',
+                               samples=[dict(warmup=True, wall_seconds=100, state={'fields': {}}, timers={})])
+            mpi['cases'].extend([failed_case, warmup_only])
+            mpi.update(status='failed', error='RuntimeError: Command timed out after 3600s')
+            serial_path.write_text(compare.json.dumps(serial))
+            mpi_path.write_text(compare.json.dumps(mpi))
+            stream = io.StringIO()
+            # Two disjoint-rank files without --summary automatically produce a combined summary.
+            with patch.object(sys, 'argv', ['compare.py', str(serial_path), str(mpi_path)]), \
+                    contextlib.redirect_stdout(stream):
+                compare.main()
+            self.assertIn('Skipping cases without measured samples: T42-mixed-p2, T42-lsg-p2', stream.getvalue())
+            self.assertIn('2.000x', stream.getvalue())
+            empty = copy.deepcopy(mpi)
+            empty['cases'] = [failed_case, warmup_only]
+            empty_path.write_text(compare.json.dumps(empty))
+            with self.assertRaisesRegex(ValueError, 'No completed measured samples'):
+                compare.load(empty_path)
 
 
 if __name__ == '__main__':

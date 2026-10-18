@@ -136,12 +136,13 @@ def execute(command: list[str], cwd: Path, log: Path, env: dict, timeout: int,
     return elapsed
 
 
-def schedule(jobs, max_cores: int, parallel: bool, control: ExecutionControl):
+def schedule(jobs, max_cores: int, parallel: bool, control: ExecutionControl) -> list[Exception]:
     """Run (core cost, callable) jobs without exceeding the shared rank budget."""
     pending = list(jobs)
     if any(cost < 1 or cost > max_cores for cost, _ in pending):
         raise ValueError("Every job must fit within the core budget")
     workers = min(len(pending), max_cores) if parallel else 1
+    errors = []
     with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
         active = {}
         used = 0
@@ -158,12 +159,16 @@ def schedule(jobs, max_cores: int, parallel: bool, control: ExecutionControl):
                 done, _ = wait(active, return_when=FIRST_COMPLETED)
                 for future in done:
                     used -= active.pop(future)
-                    future.result()
+                    try:
+                        future.result()
+                    except Exception as error:
+                        errors.append(error)
         except BaseException:
             control.cancel()
             for future in active:
                 future.cancel()
             raise
+    return errors
 
 
 def read_records(path: Path) -> dict[str, bytes]:
@@ -436,47 +441,67 @@ def main():
 
     control = ExecutionControl()
 
+    def summarize_samples(measured: list[float]) -> dict:
+        median = statistics.median(measured)
+        return {"median_wall_seconds": median, "min_wall_seconds": min(measured),
+                "max_wall_seconds": max(measured),
+                "stdev_wall_seconds": statistics.stdev(measured) if len(measured) > 1 else None,
+                "median_absolute_deviation_seconds": statistics.median(abs(t-median) for t in measured),
+                "simulated_years_per_wall_day": (args.days/360)*86400/median}
+
     def run_case(entry, executable, template, case_output):
         name, resolution, ranks = entry["name"], entry["resolution"], entry["ranks"]
         lsg = entry["case"].startswith("lsg")
-        for index in range(args.warmups + args.repeats):
-            warmup = index < args.warmups
-            label = f"{'warmup' if warmup else 'sample'}-{index+1:02d}"
-            run = work / f"{name}-{label}"
-            shutil.copytree(template, run)
-            command = ([*args.launcher, "-n", str(ranks)] if ranks > 1 else []) + [str(executable)]
-            print(f"Running {name}: {label}, {args.days} simulated days", flush=True)
-            started_utc = datetime.now(timezone.utc).isoformat()
-            try:
-                wall = execute(command, run, case_output / (label + ".stdout.log"), env, args.timeout, control)
-            finally:
-                if (run / "plasim_diag").exists():
-                    shutil.copy2(run / "plasim_diag", case_output / (label + ".diag.log"))
-            finished_utc = datetime.now(timezone.utc).isoformat()
-            diag = (run / "plasim_diag").read_text(errors="replace")
-            if ranks > 1:
-                seen = {int(r) for r in re.findall(r"^\* CPU\s+(\d+)", diag, re.M)}
-                if seen != set(range(ranks)):
-                    raise RuntimeError(f"Unexpected MPI rank diagnostics: {seen}")
-            state = state_summary(run, resolution, args.days, lsg, args.coupling_days, diag)
-            sample = {"warmup": warmup, "wall_seconds": wall,
-                      "started_utc": started_utc, "finished_utc": finished_utc,
-                      "simulated_years_per_wall_day": (args.days/360)*86400/wall,
-                      "command": command, "timers": timers(diag), "state": state}
-            with report_lock:
-                entry["samples"].append(sample)
-                save()
-            if not args.keep_work:
-                shutil.rmtree(run)
-        measured = [s["wall_seconds"] for s in entry["samples"] if not s["warmup"]]
-        median = statistics.median(measured)
-        summary = {"median_wall_seconds": median, "min_wall_seconds": min(measured),
-                   "max_wall_seconds": max(measured),
-                   "stdev_wall_seconds": statistics.stdev(measured) if len(measured) > 1 else None,
-                   "median_absolute_deviation_seconds": statistics.median(abs(t-median) for t in measured),
-                   "simulated_years_per_wall_day": (args.days/360)*86400/median}
-        print(f"  {name}: median {median:.3f} s, range {min(measured):.3f}–{max(measured):.3f} s", flush=True)
         with report_lock:
+            entry["status"] = "running"
+            save()
+        try:
+            for index in range(args.warmups + args.repeats):
+                warmup = index < args.warmups
+                label = f"{'warmup' if warmup else 'sample'}-{index+1:02d}"
+                run = work / f"{name}-{label}"
+                shutil.copytree(template, run)
+                command = ([*args.launcher, "-n", str(ranks)] if ranks > 1 else []) + [str(executable)]
+                print(f"Running {name}: {label}, {args.days} simulated days", flush=True)
+                started_utc = datetime.now(timezone.utc).isoformat()
+                try:
+                    wall = execute(command, run, case_output / (label + ".stdout.log"), env, args.timeout, control)
+                    finished_utc = datetime.now(timezone.utc).isoformat()
+                    diag = (run / "plasim_diag").read_text(errors="replace")
+                    if ranks > 1:
+                        seen = {int(r) for r in re.findall(r"^\* CPU\s+(\d+)", diag, re.M)}
+                        if seen != set(range(ranks)):
+                            raise RuntimeError(f"Unexpected MPI rank diagnostics: {seen}")
+                    state = state_summary(run, resolution, args.days, lsg, args.coupling_days, diag)
+                finally:
+                    if (run / "plasim_diag").exists():
+                        shutil.copy2(run / "plasim_diag", case_output / (label + ".diag.log"))
+                    if not args.keep_work and run.exists():
+                        shutil.rmtree(run)
+                sample = {"warmup": warmup, "wall_seconds": wall,
+                          "started_utc": started_utc, "finished_utc": finished_utc,
+                          "simulated_years_per_wall_day": (args.days/360)*86400/wall,
+                          "command": command, "timers": timers(diag), "state": state}
+                with report_lock:
+                    entry["samples"].append(sample)
+                    save()
+        except Exception as error:
+            measured = [s["wall_seconds"] for s in entry["samples"] if not s["warmup"]]
+            message = f"{type(error).__name__}: {error}"
+            print(f"  {name}: failed ({message})", flush=True)
+            with report_lock:
+                entry["status"] = "failed"
+                entry["error"] = message
+                if measured:
+                    entry["summary"] = summarize_samples(measured)
+                save()
+            raise
+        measured = [s["wall_seconds"] for s in entry["samples"] if not s["warmup"]]
+        summary = summarize_samples(measured)
+        print(f"  {name}: median {summary['median_wall_seconds']:.3f} s, "
+              f"range {summary['min_wall_seconds']:.3f}–{summary['max_wall_seconds']:.3f} s", flush=True)
+        with report_lock:
+            entry["status"] = "complete"
             entry["summary"] = summary
             save()
 
@@ -491,8 +516,12 @@ def main():
                     key = (resolution, lsg, ranks)
                     if key not in builds:
                         print(f"Building {resolution}, {'LSG' if lsg else 'mixed'}, {ranks} rank(s)", flush=True)
-                        builds[key] = build(args, work, args.output, resolution, lsg, ranks, env)
-                    executable, build_info = builds[key]
+                        try:
+                            builds[key] = build(args, work, args.output, resolution, lsg, ranks, env)
+                        except Exception as error:
+                            print(f"  Build failed for {resolution}, {'LSG' if lsg else 'mixed'}, {ranks} rank(s): "
+                                  f"{type(error).__name__}: {error}", flush=True)
+                            builds[key] = error
                     name = f"{resolution}-{case}-p{ranks}"
                     case_output = args.output / name
                     case_output.mkdir()
@@ -501,16 +530,21 @@ def main():
                     for filename, text in configs.items():
                         (case_output / filename).write_text(text)
                     entry = {"name": name, "resolution": resolution, "case": case, "ranks": ranks,
+                             "status": "pending",
                              "input_sha256": tree_digest(list(template.iterdir()), template),
-                             "namelists": configs, "build": build_info, "samples": []}
+                             "namelists": configs, "build": None, "samples": []}
                     report["cases"].append(entry)
-                    jobs.append((ranks, lambda e=entry, x=executable, t=template, o=case_output:
-                                 run_case(e, x, t, o)))
+                    if isinstance(builds[key], Exception):
+                        error = builds[key]
+                        entry.update(status="failed", error=f"{type(error).__name__}: {error}")
+                    else:
+                        executable, build_info = builds[key]
+                        entry["build"] = build_info
+                        jobs.append((ranks, lambda e=entry, x=executable, t=template, o=case_output:
+                                     run_case(e, x, t, o)))
         save()
         # Complete all builds and template preparation before timed runs.
         schedule(jobs, args.max_cores, args.parallel, control)
-        report["status"] = "complete"
-        save()
         with (args.output / "samples.csv").open("w", newline="") as stream:
             writer = csv.writer(stream)
             writer.writerow(["case", "warmup", "wall_seconds", "simulated_years_per_wall_day"])
@@ -518,6 +552,14 @@ def main():
                 for sample in entry["samples"]:
                     writer.writerow([entry["name"], sample["warmup"], sample["wall_seconds"],
                                      sample["simulated_years_per_wall_day"]])
+        failed_cases = [entry for entry in report["cases"] if entry.get("status") == "failed"]
+        if failed_cases:
+            has_measured = any(not s["warmup"] for c in report["cases"] for s in c["samples"])
+            report["status"] = "partial" if has_measured else "failed"
+            report["error"] = "; ".join(f"{c['name']}: {c['error']}" for c in failed_cases)
+        else:
+            report["status"] = "complete"
+        save()
     except BaseException as error:
         report.update(status="failed", error=f"{type(error).__name__}: {error}")
         save()
@@ -526,6 +568,8 @@ def main():
         if not args.keep_work:
             shutil.rmtree(work)
     print(f"Results: {result_path}", flush=True)
+    if report["status"] != "complete":
+        raise RuntimeError(report["error"])
 
 
 if __name__ == "__main__":

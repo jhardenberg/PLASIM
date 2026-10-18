@@ -135,7 +135,9 @@ python3 benchmarks/compare.py --summary \
 This exports summary rows and their originating report paths; original raw
 samples and metadata remain in their existing result files. The exported
 summary is not a raw `results.json` input. Two inputs **without** `--summary`
-still perform the existing before/after source-revision comparison.
+perform the before/after source-revision comparison when they share rank
+counts, or automatically summarize when their rank sets are disjoint (such as
+a serial report and an MPI-only report).
 
 ## Parallel execution and core limit
 
@@ -156,15 +158,19 @@ or schedulers where CPU quotas are not reflected in process affinity.
 This is a process/rank budget, not CPU pinning or a limit on physical cores;
 launcher/helper processes and the Python coordinator add some overhead.
 Concurrent MPI launchers may bind to overlapping CPUs: use an external
-allocation/launcher that partitions CPUs if disjoint binding is required.
+allocation/launcher that partitions CPUs (or pass `--bind-to none` to Open MPI
+when running concurrent MPI jobs on a shared host) if default core binding
+would pin multiple jobs to the same low-numbered cores.
 
 Without `--parallel`, cases run one at a time; `--max-cores` still bounds the
 selected MPI rank count. Builds use one compiler process at a time and all
 finish before model runs begin, so compilation does not overlap measurements.
 Each concurrent case has private inputs, outputs, and ocean matrices. Its
 warmups finish before its measured repeats, and repeats remain sequential.
-A failure, timeout, or Ctrl-C stops the batch and terminates active process
-groups. Completed samples remain in the failed result report.
+If a build or case fails or times out, its process group is terminated, the
+failure is recorded on that case, and the remaining cases continue to
+completion; Ctrl-C stops the entire batch immediately. Completed samples and
+`samples.csv` remain in the partial/failed result report.
 
 Parallel mode is useful for completing the workload matrix sooner. Its per-case
 timings include CPU, memory, and I/O contention and are unsuitable for claiming
@@ -262,7 +268,9 @@ component may have negligible whole-model impact.
   all warm-up/measured samples, wall-time median/min/max/standard deviation/MAD,
   throughput, component timers, and selected final-state summaries/hashes.
   `samples.csv`, build logs, stdout logs, and model diagnostic logs are retained.
-  Failed/partial result files are marked and rejected by the comparison script.
+  Partial or failed result files are marked and can still be summarized or
+  compared for any cases that completed measured samples, while reporting
+  skipped or partial cases.
 - **Sanity checks:** expected grid dimensions and atmosphere step count,
   finite selected state fields, actual MPI rank diagnostics, and LSG completion
   are required. Changed selected-state hashes are shown during comparison.

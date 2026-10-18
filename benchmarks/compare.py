@@ -12,14 +12,22 @@ import sys
 
 def load(path: Path) -> dict:
     report = json.loads((path / "results.json" if path.is_dir() else path).read_text())
-    if report.get("schema_version") != 1 or report.get("status") != "complete":
-        raise ValueError(f"Only complete schema-1 results can be compared: {path}")
+    status = report.get("status")
+    if report.get("schema_version") != 1 or status not in ("complete", "partial", "failed"):
+        raise ValueError(f"Only schema-1 benchmark results can be compared: {path}")
+    if not report.get("cases"):
+        raise ValueError("No benchmark cases")
+    complete_cases = 0
     for case in report["cases"]:
         times = measured(case)
-        if not times or not all(t > 0 and math.isfinite(t) for t in times):
+        if not all(t > 0 and math.isfinite(t) for t in times):
             raise ValueError(f"Missing/invalid measured samples: {case['name']}")
-    if not report["cases"]:
-        raise ValueError("No benchmark cases")
+        if times:
+            complete_cases += 1
+        elif status == "complete" and case.get("status", "complete") == "complete":
+            raise ValueError(f"Missing/invalid measured samples: {case['name']}")
+    if not complete_cases:
+        raise ValueError(f"No completed measured samples in {path}")
     return report
 
 
@@ -29,6 +37,24 @@ def measured(case: dict) -> list[float]:
 
 def median(case: dict) -> float:
     return statistics.median(measured(case))
+
+
+def report_incomplete(report: dict, label: str):
+    status = report.get("status", "complete")
+    skipped = [case["name"] for case in report["cases"] if not measured(case)]
+    expected = report.get("settings", {}).get("repeats")
+    partial = [f"{case['name']} ({len(measured(case))}/{expected})"
+               for case in report["cases"]
+               if measured(case) and (
+                   (expected is not None and len(measured(case)) < expected) or
+                   case.get("status") == "failed")]
+    if status != "complete" or skipped or partial:
+        detail = f" ({report['error']})" if report.get("error") else ""
+        print(f"{label} status is {status}{detail}.")
+        if skipped:
+            print(f"  Skipping cases without measured samples: {', '.join(skipped)}")
+        if partial:
+            print(f"  Cases with partial measured samples: {', '.join(partial)}")
 
 
 def summary_conditions(reference: dict, candidate: dict) -> list[str]:
@@ -68,10 +94,13 @@ def summarize(reports: list[dict], allow_mismatch: bool = False) -> list[dict]:
     cases, origins, inputs = {}, {}, {}
     differences = []
     for index, report in enumerate(reports):
+        report_incomplete(report, f"Report {index+1}")
         if index:
             differences.extend(f"report {index+1}: {item}"
                                for item in summary_conditions(reports[0], report))
         for case in report["cases"]:
+            if not measured(case):
+                continue
             key = (case["resolution"], case["case"], case["ranks"])
             if key in cases:
                 raise ValueError(f"Duplicate resolution/configuration/rank case: {case['name']}. "
@@ -81,6 +110,8 @@ def summarize(reports: list[dict], allow_mismatch: bool = False) -> list[dict]:
                 differences.append(f"runtime inputs for {group[0]}-{group[1]}")
             inputs[group] = case["input_sha256"]
             cases[key], origins[key] = case, index
+    if not cases:
+        raise ValueError("No completed measured benchmark cases")
     mpi_reports = [(index, report) for index, report in enumerate(reports)
                    if "mpifc" in report["environment"].get("tools", {})]
     if mpi_reports:
@@ -127,6 +158,8 @@ def summary(report: dict):
 
 
 def compare(baseline: dict, candidate: dict, allow_mismatch: bool) -> list[dict]:
+    report_incomplete(baseline, "Baseline report")
+    report_incomplete(candidate, "Candidate report")
     differences = []
     if baseline["suite_sha256"] != candidate["suite_sha256"]:
         differences.append("benchmark runner SHA-256")
@@ -146,8 +179,8 @@ def compare(baseline: dict, candidate: dict, allow_mismatch: bool) -> list[dict]
                 baseline["settings"]["repeats"] != candidate["settings"]["repeats"]):
             differences.append("parallel workload matrix/order or repetition count")
         print("Concurrent timings include shared-resource contention; ratios do not isolate code speedups.")
-    reference = {case["name"]: case for case in baseline["cases"]}
-    proposed = {case["name"]: case for case in candidate["cases"]}
+    reference = {case["name"]: case for case in baseline["cases"] if measured(case)}
+    proposed = {case["name"]: case for case in candidate["cases"] if measured(case)}
     common = reference.keys() & proposed.keys()
     if not common:
         raise ValueError("No matching resolution/configuration/rank cases")
@@ -205,7 +238,13 @@ def main():
     if not args.summary and len(args.inputs) > 2:
         parser.error("use --summary to combine more than two result files")
     reports = [load(path) for path in args.inputs]
-    if args.summary or len(reports) == 1:
+    measured_names = [{case["name"] for case in report["cases"] if measured(case)}
+                      for report in reports]
+    measured_ranks = [{case["ranks"] for case in report["cases"] if measured(case)}
+                      for report in reports]
+    split_ranks = (len(reports) == 2 and not (measured_names[0] & measured_names[1]) and
+                   measured_ranks[0].isdisjoint(measured_ranks[1]))
+    if args.summary or len(reports) == 1 or split_ranks:
         for index, path in enumerate(args.inputs, 1):
             print(f"Report {index}: {path}")
         rows = summarize(reports, args.allow_mismatch)
