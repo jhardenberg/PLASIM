@@ -192,6 +192,16 @@ The default pressure levels are `20,30,50,70,100,150,200,250,300,400,500,600,700
 
 [`scripts/srv2nc`](scripts/srv2nc) converts PlaSim and LSG Service output to NetCDF4 with CDO. [`scripts/nc2sra`](scripts/nc2sra) and [`scripts/sra2nc`](scripts/sra2nc) convert between NetCDF and Service-format boundary data. The [`scripts` directory](scripts) also contains monthly postprocessing and boundary-data helpers.
 
+## Performance benchmarks
+
+A separate [benchmark suite](benchmarks/README.md) measures repeated optimized
+T21/T42 runs with mixed-layer and real LSG oceans, classic/spectral radiation,
+and selectable MPI rank counts. Use `--parallel --max-cores N` to run independent
+benchmark cases within a shared rank budget; `compare.py --summary` combines
+separately collected serial and MPI results. It records timings and build/input metadata
+and compares source revisions. Benchmarks are run manually, outside regression
+tests and test CI; their state summaries do not replace correctness checks.
+
 ## Tests
 
 Run the regression suite from the repository root:
