@@ -1,10 +1,10 @@
 # Output fields, formats, and units
 
-Use the {doc}`raw-output` catalogue for the current model's literal writer
-calls and the {doc}`conversion-metadata` catalogue for names/labels declared
-by `srv2nc`. These are different interfaces. The historical
-`variable_list.txt` is a useful starting index, not an independent guarantee
-of current dimensions, units, signs, or enabled fields.
+Use the {doc}`raw-output` catalogue for the complete inventory of model output
+fields, source array assignments, writer routines, and `srv2nc` converted NetCDF
+variable names and units. The historical `variable_list.txt` is a useful starting
+index, not an independent guarantee of current dimensions, units, signs, or enabled
+fields.
 
 ## Three kinds of model product
 
@@ -100,7 +100,7 @@ Selected model-side physical units checked against declarations/writers:
 | Radiation and sensible/latent heat terms | W/m², with direction defined by the implementation. |
 | Mixed-layer diffusion-budget outputs 904/905 | Heat-flux contributions from vertical/horizontal diffusion; distinguish these from the diffusivity parameters `VDIFFKL`/`HDIFFK` in m²/s. |
 
-The converter catalogue deliberately labels its unit column **declared
+The {doc}`raw-output` catalogue deliberately labels its unit column **declared
 units**, because it records the actual conversion table rather than
 silently treating every label as a verified physical definition.
 
@@ -153,9 +153,67 @@ The historical sheet's equalities should not be used as universal numerical
 acceptance tests. Inspect the component masks and exact accumulation interval
 when investigating a budget.
 
+## LSG ocean output and grid conventions
+
+Coupled simulations with the Large Scale Geostrophic ocean write output to
+two primary binary Service-style files:
+
+- `lsg_output`: created on Fortran unit 93 by `outpostsrv` in
+  {repo}`lsg/src/lsgmod.f90` at the end of each coupling interval.
+- `LSG_srf`: created on unit `nopost` by `outsurf` in {repo}`lsg/src/lsgmod.f90`
+  to store surface fields and upper subsurface layers (layers 1, 2, 4) for
+  high-frequency diagnostics.
+- `bck...`: written by `outback` on sequential unformatted units for coupled
+  restarts.
+
+### Negative code convention
+
+In its raw Service records, LSG marks variables with **negative integer codes**
+(`jcode < 0`) in the first header slot: for example, `jcode = -2` for potential
+temperature, `-5` for salinity, `-3` for zonal velocity, `-4` for meridional velocity,
+`-7` for vertical velocity, and `-1` for surface elevation. Historically, this
+prevented collision with positive WMO/GRIB atmospheric table codes.
+
+When converting `lsg_output` via `scripts/srv2nc`, CDO maps negative Service codes
+to their positive counterparts (1–99) and looks up descriptive names and units from
+the `paramlsg.tab` dictionary.
+
+### Staggered horizontal Arakawa E-grid
+
+LSG operates on a semi-staggered Arakawa E-grid ($72 \times 76$ horizontal points
+at 2.5° resolution) with two offset subgrids:
+
+- **Scalar grid points** (`gpgridt`): variables including elevation `zeta` (code 1),
+  potential temperature `t` (2), salinity `s` (5), freshwater flux `fluwat` (65),
+  heat flux `fluxhea` (18), scalar land–sea mask `wet` (40), and bottom depth
+  `depp` (98).
+- **Vector grid points** (`gpgridu`): variables offset by half a grid cell,
+  including zonal/meridional velocities `utot`/`vtot` (3, 4), barotropic velocities
+  `ub`/`vb` (37, 38), wind stresses `taux`/`tauy` (52, 53), vector land–sea mask
+  `wetvec` (41), and vector bottom depth `depv` (99).
+
+`srv2nc` automatically separates vector variables (`uvars`) and assigns the appropriate
+curvilinear grid description before merging them into CF-compliant NetCDF files.
+
+### Vertical depth coordinate
+
+The LSG ocean uses 22 vertical depth layers:
+
+- **Layer midpoints** (`zaxislsgu` / `zaxislsgc`): 25, 75, 125, 175, 225, 275, 350,
+  450, 550, 650, 750, 850, 950, 1100, 1300, 1500, 1800, 2250, 2750, 3500, 4500, and
+  5500 m. Used for 3D state fields ($T$, $S$, $u$, $v$).
+- **Layer interfaces** (`zaxislsgw`): 50, 100, 150, 200, 250, 312.5, 400, 500, 600,
+  700, 800, 900, 1025, 1200, 1400, 1650, 2025, 2500, 3125, 4000, 5000, and 6000 m.
+  Used for vertical velocity `w` (code 7).
+
+Internal ocean potential temperature is stored in Celsius (`t(:,:,:)`), but the output
+routines `outpostsrv` and `outsurf` add `tkelvin` (273.15 K) upon writing, so raw
+code 2 is in Kelvin. Converted diagnostic code 62 (`tc`) retains Celsius.
+
 ## Sources checked
 
 User's Guide chapter 5 and appendix B, `variable_list.txt`, and the ice
 output sheet compared with {repo}`plasim/src/outmod.f90` (`outini`,
 `writegp`, `writesp`, `outgp`, `outaccu`, `outreset`), `iceout`/`icestep`,
-`oceanout`, `mpwritegph`, and the actual converter tables/expressions.
+`oceanout`, `mpwritegph`, {repo}`lsg/src/lsgmod.f90` (`outpostsrv`, `outsurf`,
+`outback`), and the actual converter tables/expressions in {repo}`scripts/srv2nc`.

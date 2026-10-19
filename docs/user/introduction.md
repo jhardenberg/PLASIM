@@ -1,61 +1,91 @@
 # Introduction
 
-**PlaSim-LSG TNG (The Next Generation)** is an independently maintained
-development of the original Planet Simulator (PlaSim). The original model
-was created at the University of Hamburg; PlaSim-LSG TNG is developed separately
-and builds on and improves that model for climate and planetary experiments.
+## What is PlaSim-LSG TNG?
 
-This guide applies specifically to the version in the
-**[jhardenberg/PLASIM repository](https://github.com/jhardenberg/PLASIM)**.
-Several PlaSim versions exist; their features and settings can differ.
-The shorter name “PlaSim” elsewhere in this guide refers to this version
-unless a historical source is explicitly identified.
+**PlaSim-LSG TNG (The Next Generation)** is a global 3D climate model of
+intermediate complexity designed for meteorology, paleoclimate, Earth-system,
+and planetary climate experiments. It builds on the original Planet Simulator
+(PlaSim) created at the University of Hamburg and is maintained independently
+in the **[jhardenberg/PLASIM repository](https://github.com/jhardenberg/PLASIM)**.
+Because several PlaSim forks exist with different features and input conventions,
+this manual documents the specific interfaces of this repository (referred to
+simply as "PlaSim" where unambiguous).
+
+At its core, PlaSim couples a **spectral primitive-equation atmosphere** with
+parameterizations for physical processes on a Gaussian longitude–latitude grid:
+
+- **Atmosphere and radiation:** 3D spectral dynamics (vorticity, divergence,
+  temperature, surface pressure, and specific humidity), shortwave and
+  longwave radiation (with classic broadband or optional stellar-spectrum
+  modes), interactive clouds, moist convection, large-scale precipitation,
+  and boundary-layer vertical diffusion.
+- **Land and vegetation:** Soil heat transfer, soil hydrology and river
+  runoff, snow cover, and the optional **SIMBA** dynamic vegetation and carbon
+  module.
+- **Ocean and sea ice:** Thermodynamic sea ice coupled either to a slab
+  **mixed-layer ocean** (default, with optional horizontal diffusion and heat-flux
+  correction) or to the 3D **LSG (Large Scale Geostrophic) deep-ocean model**
+  (72 × 76 horizontal grid, 22 vertical levels).
+- **Planets:** Built-in presets and boundary datasets for **Earth**, **Mars**,
+  and generalized **Exo** (exoplanet) setups, including configurable orbits,
+  calendars, and tidally locked illumination.
+
+## How PlaSim is configured and compiled
+
+PlaSim separates **compile-time build choices** from **runtime namelist
+parameters**:
+
+1. **Compile-time settings (selected via MoSt):** Horizontal resolution
+   (standard truncations **T21** at 64 × 32, **T31** at 96 × 48, or **T42** at
+   128 × 64 grid points), vertical levels (typically 10), number of MPI
+   processor cores, planet preset (`Earth`, `Mars`, or `Exo`), deep-ocean
+   coupling (`LSG Ocean`), numerical precision, and whether to link the X11
+   simulation GUI. These are compiled into the Fortran executable (`resmod.f90`
+   and selected module variants).
+2. **Runtime settings (namelists and run script):** Integration length, start
+   year, calendar type, $\mathrm{CO_2}$ concentration, solar constant, orbital
+   elements, output frequency, and physical tuning parameters. These are read
+   from plain-text `*_namelist` files in the run directory when the executable
+   starts, while multi-year looping and NetCDF postprocessing are controlled
+   by the generated run script (`most_plasim_run`).
 
 ## What is new in PlaSim-LSG TNG?
 
-- **More flexibility beyond Earth:** expanded planetary settings, radiation
-  for different kinds of stars, and illumination for worlds that always
-  face their star with the same side.
-- **Refined model physics:** updates to radiation and land-surface processes,
-  and vegetation treatment.
-- **Tuned, working LSG coupling:** coupling with the LSG deep-ocean model
-  for simulations in which the atmosphere and deep ocean evolve together.
-- **Improved parallel performance:** MPI optimizations reduce overhead
-  when running simulations on multiple processors.
-- **Easier experiment preparation and analysis:** graphical or headless
-  setup through MoSt, plus tools to convert results directly to NetCDF for
-  analysis.
-- **Stronger checks on model behavior:** fixes to calendars, restart handling,
-  and parallel execution, supported by automated tests that help catch
-  regressions.
-- **Updated documentation:** a searchable user and developer manual, with
-  current workflows and detailed descriptions of model inputs.
+- **Expanded planetary capabilities:** Harmonized presets for Earth, Mars, and
+  exoplanets, optional stellar-spectrum radiation and two-band surface
+  albedos, and tidally locked illumination.
+- **Refined model physics:** Updated radiation, land-surface hydrology, and
+  standalone SIMBA vegetation handling.
+- **Tuned, working LSG deep-ocean coupling:** Ready-to-run coupling between
+  PlaSim and the LSG ocean model with configurable vertical diffusion and
+  conserved flux exchanges.
+- **Improved MPI parallel performance:** Batched collective communications and
+  streamlined spectral transforms reduce parallel overhead across multiple cores.
+- **Easier experiment setup and NetCDF output:** Both graphical and headless
+  (`most.x -c`) experiment preparation, plus direct Service-to-NetCDF4
+  conversion via CDO (`scripts/srv2nc`) without needing the legacy afterburner.
+- **Automated testing and verification:** Regression tests covering serial,
+  MPI, restart continuation, calendar rules, and coupled PlaSim–LSG runs.
 
-These highlights summarize developments recorded in the
-{download}`changelog <../../CHANGELOG.md>`, which gives the full history
-and compatibility notes.
+Full details and compatibility notes are recorded in the
+{download}`changelog <../../CHANGELOG.md>`.
 
-## Explore the model
-
-The atmosphere exchanges heat, water, and momentum with land, vegetation,
-sea ice, and an ocean. The model can use a mixed-layer ocean or the coupled
-LSG deep ocean.
-
-Start with the component overview to understand the available choices.
-Then follow {doc}`getting-started` to prepare a first experiment through
-MoSt, the recommended model starter.
+## Where to go next
 
 ```{toctree}
-:maxdepth: 1
+:hidden:
 
 components
 ```
 
-The user guide progresses from preparation to {doc}`configuration`,
-{doc}`analysis`, and the {doc}`configuration and output reference
-<../reference/index>`. Developer instructions have their own part of the
-manual, including alternative compilation, testing, and benchmarking.
-
-Practical material from the legacy User's Guide is updated against the
-current code. The original sources and attribution are retained in
-{doc}`../sources`; the scientific Reference Manual remains separate.
+- **Understand the modules:** Read {doc}`components` for an overview of all
+  atmospheric, land, ice, and ocean modules and their namelist files.
+- **Compile and run your first simulation:** Follow {doc}`getting-started` and
+  {doc}`most` to build MoSt, compile PlaSim, and run `most_plasim_run`.
+- **Customize and analyze:** Continue to {doc}`configuration` (planets,
+  boundary data, MPI/LSG, restarts), {doc}`analysis` (converting and plotting
+  NetCDF output), and the {doc}`configuration and output reference <../reference/index>`.
+- **Extend or test the code:** Part II covers {doc}`../development/architecture`,
+  {doc}`../development/testing`, {doc}`../development/benchmarking`, and the
+  {doc}`../development/direct-build`. Attribution to the original University of
+  Hamburg manuals is in {doc}`../sources`.

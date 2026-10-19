@@ -1,25 +1,37 @@
 # PlaSim-LSG TNG user and developer manual
 
-**PlaSim-LSG TNG (The Next Generation)** builds on and improves the original
-Planet Simulator (PlaSim), a general circulation model for meteorology,
-climatology, and planetary experiments. This manual documents the version
-maintained in the **[jhardenberg/PLASIM repository](https://github.com/jhardenberg/PLASIM)**.
-It brings together expanded planetary capabilities, refinements to model
-physics and ocean coupling, easier workflows, and stronger automated checks.
-
-See the {doc}`introduction <user/introduction>` for a brief overview of what
-is new. The first part explains how to configure, build, and run experiments
-with MoSt. The second part covers development, testing, performance
-benchmarking, and the alternative direct-Make example used by CI.
+**PlaSim-LSG TNG (The Next Generation)** is a global 3D atmospheric general
+circulation model (GCM) coupled to land, vegetation, sea-ice, and ocean
+modules. Originally developed at the University of Hamburg as the Planet
+Simulator (PlaSim), this independently maintained version in the
+**[jhardenberg/PLASIM repository](https://github.com/jhardenberg/PLASIM)**
+adds expanded planetary and exoplanet capabilities, refined physics, tuned
+coupling with the **LSG (Large Scale Geostrophic)** deep-ocean model, faster
+MPI parallelization, direct NetCDF postprocessing, and automated regression
+testing.
 
 ```{note}
-The scientific Reference Manual remains separate; its derivations and
-equation set are not included here.
+This manual provides practical instructions for configuring, compiling,
+running, and modifying the model, verified against the current source code.
+The mathematical derivations in the historical {download}`Reference Manual <../plasim/doc/PS_ReferenceManual.pdf>` remain separate.
 ```
 
-Start with {doc}`user/most`. **MoSt (`most.x`) is the recommended way to
-compile PlaSim-LSG TNG**, using either its graphical interface or its headless
-configuration-file option.
+## Quick workflow overview
+
+Running an experiment in PlaSim-LSG TNG follows four steps using **MoSt**
+(`most.x`), the recommended model starter:
+
+1. **Configure and build MoSt** once from the repository root (`./configure.sh`).
+2. **Select your experiment and compile the model** interactively (`./most.x`)
+   or headlessly (`./most.x -c earth.cfg`), which prepares `plasim/run/`.
+3. **Run the generated script** (`./most_plasim_run` inside `plasim/run/` or a
+   copied experiment directory) to integrate the model year by year, archive
+   restarts, and convert output to NetCDF.
+4. **Inspect and plot** the resulting NetCDF files in `output/` using CDO or
+   Python.
+
+Start with {doc}`user/introduction` to learn what is inside the model, or jump
+straight to {doc}`user/most` to build and run your first simulation.
 
 ```{toctree}
 :maxdepth: 2
@@ -46,9 +58,12 @@ development/direct-build
 sources
 ```
 
-The {download}`repository README <../README.md>`,
-{download}`FAQ <../FAQ.md>`, and {download}`original User's Guide
-<../plasim/doc/PS_UsersGuide.pdf>` remain available, including historical material and
-figures. Use the current manual for present-day interfaces. The
-{download}`changelog <../CHANGELOG.md>` records changes to behavior and
-input compatibility.
+## Additional repository resources
+
+- {download}`Repository README <../README.md>` and {download}`FAQ <../FAQ.md>`:
+  quick repository overview, orbital date handling, and common questions.
+- {download}`Changelog <../CHANGELOG.md>`: release history, new features, and
+  input compatibility notes.
+- {download}`Original User's Guide <../plasim/doc/PS_UsersGuide.pdf>` and
+  {download}`Reference Manual <../plasim/doc/PS_ReferenceManual.pdf>`:
+  historical manuals retained for context and scientific equations.

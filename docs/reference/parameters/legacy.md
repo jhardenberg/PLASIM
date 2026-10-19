@@ -26,7 +26,7 @@ be copied into those files.
 
 | Historical input | Current disposition |
 | --- | --- |
-| `COLUMN`, `YMODE` | Not accepted. See {doc}`../../user/column` for individual current controls and validation limits. |
+| `COLUMN`, `YMODE` | Not accepted in modern `plasim_nl`. |
 | `MARS` in `INP` | Not accepted. Select the compiled planet through MoSt; its presets and data are separate from the planet label. |
 | `PSURF` in `INP` | In `planet_nl`, with pressure in Pa. |
 | `TIME0` in `INP` | Not accepted; runtime timing is controlled by the actual instrumented `NTIME` path. |

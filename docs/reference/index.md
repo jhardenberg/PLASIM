@@ -13,6 +13,5 @@ parameters/index
 namelist-inventory
 output
 raw-output
-conversion-metadata
 units
 ```

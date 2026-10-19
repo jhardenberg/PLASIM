@@ -31,6 +31,16 @@ bash scripts/srv2nc -m plasim_output atmosphere-monthly.nc
 | `-f format` | Select an output format; default `nc4 -z zip`. |
 | `-h` | Print the script's help. |
 
+```{tip}
+In automated simulations, the driver script `most_plasim_run` automatically runs
+`srv2nc` on `plasim_output`, `ocean_output`, `ice_output`, and `lsg_output` at
+the end of each segment. The script sets `average="-m"` by default, which passes
+`-m` to `srv2nc` to compute monthly means. To retain all written output samples
+(such as daily writes governed by `NWPD` in `plasim_namelist`), comment out
+`#average="-m"` (or set `average=""`) in `most_plasim_run` (see {doc}`most` and
+{doc}`experiments`).
+```
+
 Not every option applies to every input type. The LSG branch builds separate
 scalar/vector grids and depth axes; it is not the same operation as an
 atmospheric spectral transform. Inspect the output grid, variable names,

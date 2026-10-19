@@ -1,29 +1,60 @@
 # Restarts and reproducible experiments
 
-## Model state and segment handoff
+## How `plasim_status` and `plasim_restart` work
 
-The atmosphere writes its final state to `plasim_status`. At initialization,
-the model checks for `plasim_restart` and restores state when that file is
-present. Restart files are named binary records, not Service fields or
-NetCDF output; do not pass them to `srv2nc`.
+At the end of every executable run (`epilog`), PlaSim writes its complete
+final state (atmosphere, land, vegetation, sea ice, and mixed-layer ocean) to
+the binary file `plasim_status`. At startup (`prolog`), the model checks
+whether `plasim_restart` exists in the working directory:
 
-Within a running generated script, MoSt hands state from one annual segment
-to the next by copying `plasim_status` to `plasim_restart`, then archiving
-the status file. This is distinct from launching the entire script again:
-its startup removes `plasim_restart`. Save the complete experiment before
-changing the segment range or restoring state.
+- **If `plasim_restart` is absent (cold start):** The model initializes from a
+  resting isothermal atmosphere (plus random noise if `KICK > 0`) and surface
+  boundary climatologies at `N_START_YEAR` / `N_START_MONTH`.
+- **If `plasim_restart` is present (restart continuation):** The model reads
+  the saved state and resumes the model clock from the stored timestep.
 
-For a deliberately managed direct executable continuation, the essential
-state handoff in the run directory is:
+Restart files use named binary records (`restartmod.f90`), not Service records
+or NetCDF; do not pass them to `srv2nc`.
 
-```sh
-cp plasim_status plasim_restart
+### Segment handoff inside `most_plasim_run` vs. resuming a stopped script
+
+When you run `most_plasim_run` with the simulation GUI off (`NGUI=0`), the
+script runs one model year per loop iteration and hands the state to the next
+iteration:
+
+```bash
+[ -e plasim_status ] && cp plasim_status plasim_restart
+[ -e plasim_status ] && mv plasim_status restart/$RESTNAME
 ```
 
-Archive outputs from the preceding segment before invoking the same compatible
-executable again. Set the intended next segment duration in the namelists.
-Do not insert this command in front of an unmodified `most_plasim_run` and
-expect it to survive that script's initialization.
+However, before entering the `for ((YEAR=$YEAR1; YEAR<=$YEAR2; YEAR++))` loop,
+`most_plasim_run` executes:
+
+```bash
+rm -f plasim_restart
+```
+
+Consequently, **re-running `./most_plasim_run` unmodified does not resume a
+previous run**—it deletes `plasim_restart` and starts a cold run from segment 1.
+
+To resume or extend an experiment from saved segment `N` (for example, continuing
+after segment `0010` for segments `11` through `20`):
+
+1. Restore the saved atmospheric restart into the working directory:
+   ```sh
+   cp restart/MOST_REST.0010 plasim_restart
+   ```
+   If **LSG Ocean** is enabled, also restore the matching ocean restart files
+   (`cp restart/MOST_LSGREST.0010 kleiin1`, plus `restart/kleiswi` and
+   `restart/mat77` if they are not already in the working directory).
+2. Edit `most_plasim_run`:
+   - Comment out `#rm -f plasim_restart` so the restored file is kept.
+   - Set `YEAR1=11` and `YEAR2=20`.
+3. Launch `./most_plasim_run`.
+
+For a direct executable run without `most_plasim_run`, simply copy
+`cp plasim_status plasim_restart` after archiving the previous segment's output
+files, then invoke `./plasim.x` again.
 
 ## Compatibility checks
 
@@ -41,8 +72,8 @@ while loading an old state is therefore not equivalent to changing a scalar
 forcing parameter.
 
 For LSG, retain the ocean restart and switch state (`kleiin1`, `kleiswi`)
-and required matrix products along with the atmospheric state. Use the
-coupled setup's matching mask, ocean controls, and coupling interval.
+and required matrix products (`mat77`) along with the atmospheric state. Use
+the coupled setup's matching mask, ocean controls, and coupling interval.
 
 ## Dates, forcing, and initialization
 

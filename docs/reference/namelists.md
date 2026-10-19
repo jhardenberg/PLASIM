@@ -107,7 +107,7 @@ is stated. They are not a replacement for the complete accepted-name inventory.
 | `VDIFFK` in the ocean appendix | Current input is `VDIFFKL`; inspect its layer dimension. |
 | Scalar `ALBSMAX`, `ALBSMINF`, `ALBSMAXF`, `ALBGMIN`, `ALBGMAX` in `landmod_nl` | Not accepted; use the current band-array interface where appropriate. `ALBSMIN` remains accepted. |
 | `SIDEREAL_YEAR`, `TROPICAL_YEAR` in `planet_nl` | Removed from current lists. |
-| `COLUMN`, `YMODE` macro setup | Not accepted; see {doc}`../user/column` for current individual controls. |
+| `COLUMN`, `YMODE` macro setup | Not accepted in modern `plasim_nl`. |
 | `NRESTART` copied from an old example | Restart selection comes from the input restart file; it is not a current `plasim_nl` parameter. |
 | Old `gsol0` location/default | Accepted in `planet_nl`; direct presets and MoSt values can differ. |
 

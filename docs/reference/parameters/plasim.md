@@ -40,7 +40,7 @@ and mean ground temperature first.
 
 | Parameter | Type; input units | Default | Meaning and interactions |
 | --- | --- | --- | --- |
-| `nadv` | integer; switch | 1 | Controls advective/dynamical tendency branches in `spectrala`/`spectrald`; part of the individual controls used for column-oriented experiments. |
+| `nadv` | integer; switch | 1 | Controls advective/dynamical tendency branches in `spectrala`/`spectrald`. |
 | `nhordif` | integer; switch | 1 | Zero clears restoration, Rayleigh friction, and all four diffusion timescale arrays during `readnl`, in addition to disabling horizontal diffusion coefficients. |
 | `nhdiff` | integer; wavenumber | 15; T42 16 | Critical total wavenumber above which the spectral diffusion weighting grows; keep below `NTRU` for the denominator used in initialization. This is not ocean `nhdiff`. |
 | `ndel` | integer array(NLEV); exponent | 2; T42 4 | Power of the wavenumber-distance weighting for spectral diffusion at each level. |
