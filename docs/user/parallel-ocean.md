@@ -2,6 +2,12 @@
 
 ## Select MPI through MoSt
 
+Recent MPI optimizations improve the efficiency of parallel runs by reducing
+overhead and unnecessary work. They are included automatically in current
+builds and use the same MoSt setup described below. The benefit depends on
+the experiment and hardware; see {doc}`../development/benchmarking` to
+measure performance on your system.
+
 Install compatible MPI C and Fortran wrappers and a launcher, then run
 `configure.sh` so MoSt detects them. Select the desired core count in MoSt
 before preparing the experiment. The executable's compiled processor count

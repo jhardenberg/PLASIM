@@ -20,6 +20,8 @@ unless a historical source is explicitly identified.
   and vegetation treatment.
 - **Tuned, working LSG coupling:** coupling with the LSG deep-ocean model
   for simulations in which the atmosphere and deep ocean evolve together.
+- **Improved parallel performance:** MPI optimizations reduce overhead
+  when running simulations on multiple processors.
 - **Easier experiment preparation and analysis:** graphical or headless
   setup through MoSt, plus tools to convert results directly to NetCDF for
   analysis.

@@ -36,7 +36,8 @@ troubleshooting. Each chapter retains its existing URL.
   and MPI extension rules migrated from User's Guide chapters 2–3.
 - {doc}`development/testing`: existing regression coverage, provenance, and
   the limits of short numerical checks.
-- {doc}`development/benchmarking`: workloads, timing scope, revision/MPI
+- {doc}`development/benchmarking`: classic-radiation workloads, current
+  defaults, timing scope, revision/MPI
   comparisons, concurrent scheduling, continuation, and result interpretation.
 - {doc}`development/direct-build`: optional direct-Make/CI example, runtime
   parameter table, and operational timestep equations. MoSt remains the

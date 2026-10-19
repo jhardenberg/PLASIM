@@ -2,9 +2,11 @@
 
 The historical User's Guide is source material, not the current interface
 specification. This migration compares its practical claims with the actual
-code. The model sources reviewed are those at `9c47096` (the base of this
-documentation PR); the documentation does not change them. Source checks
-and runtime checks below are deliberately distinguished.
+code. The initial migration reviewed model sources at `9c47096`; subsequent
+updates check the merged developments identified below, including mainline
+`f924ab9` for the MPI and benchmark updates. This documentation PR does not
+change model sources. Source checks and runtime checks below are deliberately
+distinguished.
 
 ## Historical chapter coverage
 
@@ -46,6 +48,15 @@ The benchmarking chapter adapts `benchmarks/README.md`. Source checks cover
 Timer descriptions also check `mksecond` in `plasim/src/plasim.f90` and the
 root-rank timer calls in `radmod.f90`. These checks establish the documented
 protocol and reporting behavior; timings are not new performance claims.
+
+The brief MPI-performance note follows merged PR #57, checking the current
+multi-level exchanges in `mpimod.f90`, river-routing calls in `landmod.f90`,
+global-mean helpers in `legmod.f90`/`plasim.f90`, and coupled exchanges in
+`oceanmod.f90`. It makes no fixed speedup claim. The PR #60 benchmark update
+checks `CASES`, `prepare`, and `arguments` in `run.py`, and `summarize` in
+`compare.py`: classic-only runnable cases, zero default warm-ups, retained
+legacy-result reading, and descriptive scaling with concurrency flags and
+warnings. The current `benchmarks/README.md` is the companion guide.
 
 The planet/radiation chapter checks the selected `p_*` modules, `readnl`,
 `radini` and stellar-spectrum code against recent README/changelog entries:
@@ -101,12 +112,12 @@ each nondefault parameter combination has been exercised at runtime.
 | MoSt preparation | `configure.sh` built MoSt; supplied headless configuration prepared the expected executable, Gregorian/year-2000 inputs, and run script without starting a simulation. Local compiler setup was affected by separately tracked issue #51. |
 | MoSt annual run | Twelve months of 2000 completed; atmospheric/ocean/ice NetCDF output and restart were nonempty; CDO confirmed twelve monthly atmospheric records and final state was finite. Script status is separately tracked in issue #52. |
 | Converter checks | CDO inspection on real annual output plus synthetic grid/time/code cases. Discrepancies are filed in separate issues, without implementation changes here. |
-| Benchmarking | Exact optional T21 smoke script built and ran serial mixed-layer and real LSG cases for ten days each. Checked finite selected state, atmospheric step count, one LSG step, summary/comparison commands, and continuation without repeating completed samples. All 18 existing runner tests passed. T42, spectral, MPI, and concurrent model benchmarks were reviewed from source rather than newly run for this chapter; no speedup or scaling claim is made. |
+| Benchmarking | Exact optional T21 smoke script built and ran serial mixed-layer and real LSG cases for ten days each. Checked finite selected state, atmospheric step count, one LSG step, summary/comparison commands, and continuation without repeating completed samples. The updated script uses the zero-warmup default and both classic cases; summary JSON flags and all 22 existing runner tests passed. T42, MPI, and concurrent model benchmarks were reviewed from source rather than newly run for this chapter; legacy spectral-result handling is covered by the runner tests. No speedup or scaling claim is made. |
 | GUI | Reader/field/plot behavior checked from source; interactive X11 operation not exercised. |
 | burn7 | Source/interface review; legacy NetCDF C++ dependency unavailable for runtime validation. |
 | Other planets/columns | Relevant inputs and paths checked from source; no claim of new climate validation or a runtime-tested column recipe. |
 | Parameter coverage | All 348 memberships across the 16 reviewed source variants have descriptive rows. Isolated checker trials reject missing, extra, duplicate, and incomplete rows. Types/units/defaults/semantics were reviewed separately against code, not inferred by the checker. |
-| Sphinx | Strict HTML and LaTeX-source builds, reference-inventory consistency, and 3407 local link targets (including anchors/downloads) plus 302 asset references across 50 HTML pages passed, including the benchmarking chapter. Read the Docs theme, PlaSim-LSG TNG opening pages, grouped sidebar navigation, breadcrumbs, and detailed table layouts reviewed in HTML; each chapter has exactly one toctree parent. External checking reached valid pages but GitHub throttled some requests with HTTP 429; a complete external-link pass was not obtained. Compiled PDF layout not validated. |
+| Sphinx | Strict HTML and LaTeX-source builds, reference-inventory consistency, and 3447 local link targets (including anchors/downloads) plus 302 asset references across 50 HTML pages passed, including the benchmarking chapter. Read the Docs theme, PlaSim-LSG TNG opening pages, grouped sidebar navigation, breadcrumbs, and detailed table layouts reviewed in HTML; each chapter has exactly one toctree parent. External checking reached valid pages but GitHub throttled some requests with HTTP 429; a complete external-link pass was not obtained. Compiled PDF layout not validated. |
 
 ## Issue-only follow-up
 

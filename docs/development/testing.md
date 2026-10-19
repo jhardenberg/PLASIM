@@ -20,7 +20,7 @@ existing Makefile and checked-in runtime inputs.
 | Restarts | Continuous versus split short runs, classic/spectral modes, selected older restart continuation, and orbital-epoch selection across a year boundary. |
 | Cloud diagnostics | State invariance when diagnostics are enabled and nonempty finite clear-sky flux output. |
 | Real LSG | Actual ocean advancement with daily coupling, ocean state, bidirectional exchange, and atmosphere/ocean restart consistency. |
-| MPI | Two-rank mixed-layer/LSG comparisons, restart layout, spectral fractions, and selected nondefault broadcasts. |
+| MPI | Two-rank mixed-layer/LSG comparisons including runoff, restart layout, spectral fractions, and selected nondefault broadcasts. |
 
 See {download}`tests/README.md <../../tests/README.md>` for precise
 configurations, tolerances, limitations, and commands to select subsets.

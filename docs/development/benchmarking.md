@@ -18,15 +18,18 @@ Make on Linux or macOS. MPI cases additionally need compatible `mpif90` and
 `mpiexec`. The suite uses the Python standard library; no GUI, CDO, NetCDF,
 or extra Python packages are required.
 
-The default matrix has eight serial cases: each configuration below runs
-at both T21/L10 and T42/L10.
+The default matrix has four serial cases: each configuration below runs
+at both T21/L10 and T42/L10. Each additional MPI rank count runs the same
+four configurations.
 
 | Case | Radiation | Ocean |
 | --- | --- | --- |
 | `mixed` | Classic broadband | Mixed layer |
-| `mixed-spectral` | Stellar-spectrum option, 5778 K blackbody | Mixed layer |
 | `lsg` | Classic broadband | Real coupled LSG |
-| `lsg-spectral` | Stellar-spectrum option, 5778 K blackbody | Real coupled LSG |
+
+Only `mixed` and `lsg` are accepted by `--cases`; all new benchmarks use
+classic broadband radiation (`nstartemp=0`). The model's spectral-radiation
+capability remains available for ordinary experiments.
 
 The benchmark protocol prescribes Earth, ten atmospheric levels, a 360-day
 year starting on 1 January of year 1, `seed=1`, `kick=0`, and disabled
@@ -70,17 +73,19 @@ python3 benchmarks/run.py --output benchmarks/results/baseline
 python3 benchmarks/compare.py benchmarks/results/baseline
 ```
 
-The defaults are 120 simulated days, five measured repetitions, and one
-excluded warm-up **per case**. The full matrix can take hours, especially
-at T42. Select a smaller matrix when investigating a particular component.
+The defaults are 120 simulated days, five measured repetitions, and zero
+warm-ups **per case**. Request excluded preliminary runs with `--warmups N`;
+each lasts the full `--days` duration and is recorded but excluded from
+summary statistics. The full matrix can take hours, especially at T42.
+Select a smaller matrix when investigating a particular component.
 
 | Option | Default | Effect |
 | --- | --- | --- |
 | `--resolutions` | `T21 T42` | Select one or both atmospheric resolutions. |
-| `--cases` | All four cases above | Select ocean/radiation configurations. |
+| `--cases` | `mixed lsg` | Select one or both ocean configurations; radiation is classic broadband. |
 | `--ranks` | `1` | Serial for 1; real MPI for larger counts. Each count must be a power of two dividing every selected latitude count (32 for T21, 64 for T42). |
 | `--days` | `120` | Positive simulated days; LSG runs require an integer number of coupling intervals. |
-| `--repeats`, `--warmups` | `5`, `1` | Positive measured count and nonnegative excluded count. |
+| `--repeats`, `--warmups` | `5`, `0` | Positive measured count and nonnegative excluded count. |
 | `--coupling-days` | `10` | LSG exchange interval; choices are 1 or 10 days. |
 | `--io` | `minimal` | Suppress regular Service output, or select `daily` output. |
 | `--fc`, `--mpifc`, `--cc` | `gfortran`, `mpif90`, `cc` | Compiler executables; precision is fixed separately by the runner. |
@@ -112,6 +117,13 @@ digest, runtime inputs, and environment match. Repeating the same run
 command skips completed cases and recorded samples. An incompatible
 directory, or one without `results.json`, is rejected. Exported comparison
 and summary JSON files must have new filenames.
+
+Saved result files containing the former spectral benchmark cases can still
+be summarized and compared. To continue an old eight-case run, use its
+original runner; start a new output directory for the current reduced matrix.
+Runner-version compatibility checks still apply when combining reports.
+To continue any run that used warm-ups, explicitly pass its original
+`--warmups N` count.
 
 The comparison matches resolution/configuration/rank cases and reports
 unmatched or incomplete cases. It checks runner versions, runtime inputs,
@@ -164,8 +176,15 @@ raw samples; duplicate cases are rejected. Serial and MPI Fortran versions
 must agree, and separate MPI reports must agree on wrapper and launcher.
 Sequential core budgets and repetition counts can differ. The exported
 summary records source report paths and summarized rows; it is not a raw
-`results.json` input for later comparisons. With incompatible conditions,
-`--allow-mismatch` produces a timing-only summary without scaling ratios.
+`results.json` input for later comparisons. JSON rows also record
+`concurrent_run` and `concurrent_serial_baseline` flags.
+
+Speedup and efficiency are shown whenever a matching serial baseline has
+measured samples. Concurrent runs retain these ratios with a warning that
+they include shared-resource effects. `n/a` means there is no measured
+matching serial baseline. Compatibility checks remain in place; explicitly
+allowing differences with `--allow-mismatch` retains descriptive ratios and
+warns about those differences.
 
 ## Run independent cases concurrently
 
@@ -189,8 +208,9 @@ cores; consult the benchmark guide for launcher considerations.
 
 Concurrent timings include competition for CPU, memory, and storage. Use
 this mode to finish a matrix sooner. Use isolated sequential cases to
-measure model speedups or MPI efficiency: scaling ratios are suppressed
-for any summary row whose case or serial baseline ran concurrently.
+measure model speedups or MPI efficiency. Summaries display scaling ratios
+with a warning when a case or its serial baseline ran concurrently; those
+ratios describe performance under concurrent load.
 Matching scheduling settings alone do not guarantee identical overlap.
 
 To check the runner's scheduling and report-handling tests without compiling
