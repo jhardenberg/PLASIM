@@ -135,12 +135,23 @@
 
       real :: pf(NUGP,klev)
       real :: pp(NHOR,klev)
+      real :: zbuf(NHOR,klev,NPRO)
+      integer :: jpro
 
-      do jlev = 1 , klev
-         call mpi_scatter(pf(:,jlev),NHOR,mpi_rtype,                     &
-     &                    pp(:,jlev),NHOR,mpi_rtype,                     &
+      if (klev <= 1) then
+         call mpi_scatter(pf(:,1),NHOR,mpi_rtype,                       &
+     &                    pp(:,1),NHOR,mpi_rtype,                       &
      &                    NROOT,myworld,mpinfo)
-      enddo
+      else
+         if (mypid == NROOT) then
+            do jpro = 1 , NPRO
+               zbuf(:,:,jpro) = pf((jpro-1)*NHOR+1:jpro*NHOR,1:klev)
+            enddo
+         endif
+         call mpi_scatter(zbuf,NHOR*klev,mpi_rtype,                     &
+     &                    pp,NHOR*klev,mpi_rtype,                       &
+     &                    NROOT,myworld,mpinfo)
+      endif
 
       return
       end subroutine mpscgp
@@ -154,12 +165,23 @@
 
       real :: pf(NLON*NLAT,klev)
       real :: pp(NHOR,klev)
+      real :: zbuf(NHOR,klev,NPRO)
+      integer :: jpro
 
-      do jlev = 1 , klev
-         call mpi_gather(pp(:,jlev),NHOR,mpi_rtype,                      &
-     &                   pf(:,jlev),NHOR,mpi_rtype,                      &
+      if (klev <= 1) then
+         call mpi_gather(pp(:,1),NHOR,mpi_rtype,                        &
+     &                   pf(:,1),NHOR,mpi_rtype,                        &
      &                   NROOT,myworld,mpinfo)
-      enddo
+      else
+         call mpi_gather(pp,NHOR*klev,mpi_rtype,                        &
+     &                   zbuf,NHOR*klev,mpi_rtype,                      &
+     &                   NROOT,myworld,mpinfo)
+         if (mypid == NROOT) then
+            do jpro = 1 , NPRO
+               pf((jpro-1)*NHOR+1:jpro*NHOR,1:klev) = zbuf(:,:,jpro)
+            enddo
+         endif
+      endif
 
       return
       end subroutine mpgagp
@@ -173,15 +195,87 @@
 
       real :: pf(NLON*NLAT,klev)
       real :: pp(NHOR,klev)
+      real :: zbuf(NHOR,klev,NPRO)
+      integer :: jpro
 
-      do jlev = 1 , klev
-         call mpi_allgather(pp(:,jlev),NHOR,mpi_rtype,                   &
-     &                      pf(:,jlev),NHOR,mpi_rtype,                   &
+      if (klev <= 1) then
+         call mpi_allgather(pp(:,1),NHOR,mpi_rtype,                     &
+     &                      pf(:,1),NHOR,mpi_rtype,                     &
      &                      myworld,mpinfo)
-      enddo
+      else
+         call mpi_allgather(pp,NHOR*klev,mpi_rtype,                     &
+     &                      zbuf,NHOR*klev,mpi_rtype,                   &
+     &                      myworld,mpinfo)
+         do jpro = 1 , NPRO
+            pf((jpro-1)*NHOR+1:jpro*NHOR,1:klev) = zbuf(:,:,jpro)
+         enddo
+      endif
 
       return
       end subroutine mpgallgp
+
+!     =========================
+!     SUBROUTINE MPSHIFTGP_NORTH
+!     =========================
+!     Shift a 2D gridpoint field 1 latitude row north (pout(:,j) = pin(:,j+1))
+!     by exchanging only the boundary latitude row with neighboring MPI ranks
+!     instead of gathering and scattering the full global grid in mkradv.
+
+      subroutine mpshiftgp_north(pin,pout) ! shift global grid 1 row north
+      use mpimod
+
+      real :: pin(NLON,NLPP)
+      real :: pout(NLON,NLPP)
+      real :: zsend(NLON),zrecv(NLON)
+      integer :: isrc,idst,istat(MPI_STATUS_SIZE)
+
+      zsend(:) = pin(:,1)
+      zrecv(:) = 0.0
+      idst = mypid - 1
+      if (idst < 0) idst = MPI_PROC_NULL
+      isrc = mypid + 1
+      if (isrc >= NPRO) isrc = MPI_PROC_NULL
+      if (NPRO > 1) then
+         call mpi_sendrecv(zsend,NLON,mpi_rtype,idst,101,               &
+     &                     zrecv,NLON,mpi_rtype,isrc,101,               &
+     &                     myworld,istat,mpinfo)
+      endif
+      if (NLPP > 1) pout(:,1:NLPP-1) = pin(:,2:NLPP)
+      pout(:,NLPP) = zrecv(:)
+
+      return
+      end subroutine mpshiftgp_north
+
+!     =========================
+!     SUBROUTINE MPSHIFTGP_SOUTH
+!     =========================
+!     Shift a 2D gridpoint field 1 latitude row south (pout(:,j) = pin(:,j-1))
+!     by exchanging only the boundary latitude row with neighboring MPI ranks.
+
+      subroutine mpshiftgp_south(pin,pout) ! shift global grid 1 row south
+      use mpimod
+
+      real :: pin(NLON,NLPP)
+      real :: pout(NLON,NLPP)
+      real :: zsend(NLON),zrecv(NLON)
+      integer :: isrc,idst,istat(MPI_STATUS_SIZE)
+
+      zsend(:) = pin(:,NLPP)
+      zrecv(:) = 0.0
+      idst = mypid + 1
+      if (idst >= NPRO) idst = MPI_PROC_NULL
+      isrc = mypid - 1
+      if (isrc < 0) isrc = MPI_PROC_NULL
+      if (NPRO > 1) then
+         call mpi_sendrecv(zsend,NLON,mpi_rtype,idst,102,               &
+     &                     zrecv,NLON,mpi_rtype,isrc,102,               &
+     &                     myworld,istat,mpinfo)
+      endif
+      if (NLPP > 1) pout(:,NLPP:2:-1) = pin(:,NLPP-1:1:-1)
+      pout(:,1) = zrecv(:)
+
+      return
+      end subroutine mpshiftgp_south
 
 !     =================
 !     SUBROUTINE MPSCSP
@@ -192,12 +286,23 @@
 
       real :: pf(NESP,klev)
       real :: pp(NSPP,klev)
+      real :: zbuf(NSPP,klev,NPRO)
+      integer :: jpro
 
-      do jlev = 1 , klev
-         call mpi_scatter(pf(:,jlev),NSPP,mpi_rtype                      &
-     &                   ,pp(:,jlev),NSPP,mpi_rtype                      &
+      if (klev <= 1) then
+         call mpi_scatter(pf(:,1),NSPP,mpi_rtype                        &
+     &                   ,pp(:,1),NSPP,mpi_rtype                        &
      &                   ,NROOT,myworld,mpinfo)
-      enddo
+      else
+         if (mypid == NROOT) then
+            do jpro = 1 , NPRO
+               zbuf(:,:,jpro) = pf((jpro-1)*NSPP+1:jpro*NSPP,1:klev)
+            enddo
+         endif
+         call mpi_scatter(zbuf,NSPP*klev,mpi_rtype                      &
+     &                   ,pp,NSPP*klev,mpi_rtype                        &
+     &                   ,NROOT,myworld,mpinfo)
+      endif
 
       return
       end subroutine mpscsp
@@ -211,12 +316,23 @@
 
       real :: pf(NESP,klev)
       real :: pp(NSPP,klev)
+      real :: zbuf(NSPP,klev,NPRO)
+      integer :: jpro
 
-      do jlev = 1 , klev
-         call mpi_gather(pp(:,jlev),NSPP,mpi_rtype                       &
-     &                  ,pf(:,jlev),NSPP,mpi_rtype                       &
+      if (klev <= 1) then
+         call mpi_gather(pp(:,1),NSPP,mpi_rtype                         &
+     &                  ,pf(:,1),NSPP,mpi_rtype                         &
      &                  ,NROOT,myworld,mpinfo)
-      enddo
+      else
+         call mpi_gather(pp,NSPP*klev,mpi_rtype                         &
+     &                  ,zbuf,NSPP*klev,mpi_rtype                       &
+     &                  ,NROOT,myworld,mpinfo)
+         if (mypid == NROOT) then
+            do jpro = 1 , NPRO
+               pf((jpro-1)*NSPP+1:jpro*NSPP,1:klev) = zbuf(:,:,jpro)
+            enddo
+         endif
+      endif
 
       return
       end subroutine mpgasp
@@ -228,14 +344,19 @@
       subroutine mpgacs(pcs) ! gather cross sections
       use mpimod
 
-      real :: pcs(NLAT,NLEV),l(NLPP)
+      real :: pcs(NLAT,NLEV),l(NLPP,NLEV)
+      real :: zbuf(NLPP,NLEV,NPRO)
+      integer :: jpro
 
-      do jlev = 1 , NLEV
-         l(:)=pcs(1:NLPP,jlev)
-         call mpi_gather(l,NLPP,mpi_rtype                      &
-     &                  ,pcs(:,jlev),NLPP,mpi_rtype                      &
-     &                  ,NROOT,myworld,mpinfo)
-      enddo
+      l(:,:) = pcs(1:NLPP,1:NLEV)
+      call mpi_gather(l,NLPP*NLEV,mpi_rtype                             &
+     &               ,zbuf,NLPP*NLEV,mpi_rtype                          &
+     &               ,NROOT,myworld,mpinfo)
+      if (mypid == NROOT) then
+         do jpro = 1 , NPRO
+            pcs((jpro-1)*NLPP+1:jpro*NLPP,1:NLEV) = zbuf(:,:,jpro)
+         enddo
+      endif
       return
       end subroutine mpgacs
 
@@ -248,12 +369,21 @@
 
       real :: pf(NESP,klev)
       real :: pp(NSPP,klev)
+      real :: zbuf(NSPP,klev,NPRO)
+      integer :: jpro
 
-      do jlev = 1 , klev
-         call mpi_allgather(pp(:,jlev),NSPP,mpi_rtype                    &
-     &                     ,pf(:,jlev),NSPP,mpi_rtype                    &
+      if (klev <= 1) then
+         call mpi_allgather(pp(:,1),NSPP,mpi_rtype                      &
+     &                     ,pf(:,1),NSPP,mpi_rtype                      &
      &                     ,myworld,mpinfo)
-      enddo
+      else
+         call mpi_allgather(pp,NSPP*klev,mpi_rtype                      &
+     &                     ,zbuf,NSPP*klev,mpi_rtype                    &
+     &                     ,myworld,mpinfo)
+         do jpro = 1 , NPRO
+            pf((jpro-1)*NSPP+1:jpro*NSPP,1:klev) = zbuf(:,:,jpro)
+         enddo
+      endif
 
       return
       end subroutine mpgallsp
@@ -284,11 +414,21 @@
 
       real :: psf(NESP,klev)
       real :: psp(NSPP,klev)
+      real :: zbuf(NSPP,klev,NPRO)
+      integer :: iscat(NPRO)
+      integer :: jpro
 
-      do jlev = 1 , klev
-         call mpi_reduce_scatter(psf(:,jlev),psp(:,jlev),nscatsp        &
+      if (klev <= 1) then
+         call mpi_reduce_scatter(psf(:,1),psp(:,1),nscatsp              &
      &                          ,mpi_rtype,MPI_SUM,myworld,mpinfo)
-      enddo
+      else
+         do jpro = 1 , NPRO
+            zbuf(:,:,jpro) = psf((jpro-1)*NSPP+1:jpro*NSPP,1:klev)
+         enddo
+         iscat(:) = NSPP * klev
+         call mpi_reduce_scatter(zbuf,psp,iscat                         &
+     &                          ,mpi_rtype,MPI_SUM,myworld,mpinfo)
+      endif
 
       return
       end subroutine mpsumsc
