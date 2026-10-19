@@ -1,12 +1,13 @@
 # The simulation GUI
 
 MoSt configures and builds an experiment. The **simulation GUI** displays
-and controls a running model. They are different programs/interfaces:
+and controls a running model. They are separate interfaces:
 `most.x -c` suppresses the MoSt window, while **Run with GUI** controls the
 model's GUI build and `NGUI` setting.
 
-Enable the simulation GUI through MoSt when you want interactive diagnostics
-and have an available X11 display. It is optional for batch experiments.
+Enable the simulation GUI through MoSt for interactive demonstrations and
+teaching, with an available X11 display. Keep it disabled (`NGUI=0`) for
+normal and production runs.
 The old guide's statement that every Unix/Linux system already has X11 is
 not a current installation assumption: provide the headers/libraries for
 the build and a working display for interactive use.

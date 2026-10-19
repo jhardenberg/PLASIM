@@ -77,10 +77,10 @@ output, diagnostics, and restart files before starting. Local storage may
 avoid network-filesystem overhead; choose storage appropriate to your
 machine or cluster and its backup policy.
 
-First prepare an experiment with MoSt: choose the model, resolution, output
-settings, and number of years; disable **Run with GUI** if it is not needed;
-then select **Save & Exit**, or use the headless equivalent. Starting from a
-freshly prepared `plasim/run`, copy its contents to a new experiment directory.
+First prepare an experiment with MoSt. Choose the model, resolution, output
+settings, and number of years. Keep **Run with GUI** disabled for normal and
+production runs. Select **Save & Exit**, or use the headless equivalent.
+Copy the contents of the freshly prepared `plasim/run` to a new experiment directory.
 For example, from the repository root:
 
 ```sh

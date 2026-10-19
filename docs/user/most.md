@@ -43,13 +43,14 @@ Start MoSt from the repository root:
 For a first serial Earth setup, choose **Planet Simulator**, **Earth**, T21
 (64 × 32), 10 levels, and one core. Enable **ML Ocean**, **Sea Ice**,
 **Double Precision**, and **Write Output**; leave **LSG Ocean** disabled.
-Set **Start year** to 2000 and **Years to run** to 1. Disable **Run with GUI**
-for a simulation without the interactive model display.
+Set **Start year** to 2000 and **Years to run** to 1. The model's live display
+is mainly intended for interactive demonstrations and teaching. Keep
+**Run with GUI** disabled (`NGUI=0`) for normal and production runs.
 
 Choose **Save & Exit** to compile and prepare the experiment for review before
 launching it. **Save & Run** also starts the generated run script. The MoSt
-window and the model's own simulation GUI are separate: disabling **Run with
-GUI** affects the model executable, not the MoSt configuration window.
+window and the model's own simulation GUI are separate. Disabling
+**Run with GUI** affects the model executable, not the MoSt configuration window.
 
 ## Prepare the same setup without a display
 
@@ -77,10 +78,11 @@ the GUI. MoSt writes its settings to `most_last_used.cfg`; the command
 cannot be read or has an invalid header, MoSt reports that it is using
 defaults, so inspect the messages and generated settings before proceeding.
 
-**`-c` builds and prepares the experiment, then exits; it does not start
-the simulation.** It follows the same preparation path as **Save & Exit**.
-It also does not override **Run with GUI** in the saved configuration: keep
-that setting at zero when preparing a fully headless model run.
+The `-c` option builds and prepares the experiment, then exits.
+**It does not start the simulation.** It follows the same preparation path
+as **Save & Exit**. It also does not override **Run with GUI** in the saved
+configuration. Keep that setting at zero when preparing a fully headless
+model run.
 
 ## Review and start the simulation
 
