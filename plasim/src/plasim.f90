@@ -2121,7 +2121,6 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
          call qtend(zsf(1,3*NLEV+2),gqn,guq,gvq)
          call mpsumsc(zsf,zsp_tend,4*NLEV+1)
          sqt(:,:) = zsp_tend(:,3*NLEV+2:4*NLEV+1)
-         lsqt_gathered = .false.
       else
          call mpsumsc(zsf,zsp_tend,3*NLEV+1)
       endif
@@ -2397,48 +2396,6 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       return
       end
 
-!     =========================
-!     SUBROUTINE GATHER_PROG_SP
-!     =========================
-!     Gather the distributed prognostic spectral arrays (sdp, szp, stp,
-!     spp, sqp) across all MPI ranks in a single mpgallsp collective
-!     instead of 5 separate calls. When lgather_sqt is .true. (at the
-!     end of spectrala), also gather sqt into sqt_glob so mkdqtgp in
-!     rainstep does not need a mid-physics MPI collective after radstep.
-
-      subroutine gather_prog_sp(lgather_sqt)
-      use pumamod
-
-      logical :: lgather_sqt
-      real :: zsp(NSPP,5*NLEV+1)
-      real :: zsf(NESP,5*NLEV+1)
-
-      zsp(:,1:NLEV)          = sdp(:,:)
-      zsp(:,NLEV+1:2*NLEV)   = szp(:,:)
-      zsp(:,2*NLEV+1:3*NLEV) = stp(:,:)
-      zsp(:,3*NLEV+1)        = spp(:)
-      if (nqspec == 1) then
-         zsp(:,3*NLEV+2:4*NLEV+1) = sqp(:,:)
-         if (lgather_sqt) then
-            zsp(:,4*NLEV+2:5*NLEV+1) = sqt(:,:)
-            call mpgallsp(zsf,zsp,5*NLEV+1)
-            sqt_glob(:,:) = zsf(:,4*NLEV+2:5*NLEV+1)
-            lsqt_gathered = .true.
-         else
-            call mpgallsp(zsf,zsp,4*NLEV+1)
-         endif
-         sq(:,:) = zsf(:,3*NLEV+2:4*NLEV+1)
-      else
-         call mpgallsp(zsf,zsp,3*NLEV+1)
-      endif
-      sd(:,:) = zsf(:,1:NLEV)
-      sz(:,:) = zsf(:,NLEV+1:2*NLEV)
-      st(:,:) = zsf(:,2*NLEV+1:3*NLEV)
-      sp(:)   = zsf(:,3*NLEV+1)
-
-      return
-      end subroutine gather_prog_sp
-
 !     ====================
 !     SUBROUTINE SPECTRALA
 !     ====================
@@ -2632,7 +2589,11 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 !
 !     finaly the partial arrays are gathered from all processors (mpi)
 !
-      call gather_prog_sp(.true.)
+      call mpgallsp(sd,sdp,NLEV)
+      call mpgallsp(sz,szp,NLEV)
+      call mpgallsp(st,stp,NLEV)
+      call mpgallsp(sp,spp,   1)
+      if (nqspec == 1) call mpgallsp(sq,sqp,NLEV)
 !
 !     franks diagnostic
 !
@@ -3061,7 +3022,6 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       if (nqspec == 1) then
          call mpsumsc(zsf,zsp,4*NLEV)
          sqt(:,:) = zsp(:,3*NLEV+1:4*NLEV)
-         lsqt_gathered = .false.
       else
          call mpsumsc(zsf,zsp,3*NLEV)
       endif
@@ -3406,7 +3366,6 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
      &              /(1.+delt2*tdissz(jlev)*sakpp(1:NSPP,jlev))
        szt(:,jlev)=zszt1(:,jlev)+zszt2(:,jlev)
       enddo
-      if (nqspec == 1) lsqt_gathered = .false.
 !
 !     energy/entropy diagnostics
 !
@@ -3523,7 +3482,11 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
          if (nqspec == 1) sqm = sqm + pnu * sqp
       endif
 
-      call gather_prog_sp(.false.)
+      call mpgallsp(sd,sdp,NLEV)
+      call mpgallsp(sz,szp,NLEV)
+      call mpgallsp(st,stp,NLEV)
+      call mpgallsp(sp,spp,   1)
+      if (nqspec == 1) call mpgallsp(sq,sqp,NLEV)
 !
 !     franks diagnostic
 !
