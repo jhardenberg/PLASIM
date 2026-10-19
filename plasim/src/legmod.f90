@@ -167,6 +167,53 @@ return
 end
 
 
+! =================
+! SUBROUTINE FC2SP0
+! =================
+! Compute only the (0,0) global-mean spectral mode (w = 1) from
+! the zonal-mean Fourier component fc(1,1,l). Used in mkdheat
+! where modes 2..NESP of kinetic energy dissipation are zeroed.
+
+subroutine fc2sp0(fc,sp0)
+use legmod
+implicit none
+real, intent(in ) :: fc(2,NLON/2,NLPP)
+real, intent(out) :: sp0
+
+integer :: l ! Index for latitude
+
+sp0 = 0.0
+
+if (NLPP < NLAT) then
+  do l = 1 , NLPP
+    sp0 = sp0 + qc(1,l) * fc(1,1,l)
+  enddo
+else
+  do l = 1 , NLAT/2
+    sp0 = sp0 + qc(1,l) * (fc(1,1,l) + fc(1,1,NLAT+1-l))
+  enddo
+endif
+return
+end
+
+
+! =================
+! SUBROUTINE SP02GP
+! =================
+! Reconstruct a uniform gridpoint field from the (0,0) global-mean
+! spectral mode (w = 1) without running a full sp2fc + fc2gp transform.
+
+subroutine sp02gp(sp0,gp)
+use legmod
+implicit none
+real, intent(in ) :: sp0
+real, intent(out) :: gp(NHOR)
+
+gp(:) = qi(1,1) * sp0
+return
+end
+
+
 ! ================
 ! SUBROUTINE SP2FC
 ! ================
