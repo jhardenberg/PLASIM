@@ -190,7 +190,7 @@ class MPITests(FieldComparison, unittest.TestCase):
             self.assertAlmostEqual(math.fsum(fractions), 1.0, delta=1e-12)
         # Parallel reductions can change roundoff; compare every value in both
         # gridpoint fields and global spectral fields rather than file bytes.
-        fields = ["dt", "dq", "dalb", "ysst", "dicec", "diced",
+        fields = ["dt", "dq", "dalb", "drunoff", "ysst", "dicec", "diced",
                   "sz", "sd", "st", "sq", "sp"]
         if lsg:
             fields.append("yfldo")  # Returned LSG heat flux after MPI scatter.

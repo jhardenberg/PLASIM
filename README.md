@@ -197,7 +197,7 @@ The default pressure levels are `20,30,50,70,100,150,200,250,300,400,500,600,700
 ## Performance benchmarks
 
 A separate [benchmark suite](benchmarks/README.md) measures repeated optimized
-T21/T42 runs with mixed-layer and real LSG oceans, classic/spectral radiation,
+T21/T42 runs with mixed-layer and real LSG oceans, classic broadband radiation,
 and selectable MPI rank counts. Use `--parallel --max-cores N` to run independent
 benchmark cases within a shared rank budget; `compare.py --summary` combines
 separately collected serial and MPI results. It records timings and build/input metadata

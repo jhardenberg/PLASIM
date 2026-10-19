@@ -10,14 +10,20 @@ supported hosts. No GUI, CDO, NetCDF, or Python packages are required.
 
 ## Workloads
 
-The default matrix includes **all eight serial T21/L10 and T42/L10 cases**:
+The default matrix includes **all four serial T21/L10 and T42/L10 cases**:
 
 | Case | Atmosphere radiation | Ocean |
 | --- | --- | --- |
 | `mixed` | Classic broadband | Mixed layer, without LSG |
-| `mixed-spectral` | Spectral, stellar temperature 5778 K | Mixed layer, without LSG |
 | `lsg` | Classic broadband | Real coupled LSG |
-| `lsg-spectral` | Spectral, stellar temperature 5778 K | Real coupled LSG |
+
+Each selected rank count runs these four configurations with classic broadband
+radiation (`nstartemp=0`). Only `mixed` and `lsg` are accepted by `--cases`.
+Existing JSON files containing spectral results can still be summarized and
+compared. Use a new output directory for the reduced matrix: continuation
+requires the original case selection and runtime settings to match. The
+comparison tool retains its checks of runner versions when combining old
+and new result files.
 
 Both resolutions use their checked-in atmospheric boundary data. Coupled runs
 also use the real `lsg/src/lsgmod.f90`, `plasim/src/cpl.f90`, and `lsg/dat`
@@ -48,11 +54,16 @@ From the repository root:
 python3 benchmarks/run.py --output benchmarks/results/baseline
 ```
 
-The defaults are 120 simulated days, five measured repetitions, and one
-excluded warm-up **per case**. The full matrix can take hours on a workstation,
-especially at T42. Each sample starts from a fresh copy of the same inputs.
-Warm-ups condition filesystem/CPU caches; they are not climate spin-up and
-do not supply restart state to measured samples.
+The defaults are 120 simulated days, five measured repetitions, and **zero
+warmups** per case. The full matrix can take hours on a workstation, especially
+at T42. Each sample starts from a fresh copy of the same inputs.
+
+Use `--warmups N` to request excluded preliminary runs, for example
+`--warmups 1` for one extra run before the five measured repetitions. Each
+warmup lasts the full `--days` duration; its timing is recorded but excluded
+from summary statistics. Warmups may condition filesystem/CPU caches; they
+do not supply restart state to measured samples. To continue a result directory
+created with warmups, explicitly pass its original `--warmups N` setting.
 
 For a short functional check of the complete matrix:
 
@@ -106,10 +117,10 @@ Use the same source checkout, machine, compiler, input settings (including
 `--days`, coupling and output policy), warmups, and timing options as the
 serial run. Omit `--parallel` for isolated MPI efficiency measurements.
 The new run does not repeat rank 1. `--summary` accepts two or more result
-files/directories and matches each MPI case to its serial resolution/ocean/
-radiation baseline. It prints all timings and, where conditions permit,
-speedup and efficiency. You can also collect ranks 2, 4, and 8 in separate
-runs and supply all their files to the same command.
+files/directories and matches each MPI case to its serial resolution/ocean
+baseline. It prints all timings and reports speedup and efficiency whenever
+a matching serial baseline has measured samples. You can also collect ranks
+2, 4, and 8 in separate runs and supply all their files to the same command.
 
 The tool checks model/runner digests, runtime inputs, shared environment and
 compiler settings. Serial and MPI compiler/launcher entries may differ as
@@ -119,10 +130,14 @@ repetition counts are allowed. Duplicate cases are rejected; samples from
 repeated experiments are never silently pooled. Collect runs under the same
 external CPU allocation/binding and comparable machine load.
 
-If either a case or its serial baseline used concurrent cases (`--parallel`),
-its efficiency is shown as `n/a`. Those timings remain available in the table.
+Speedup is the serial median wall time divided by the MPI median wall time;
+efficiency is speedup divided by the rank count, expressed as a percentage.
+These values are displayed for concurrent cases (`--parallel`) as well. A
+warning identifies possible shared-resource effects when either a case or
+its serial baseline used concurrency. Ratios from those runs describe scaling
+under concurrent load. `n/a` means there is no measured matching serial baseline.
 For other incompatible conditions, `--allow-mismatch` explicitly permits a
-timing-only summary and suppresses all scaling ratios.
+descriptive summary, including scaling ratios, and warns about the differences.
 
 To retain the combined table as a new JSON file:
 
@@ -132,7 +147,8 @@ python3 benchmarks/compare.py --summary \
   --output benchmarks/results/scaling-summary.json
 ```
 
-This exports summary rows and their originating report paths; original raw
+This exports summary rows, their originating report paths, and per-row
+`concurrent_run`/`concurrent_serial_baseline` flags; original raw
 samples and metadata remain in their existing result files. The exported
 summary is not a raw `results.json` input. Two inputs **without** `--summary`
 perform the before/after source-revision comparison when they share rank
@@ -174,9 +190,10 @@ completion; Ctrl-C stops the entire batch immediately. Completed samples and
 
 Parallel mode is useful for completing the workload matrix sooner. Its per-case
 timings include CPU, memory, and I/O contention and are unsuitable for claiming
-isolated model or MPI speedups. The one-file summary suppresses MPI scaling
-ratios in this mode. Use sequential mode on a quiet allocated machine for
-performance comparisons. Scheduling mode and core budget are recorded;
+isolated model or MPI speedups. Summaries display scaling ratios with a
+concurrency warning in this mode. Use sequential mode on a quiet allocated
+machine for isolated performance comparisons. Scheduling mode and core budget
+are recorded;
 comparisons reject different policies/budgets and, in parallel mode, different
 workload matrices/order or repetition counts unless `--allow-mismatch` is set.
 Even matching parallel settings do not guarantee identical overlap between runs.
@@ -199,7 +216,7 @@ For a coupling-heavy investigation:
 
 ```sh
 python3 benchmarks/run.py --output benchmarks/results/daily-coupling \
-  --cases lsg lsg-spectral --coupling-days 1 --days 120
+  --cases lsg --coupling-days 1 --days 120
 ```
 
 Daily coupling changes the numerical workload and ocean timestep. Compare
