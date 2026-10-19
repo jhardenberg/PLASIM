@@ -137,8 +137,8 @@ guarantee byte-identical results across compilers or platforms.
 
 The root README describes `scripts/srv2nc` for conversion to NetCDF with CDO,
 and `burn7`/`burn.sh` for other postprocessing workflows. Those tools are
-not prerequisites for this example. Their full Sphinx chapters are
-{doc}`planned <../outline>`.
+not prerequisites for this example. See {doc}`../user/postprocessing` for
+their use.
 
 ## Continue or troubleshoot
 

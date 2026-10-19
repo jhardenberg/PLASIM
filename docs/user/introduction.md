@@ -54,7 +54,7 @@ components
 The user guide progresses from preparation to {doc}`configuration`,
 {doc}`analysis`, and the {doc}`configuration and output reference
 <../reference/index>`. Developer instructions have their own part of the
-manual, including alternative compilation and documentation maintenance.
+manual, including alternative compilation, testing, and benchmarking.
 
 Practical material from the legacy User's Guide is updated against the
 current code. The original sources and attribution are retained in

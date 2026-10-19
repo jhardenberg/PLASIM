@@ -2,7 +2,7 @@
 
 These answers update the older `FAQ` for the current PlaSim-focused repository. For current workflows, start with the [README](README.md) and the [Sphinx user manual](docs/index.md). The original [User's Guide](plasim/doc/PS_UsersGuide.pdf) is retained for historical context.
 
-The developing Sphinx manual starts with the recommended [MoSt workflow](docs/user/most.md), including headless preparation, followed by [experiment directories and long simulations](docs/user/experiments.md). An [alternative direct-Make build](docs/development/direct-build.md) and [documentation build instructions](docs/development/documentation.md) are in its separate developer part.
+The developing Sphinx manual starts with the recommended [MoSt workflow](docs/user/most.md), including headless preparation, followed by [experiment directories and long simulations](docs/user/experiments.md). An [alternative direct-Make build](docs/development/direct-build.md) is in its separate developer part. Contributor [documentation build instructions](contributing/documentation.md) are kept separately from the published manual.
 
 ## `configure.sh` cannot find `make`, Fortran, or another compiler. What do I need?
 

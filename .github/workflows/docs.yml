@@ -6,6 +6,7 @@ on:
     branches: [master, main]
     paths:
       - 'docs/**'
+      - 'contributing/**'
       - 'plasim/doc/**'
       - '.readthedocs.yaml'
       - 'plasim/src/**'
@@ -24,6 +25,7 @@ on:
     branches: [master, main]
     paths:
       - 'docs/**'
+      - 'contributing/**'
       - 'plasim/doc/**'
       - '.readthedocs.yaml'
       - 'plasim/src/**'

@@ -45,5 +45,6 @@ legacy
 
 Historical User's Guide module tables and appendix C are the starting
 material; {doc}`legacy` records moved, renamed, and removed entries. The
-scientific Reference Manual remains excluded. Coverage and verification
-limits are recorded in {doc}`../../development/verification`.
+scientific Reference Manual remains separate. The tables describe accepted
+inputs; they do not establish that every parameter combination has been
+tested at runtime.

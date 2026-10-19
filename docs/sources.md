@@ -3,9 +3,8 @@
 The manual adapts the University of Hamburg's *Planet Simulator User's
 Guide*, version 16.0, by Frank Lunkeit, Simon Blessing, Klaus Fraedrich,
 Heiko Jansen, Edilbert Kirk, Ute Luksch, and Frank Sielmann. The original
-PDF is retained, including its figures and historical context. Current
-behavior is determined by code review and the checks recorded in
-{doc}`development/verification`.
+PDF is retained, including its figures and historical context. Descriptions
+of current behavior are checked against the model code.
 
 The original module parameter tables and appendix C are carried into
 {doc}`reference/parameters/index`, with current inputs explained individually
@@ -15,7 +14,7 @@ paths rather than copied unchanged.
 
 | Material | Current use |
 | --- | --- |
-| {download}`User's Guide <../plasim/doc/PS_UsersGuide.pdf>` (70 pages) | Chapters 1–7 and appendices A–C mapped to current practical/user/developer/reference chapters in the ledger; obsolete instructions are replaced or identified as historical. |
+| {download}`User's Guide <../plasim/doc/PS_UsersGuide.pdf>` (70 pages) | Practical user, developer, and reference material from chapters 1–7 and appendices A–C; obsolete instructions are replaced or identified as historical. |
 | {download}`README <../README.md>` | Current MoSt, planetary/orbital, postprocessor, and test context. |
 | {download}`FAQ <../FAQ.md>` | Dependencies, file paths, rejected inputs, source/build separation, and compatibility advice. |
 | {download}`Changelog <../CHANGELOG.md>` | Recent features and intentional input/behavior migrations, checked against implementation before adoption. |

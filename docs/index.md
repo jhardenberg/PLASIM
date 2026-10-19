@@ -9,14 +9,12 @@ physics and ocean coupling, easier workflows, and stronger automated checks.
 
 See the {doc}`introduction <user/introduction>` for a brief overview of what
 is new. The first part explains how to configure, build, and run experiments
-with MoSt. The second part covers development, performance benchmarking,
-the alternative direct-Make example used by CI, and documentation maintenance.
+with MoSt. The second part covers development, testing, performance
+benchmarking, and the alternative direct-Make example used by CI.
 
 ```{note}
-This manual migrates the practical User's Guide and repository instructions,
-checking descriptions against current source code. Runtime validation is
-identified separately from source review in the verification ledger. The
-scientific Reference Manual and its equation set are outside this phase.
+The scientific Reference Manual remains separate; its derivations and
+equation set are not included here.
 ```
 
 Start with {doc}`user/most`. **MoSt (`most.x`) is the recommended way to
@@ -45,9 +43,6 @@ development/architecture
 development/testing
 development/benchmarking
 development/direct-build
-development/documentation
-development/verification
-outline
 sources
 ```
 

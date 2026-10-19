@@ -96,5 +96,4 @@ or workaround tutorial in the manual migration.
 Source comparison: User's Guide chapter 2 lifecycle descriptions and
 chapter 3 decomposition rules checked against `plasim_main`, `prolog`,
 `master`, `gridpointd`, `epilog`, `make_plasim`, `mpimod`, and shared
-dimension definitions. Detailed code-verification records are in
-{doc}`verification`.
+dimension definitions.

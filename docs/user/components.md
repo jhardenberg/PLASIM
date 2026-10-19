@@ -89,5 +89,4 @@ time parameter in this model has the same normalization convention.
 User's Guide §§2.1–2.16 compared with the modules in the table,
 {repo}`plasim/src/make_plasim`, `prolog`/`gridpointd`/`epilog` in
 {repo}`plasim/src/plasim.f90`, and MoSt's `WriteNamelistFile`.
-Developer details are in {doc}`../development/architecture`; verification
-scope and migration differences are recorded in {doc}`../development/verification`.
+Developer details are in {doc}`../development/architecture`.

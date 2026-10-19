@@ -25,7 +25,7 @@ The two `ZUMIN` expressions compare against a squared speed and a speed,
 respectively. Thus the declaration's label “minimum wind speed (m/s)”
 does not provide a single consistent unit convention for nondefault values.
 The table records current behavior; the implementation finding is tracked
-separately in the verification ledger.
+in [issue #56](https://github.com/jhardenberg/PLASIM-LSG/issues/56).
 
 `ZUMIN_D` from the old descriptive text is not the accepted spelling.
 The main model's `NFLUX` is separate from these component switches; check

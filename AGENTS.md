@@ -15,6 +15,7 @@ Read `README.md` and `tests/README.md` before changing a workflow.
 - `tests`: Python `unittest` regression tests and reference data.
 - `benchmarks`: standalone performance workloads, reports, and comparisons.
 - `docs`: Sphinx/MyST user documentation and runnable examples.
+- `contributing`: documentation maintenance, verification, and coverage notes, outside the published manual.
 - `plasim/doc`: historical manuals and reference material.
 
 Edit permanent sources, not generated copies in `plasim/bld`, `plasim/bin`, or
@@ -70,8 +71,9 @@ Report any checks that could not be completed and why.
 
 - When migrating or writing documentation, compare each described interface,
   default, unit, file format, and workflow with the actual code. Record the
-  source files/routines used for verification in the manual's verification
-  ledger. Treat historical manuals as source material, not current authority.
+  source files/routines used for verification in
+  `contributing/documentation-verification.md`. Treat historical manuals as
+  source material, not current authority.
 - Bugs discovered during documentation work belong in GitHub issues. Search
   for existing reports, then open a focused issue with code evidence and
   reproduction details when needed. Do not fix them or turn their workarounds
@@ -82,7 +84,7 @@ Report any checks that could not be completed and why.
   parameters/defaults/units, calendars, output, restart compatibility, and
   testing workflows. Check the manual even when the code change is small;
   when no documentation update is needed, explain why in the PR description.
-- Consult `docs/outline.md` and `docs/sources.md` for migration
+- Consult `contributing/documentation-coverage.md` and `docs/sources.md` for migration
   coverage. Update existing chapters and examples as behavior changes; for
   material not yet migrated, update the relevant repository guide and record
   the remaining work in the outline. Keep coverage and source attribution
@@ -91,7 +93,7 @@ Report any checks that could not be completed and why.
 - Keep the manual's user and developer parts distinct. Recommend MoSt
   (`most.x`, including its headless option) for user compilation and run
   preparation; present direct-Make builds as an additional developer option.
-- Follow `docs/development/documentation.md` when editing the manual.
+- Follow `contributing/documentation.md` when editing the manual.
   Maintain each affected row in `docs/reference/parameters/` alongside
   summary tables and input migrations. Run `python3 docs/generate_reference.py
   --check` for source inventories and complete parameter membership coverage;

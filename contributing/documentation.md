@@ -1,7 +1,8 @@
 # Build and maintain the documentation
 
-This chapter belongs to Part II, for contributors maintaining the manual.
-For compiling and running PlaSim as a user, start with {doc}`../user/most`.
+These contributor notes describe how to maintain the Sphinx manual. They
+are kept in the repository and are not included in the published manual.
+For compiling and running PlaSim as a user, start with [Configure, compile, and run with MoSt](../docs/user/most.md).
 
 The Sphinx documentation sources live in `docs` at the repository root.
 The original PDFs and historical reference files remain in `plasim/doc`.
@@ -56,14 +57,14 @@ python3 docs/generate_reference.py
 python3 docs/generate_reference.py --check
 ```
 
-Edit the descriptive tables in `reference/parameters/` by hand. Add a row
+Edit the descriptive tables in `docs/reference/parameters/` by hand. Add a row
 when introducing an accepted input; remove or migrate it when an interface
 changes. The coverage check does not infer types, defaults, units, or meaning
 from the row, so passing it alone is not semantic validation.
 
 The generator extracts interfaces; it does not infer effective defaults or
 physical semantics. Review initialization, units, conditions, and conversions
-against the code and update {doc}`verification` as part of the same change.
+against the code and update [Documentation verification ledger](documentation-verification.md) as part of the same change.
 
 The example requires `gfortran`, `cc`, and `make`. It creates and retains a
 fresh temporary workspace rather than writing build/run files into the
@@ -72,8 +73,7 @@ checkout. Inspect it before removing that workspace when finished.
 The documentation workflow builds HTML and LaTeX sources with warnings
 treated as errors, runs this exact example, and uploads the HTML as a CI
 artifact. It does not publish a public site. The model's broader regression
-suite remains a separate workflow; see the {download}`test guide
-<../../tests/README.md>` for its scope and invocation.
+suite remains a separate workflow; see the [test guide](../tests/README.md) for its scope and invocation.
 
 Read the Docs uses the root `.readthedocs.yaml`, which selects
 `docs/conf.py` and installs `docs/requirements.txt`. It builds the manual
@@ -98,10 +98,11 @@ PDF publication and visual review are follow-up work for the larger manual.
 
 ## Add or update a chapter
 
-1. Update the coverage status in {doc}`../outline` and add the page to the
+1. Update the coverage status in [Manual structure and migration coverage](documentation-coverage.md) and add the page to the
    appropriate `index.md` toctree when it is ready for readers. User workflows
-   belong in Part I (`user/`); implementation, testing, alternative builds,
-   and documentation maintenance belong in Part II (`development/`). Keep
+   belong in Part I (`user/`); implementation, testing, and alternative builds
+   belong in Part II (`development/`). Contributor maintenance notes stay
+   in `contributing/`, outside the published manual. Keep
    MoSt as the recommended user build/preparation method.
    Group related user chapters beneath the introduction, getting-started,
    configuration, or postprocessing landing pages. Keep each chapter in one
@@ -111,20 +112,20 @@ PDF publication and visual review are follow-up work for the larger manual.
    settings from runtime controls. Maintain the detailed row and the legacy
    crosswalk as well as any summary; explain initialization/restart precedence
    and inputs that are accepted but inactive in the selected implementation.
-3. Add provenance in the chapter and update {doc}`../sources` when needed.
+3. Add provenance in the chapter and update [Source material and attribution](../docs/sources.md) when needed.
    Compare every described interface/default/unit/workflow with the current
    code rather than copying old defaults. Record routines and runtime/source
-   verification scope in {doc}`verification`. Update stale descriptions to
+   verification scope in [Documentation verification ledger](documentation-verification.md). Update stale descriptions to
    current behavior. File implementation bugs separately as issues; do not
    fix them or add workaround instructions in the documentation migration.
-4. Keep executable examples in `examples/` and include them with
+4. Keep executable examples in `docs/examples/` and include them with
    `literalinclude`, so the displayed procedure and the executed file agree.
 5. Run the strict build and affected examples. Review navigation, equations,
    tables, and code blocks in a browser. Add a changelog entry for significant
    documentation changes.
 
-Sphinx configuration is in `conf.py`; Python dependencies are bounded to
-compatible major versions in `requirements.txt`. The authoring references
+Sphinx configuration is in `docs/conf.py`; Python dependencies are bounded to
+compatible major versions in `docs/requirements.txt`. The authoring references
 are the [Sphinx guide](https://www.sphinx-doc.org/en/master/usage/quickstart.html)
 and [MyST syntax guide](https://myst-parser.readthedocs.io/en/stable/syntax/roles-and-directives.html).
 Theme navigation options follow the [Read the Docs theme configuration guide](https://sphinx-rtd-theme.readthedocs.io/en/stable/configuring.html).

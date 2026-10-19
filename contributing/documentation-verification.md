@@ -1,5 +1,9 @@
 # Documentation verification ledger
 
+Contributor record retained outside the published Sphinx manual. Documentation
+maintenance, this ledger, and migration coverage are kept in `contributing/`;
+clean HTML/search/LaTeX builds omit their former manual pages.
+
 The historical User's Guide is source material, not the current interface
 specification. This migration compares its practical claims with the actual
 code. The initial migration reviewed model sources at `9c47096`; subsequent
@@ -117,7 +121,7 @@ each nondefault parameter combination has been exercised at runtime.
 | burn7 | Source/interface review; legacy NetCDF C++ dependency unavailable for runtime validation. |
 | Other planets/columns | Relevant inputs and paths checked from source; no claim of new climate validation or a runtime-tested column recipe. |
 | Parameter coverage | All 348 memberships across the 16 reviewed source variants have descriptive rows. Isolated checker trials reject missing, extra, duplicate, and incomplete rows. Types/units/defaults/semantics were reviewed separately against code, not inferred by the checker. |
-| Sphinx | Strict HTML and LaTeX-source builds, reference-inventory consistency, and 3447 local link targets (including anchors/downloads) plus 302 asset references across 50 HTML pages passed, including the benchmarking chapter. Read the Docs theme, PlaSim-LSG TNG opening pages, grouped sidebar navigation, breadcrumbs, and detailed table layouts reviewed in HTML; each chapter has exactly one toctree parent. External checking reached valid pages but GitHub throttled some requests with HTTP 429; a complete external-link pass was not obtained. Compiled PDF layout not validated. |
+| Sphinx | Strict HTML and LaTeX-source builds, reference-inventory consistency, and 3071 local link targets (including anchors/downloads) plus 284 asset references across 47 HTML pages passed after moving contributor notes outside the published manual. Read the Docs theme, PlaSim-LSG TNG opening pages, grouped sidebar navigation, breadcrumbs, and detailed table layouts reviewed in HTML; each chapter has exactly one toctree parent. External checking reached valid pages but GitHub throttled some requests with HTTP 429; a complete external-link pass was not obtained. Compiled PDF layout not validated. |
 
 ## Issue-only follow-up
 

@@ -126,4 +126,3 @@ here.
 {repo}`plasim/src/p_exo.f90`, `readnl` in {repo}`plasim/src/plasim.f90`,
 {repo}`plasim/src/calmod.f90`, `radini`/`solarini` in
 {repo}`plasim/src/radmod.f90`, and current restart handling in `landmod`.
-The verification ledger distinguishes source review from runtime coverage.
