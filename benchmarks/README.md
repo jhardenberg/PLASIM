@@ -54,11 +54,16 @@ From the repository root:
 python3 benchmarks/run.py --output benchmarks/results/baseline
 ```
 
-The defaults are 120 simulated days, five measured repetitions, and one
-excluded warm-up **per case**. The full matrix can take hours on a workstation,
-especially at T42. Each sample starts from a fresh copy of the same inputs.
-Warm-ups condition filesystem/CPU caches; they are not climate spin-up and
-do not supply restart state to measured samples.
+The defaults are 120 simulated days, five measured repetitions, and **zero
+warmups** per case. The full matrix can take hours on a workstation, especially
+at T42. Each sample starts from a fresh copy of the same inputs.
+
+Use `--warmups N` to request excluded preliminary runs, for example
+`--warmups 1` for one extra run before the five measured repetitions. Each
+warmup lasts the full `--days` duration; its timing is recorded but excluded
+from summary statistics. Warmups may condition filesystem/CPU caches; they
+do not supply restart state to measured samples. To continue a result directory
+created with warmups, explicitly pass its original `--warmups N` setting.
 
 For a short functional check of the complete matrix:
 

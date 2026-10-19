@@ -24,6 +24,7 @@ class BenchmarkMatrixTests(unittest.TestCase):
             self.assertEqual(args.resolutions, ['T21', 'T42'])
             self.assertEqual(args.cases, ['mixed', 'lsg'])
             self.assertEqual(args.ranks, [1])
+            self.assertEqual(args.warmups, 0)
             for resolution in args.resolutions:
                 for case in args.cases:
                     with self.subTest(resolution=resolution, case=case):

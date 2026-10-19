@@ -338,7 +338,8 @@ def arguments():
                         help="Maximum simultaneous serial processes/MPI ranks (default: available logical CPUs)")
     parser.add_argument("--days", type=int, default=120)
     parser.add_argument("--repeats", type=int, default=5)
-    parser.add_argument("--warmups", type=int, default=1)
+    parser.add_argument("--warmups", type=int, default=0,
+                        help="Excluded runs per case before measurements (default: 0)")
     parser.add_argument("--coupling-days", type=int, choices=(1, 10), default=10)
     parser.add_argument("--io", choices=("minimal", "daily"), default="minimal")
     parser.add_argument("--fc", default="gfortran")
