@@ -2,8 +2,8 @@
 
 ```{note}
 The **simulation GUI** (`NGUI=1` / **Run with GUI** in MoSt) is mainly for
-visual demonstrations, quick classroom exploration, and show—**it is not intended
-for scientific production runs**. Production experiments should always disable
+visual demonstrations and quick classroom exploration.
+**It is not intended for scientific production runs**. Production experiments should always disable
 **Run with GUI** (`NGUI=0`) so the model runs at full speed without X11 display
 overhead, writes clean annual restart segments via `most_plasim_run`, and
 avoids unrecorded interactive parameter changes.
@@ -12,8 +12,8 @@ avoids unrecorded interactive parameter changes.
 MoSt configures and builds an experiment (`most.x`), whereas the **simulation
 GUI** is compiled into the model executable (`pumax.c` / `guimod.f90`) to
 display and control a running simulation in real time. They are separate
-interfaces: `most.x -c` suppresses the MoSt configuration window, while **Run
-with GUI** controls whether the model executable itself opens an X11 display
+interfaces: `most.x -c` suppresses the MoSt configuration window, while
+**Run with GUI** controls whether the model executable itself opens an X11 display
 and sets `NGUI=1`.
 
 Enable the simulation GUI through MoSt only when you want an interactive live

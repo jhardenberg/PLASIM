@@ -151,7 +151,7 @@ sequence of 1-year segments (`for ((YEAR=$YEAR1; YEAR<=$YEAR2; YEAR++))`):
 - **Continuing an interrupted or completed run:** Remember that line 12 of
   `most_plasim_run` is `rm -f plasim_restart`. If a 30-year run stops after
   segment 10 (or if you want to extend a finished 10-year run to year 20),
-  **do not** simply run `./most_plasim_run` again unmodified—that would delete
+  **do not** simply run `./most_plasim_run` again unmodified. That would delete
   `plasim_restart` and start over from year 1. Instead:
   1. Copy the last good restart file into place as `plasim_restart` (for
      example, `cp restart/EARTH_CTRL_REST.0010 plasim_restart`, plus the matching

@@ -21,10 +21,10 @@ experiments
   experiment directories for long simulations, and resume interrupted runs.
 
 ```{note}
-MoSt also includes an optional real-time X11 **simulation GUI** (**Run with
-GUI** / `NGUI=1`; see {doc}`gui`), which is separate from the MoSt
+MoSt also includes an optional real-time X11 **simulation GUI**
+(**Run with GUI** / `NGUI=1`; see {doc}`gui`), which is separate from the MoSt
 configuration window. That live display is mainly for interactive
-demonstrations and teaching—keep **Run with GUI** disabled (`NGUI=0`) for all
+demonstrations and teaching. Keep **Run with GUI** disabled (`NGUI=0`) for all
 normal and production runs.
 ```
 

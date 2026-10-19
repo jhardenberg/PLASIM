@@ -50,8 +50,8 @@ MoSt GUI (Option A) or from the command line using a configuration file
 
 ```{note}
 **Two distinct GUIs:** The **MoSt window** (`./most.x`) is used before the run
-to choose settings and compile the model. The **simulation GUI** (**Run with
-GUI** / `NGUI=1`) opens live X11 plots while the model integrates. Because the
+to choose settings and compile the model. The **simulation GUI**
+(**Run with GUI** / `NGUI=1`) opens live X11 plots while the model integrates. Because the
 simulation GUI is mainly for visual demonstration and teaching rather than
 scientific production runs, always disable **Run with GUI** (`Run with GUI = 0`)
 for standard and production experiments.
@@ -264,8 +264,8 @@ MoSt builds or `./cleanplasim` do not overwrite your work. See
 
 If **Run with GUI** is enabled in MoSt (`NGUI=1`), the compiled executable
 opens an interactive X11 window showing live atmospheric and ocean plots while
-the model runs. This feature is mainly for visual demonstrations and teaching—it
-is not used for scientific production runs (which should always use
+the model runs. This feature is mainly for visual demonstrations and teaching.
+It is not used for scientific production runs (which should always use
 `Run with GUI = 0` for speed, annual restart segmentation, and reproducibility).
 Details on `GUI.cfg` and its display arrays are kept in the subsection below:
 
