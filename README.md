@@ -20,7 +20,7 @@ The [Sphinx manual](docs/index.md) provides a user guide and a separate develope
 
 For the standard build, install a C compiler, a C++ compiler, a Fortran 90 compiler such as `gfortran`, and `make`. The graphical MoSt interface also needs X11 headers and libraries. `configure.sh` searches for these tools and reports what it finds. For parallel execution, install MPI with Fortran and C compiler wrappers (for example, `mpif90`, `mpicc`, and `mpiexec`). MPI is optional for serial runs.
 
-The `burn7` postprocessor needs the legacy NetCDF C++ library and its `netcdfcpp.h` header. The `srv2nc` and `burn.sh` scripts use CDO; `burn.sh` also invokes `burn7`. Other useful analysis tools mentioned in the earlier documentation are GrADS and ImageMagick.
+The `burn7` postprocessor needs the legacy NetCDF C++ library and its `netcdfcpp.h` header. The `srv2nc` and `burn.sh` scripts use CDO; `burn.sh` also invokes `burn7`. The Python map example uses optional xarray and Matplotlib packages, with netCDF4 and cftime for reading NetCDF files and model calendars.
 
 ## Configure and run
 

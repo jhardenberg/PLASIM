@@ -23,7 +23,7 @@ troubleshooting. Each chapter retains its existing URL.
 | Interactive model display | [The simulation GUI](../docs/user/gui.md): current configuration precedence, arrays, plot types, and display scaling. |
 | Continuation and provenance | [Restarts and reproducible experiments](../docs/user/restarts.md): segment handoff, compatibility, and reproducibility. |
 | Output conversion | [Convert and analyse model output](../docs/user/postprocessing.md): srv2nc, current burn7, and extraction conventions. |
-| Inspection and graphics | [Inspect and visualize results](../docs/user/visualization.md): tested CDO inspection and current versus historical graphics paths. |
+| Inspection and graphics | [Inspect and visualize results](../docs/user/visualization.md): CDO inspection and a runnable xarray/Matplotlib temperature-map example. |
 | Columns and soundings | [Column-oriented experiments and soundings](../docs/user/column.md): individual current controls, absent historical macro, and sounding interface. |
 | Practical FAQ | [Troubleshooting and compatibility](../docs/user/troubleshooting.md): current workflow and compatibility checks. |
 | Configuration reference | [Runtime configuration reference](../docs/reference/namelists.md) overview, [Detailed namelist reference](../docs/reference/parameters/index.md) with individual inputs, and the complete accepted-name inventory. |

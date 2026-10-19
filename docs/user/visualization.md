@@ -1,9 +1,9 @@
 # Inspect and visualize results
 
-User's Guide chapter 6 describes GrADS and Vis5D workflows. Start from a
-correctly converted dataset and inspect its coordinates and physical units
-before choosing a plotting tool. NetCDF conversion does not by itself prove
-that a field is on a regular latitude grid or on pressure levels.
+Start from a NetCDF dataset produced by {doc}`postprocessing` and inspect
+its coordinates and physical units before plotting. NetCDF conversion does
+not by itself prove that a field is on a regular latitude grid or on
+pressure levels.
 
 ## Inspect NetCDF with the tools used by this repository
 
@@ -35,34 +35,46 @@ criterion. Check the available name in your particular conversion first.
 When plotting precipitation or heat flux, state the units and sign convention
 from the selected output path; see {doc}`../reference/output`.
 
-## GrADS paths retained in the code
+## Plot a temperature map with Python
 
-Current burn7 has a `-g` option that writes a GrADS control file for Service
-plotting. With explicit gridpoint controls in `fields.nl`, a typical form is:
+This example uses xarray to read near-surface air temperature (`tas`) and
+Matplotlib to draw a longitude–latitude map of the first output time.
+Install these optional analysis packages in your Python virtual environment:
 
 ```sh
-./postprocessor/burn7.x -g plasim_output fields.srv < fields.nl > burn7.log
+python -m pip install xarray matplotlib netCDF4 cftime
 ```
 
-Do not also request NetCDF for this GrADS path: the current program disables
-GrADS output when NetCDF is selected. The repository additionally contains
-`tools/srvctl.f90` for a binary Service descriptor and `tools/sractl.f90` for
-formatted Service input. Their input records must maintain consistent field
-and level ordering. They do not turn arbitrary model files or restart files
-into plotting-ready datasets.
+`netCDF4` supplies the NetCDF reader; `cftime` supports model calendars such
+as a 360-day year. From the repository root, run the supplied script on your
+converted atmospheric output:
 
-## Historical Vis5D recipes
+```sh
+python docs/examples/plot-temperature.py atmosphere.nc temperature-map.png
+```
 
-The old manual describes conversion through external `puma2srv`/`puma2v5d`
-and Vis5D tools. Those converters are not provided as a maintained workflow
-in this checkout. Preserve that material in the original guide rather than
-presenting its old executable names or workstation setup as current commands.
-Use a viewer compatible with the verified NetCDF output, or validate an
-external conversion separately.
+In a notebook, replace `sys.argv[1:]` with the two filenames:
+
+```{literalinclude} ../examples/plot-temperature.py
+:language: python
+```
+
+Open `temperature-map.png` to see the map. The colors use the variable's
+recorded units; the script applies no unit conversion or additional time
+averaging. The plot uses the dataset's latitude coordinates directly, including
+Gaussian latitudes, and needs no regridding for this display.
+
+Check `print(ds)` when adapting the example: it expects `tas`, `time`,
+`lat`, and `lon` as produced by the atmospheric `srv2nc` path. `squeeze`
+removes singleton dimensions such as a near-surface height axis. For a
+three-dimensional field, select a level explicitly before plotting. Label
+any alternative variable with its own units and sign convention.
+
+For other plot types, see the [xarray plotting guide](https://docs.xarray.dev/en/stable/user-guide/plotting.html)
+and [Matplotlib figure guide](https://matplotlib.org/stable/users/explain/figure/figure_intro.html).
 
 ## Sources checked
 
-User's Guide chapter 6 compared with burn7 `WriteGradsCtl` and its option
-parser, {repo}`tools/srvctl.f90`, {repo}`tools/sractl.f90`, and the srv2nc
-grid branches. The CDO inspection commands were exercised on the generated
-Earth NetCDF output; external graphical applications were not exercised.
+Variable code 167 (`tas`, kelvin) and the horizontal grid branches in
+{repo}`scripts/srv2nc`. CDO inspection and the Python map example were
+exercised on converted Earth output.
