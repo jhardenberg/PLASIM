@@ -15,6 +15,44 @@ import compare
 import run
 
 
+class BenchmarkMatrixTests(unittest.TestCase):
+    def test_default_matrix_and_classic_radiation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            with patch.object(sys, 'argv', ['run.py', '--output', str(directory / 'out')]):
+                args = run.arguments()
+            self.assertEqual(args.resolutions, ['T21', 'T42'])
+            self.assertEqual(args.cases, ['mixed', 'lsg'])
+            self.assertEqual(args.ranks, [1])
+            for resolution in args.resolutions:
+                for case in args.cases:
+                    with self.subTest(resolution=resolution, case=case):
+                        configs = run.prepare(args, directory / f'{resolution}-{case}', resolution, case)
+                        self.assertRegex(configs['radmod_namelist'], r'\bnstartemp=0\b')
+                        self.assertRegex(configs['oceanmod_namelist'],
+                                         r'\bnlsg=' + ('1' if case == 'lsg' else '0') + r'\b')
+
+    def test_spectral_cases_are_rejected_before_output_creation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'unused'
+            for case in ('mixed-spectral', 'lsg-spectral'):
+                with self.subTest(case=case), patch.object(sys, 'argv',
+                        ['run.py', '--output', str(output), '--cases', case]), \
+                        contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaises(SystemExit) as caught:
+                        run.arguments()
+                    self.assertEqual(caught.exception.code, 2)
+                    self.assertFalse(output.exists())
+
+    def test_old_spectral_results_can_still_be_summarized(self):
+        report = ComparisonTests().report()
+        case = report['cases'][0]
+        case.update(name='T21-mixed-spectral-p1', case='mixed-spectral')
+        with contextlib.redirect_stdout(io.StringIO()):
+            rows = compare.summary(report)
+        self.assertEqual(rows[0]['name'], 'T21-mixed-spectral-p1')
+
+
 class SchedulerTests(unittest.TestCase):
     def exercise(self, costs, budget, parallel):
         lock = threading.Lock()
@@ -310,7 +348,7 @@ class ContinuationTests(unittest.TestCase):
             output = directory / 'bench-out'
             executed = []
             built = []
-            fail_once = {('T21-mixed-spectral-p1', 'sample-03'), ('T21-lsg-p1', 'warmup-01')}
+            fail_once = {('T21-lsg-p1', 'sample-03'), ('T42-mixed-p1', 'warmup-01')}
 
             def fake_build(args, work, out, resolution, lsg, ranks, env):
                 key = (resolution, lsg, ranks)
@@ -335,7 +373,7 @@ class ContinuationTests(unittest.TestCase):
                                                         'mean': 280.0, 'sha256': 'field-sha'}}}
 
             base_argv = ['run.py', '--output', str(output), '--work-dir', str(directory),
-                         '--resolutions', 'T21', '--cases', 'mixed', 'mixed-spectral', 'lsg',
+                         '--resolutions', 'T21', 'T42', '--cases', 'mixed', 'lsg',
                          '--ranks', '1', '--warmups', '1', '--repeats', '2', '--days', '10',
                          '--max-cores', '2']
             with patch.object(sys, 'argv', base_argv), \
@@ -348,8 +386,8 @@ class ContinuationTests(unittest.TestCase):
 
             first_report = compare.json.loads((output / 'results.json').read_text())
             self.assertEqual(first_report['status'], 'partial')
-            self.assertEqual([c['status'] for c in first_report['cases']], ['complete', 'failed', 'failed'])
-            self.assertEqual([len(c['samples']) for c in first_report['cases']], [3, 2, 0])
+            self.assertEqual([c['status'] for c in first_report['cases']], ['complete', 'failed', 'failed', 'complete'])
+            self.assertEqual([len(c['samples']) for c in first_report['cases']], [3, 2, 0, 3])
 
             # Refuses to continue if any setting or case selection differs, leaving results.json untouched.
             before_bytes = (output / 'results.json').read_text()
@@ -376,19 +414,19 @@ class ContinuationTests(unittest.TestCase):
             text = stream.getvalue()
             self.assertIn('Continuing existing benchmark report', text)
             self.assertIn('Skipping T21-mixed-p1: already complete (2 measured sample(s))', text)
-            self.assertIn('Skipping T21-mixed-spectral-p1: warmup-01 already recorded', text)
-            self.assertIn('Skipping T21-mixed-spectral-p1: sample-02 already recorded', text)
+            self.assertIn('Skipping T21-lsg-p1: warmup-01 already recorded', text)
+            self.assertIn('Skipping T21-lsg-p1: sample-02 already recorded', text)
             self.assertEqual(executed, [
-                ('T21-mixed-spectral-p1', 'sample-03'),
-                ('T21-lsg-p1', 'warmup-01'),
-                ('T21-lsg-p1', 'sample-02'),
                 ('T21-lsg-p1', 'sample-03'),
+                ('T42-mixed-p1', 'warmup-01'),
+                ('T42-mixed-p1', 'sample-02'),
+                ('T42-mixed-p1', 'sample-03'),
             ])
             final_report = compare.json.loads((output / 'results.json').read_text())
             self.assertEqual(final_report['status'], 'complete')
             self.assertNotIn('error', final_report)
-            self.assertEqual([c['status'] for c in final_report['cases']], ['complete', 'complete', 'complete'])
-            self.assertEqual([len(c['samples']) for c in final_report['cases']], [3, 3, 3])
+            self.assertEqual([c['status'] for c in final_report['cases']], ['complete', 'complete', 'complete', 'complete'])
+            self.assertEqual([len(c['samples']) for c in final_report['cases']], [3, 3, 3, 3])
 
             # Re-running an already complete report skips all builds and runs.
             executed.clear()

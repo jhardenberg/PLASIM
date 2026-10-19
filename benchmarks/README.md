@@ -10,14 +10,20 @@ supported hosts. No GUI, CDO, NetCDF, or Python packages are required.
 
 ## Workloads
 
-The default matrix includes **all eight serial T21/L10 and T42/L10 cases**:
+The default matrix includes **all four serial T21/L10 and T42/L10 cases**:
 
 | Case | Atmosphere radiation | Ocean |
 | --- | --- | --- |
 | `mixed` | Classic broadband | Mixed layer, without LSG |
-| `mixed-spectral` | Spectral, stellar temperature 5778 K | Mixed layer, without LSG |
 | `lsg` | Classic broadband | Real coupled LSG |
-| `lsg-spectral` | Spectral, stellar temperature 5778 K | Real coupled LSG |
+
+Each selected rank count runs these four configurations with classic broadband
+radiation (`nstartemp=0`). Only `mixed` and `lsg` are accepted by `--cases`.
+Existing JSON files containing spectral results can still be summarized and
+compared. Use a new output directory for the reduced matrix: continuation
+requires the original case selection and runtime settings to match. The
+comparison tool retains its checks of runner versions when combining old
+and new result files.
 
 Both resolutions use their checked-in atmospheric boundary data. Coupled runs
 also use the real `lsg/src/lsgmod.f90`, `plasim/src/cpl.f90`, and `lsg/dat`
@@ -106,8 +112,8 @@ Use the same source checkout, machine, compiler, input settings (including
 `--days`, coupling and output policy), warmups, and timing options as the
 serial run. Omit `--parallel` for isolated MPI efficiency measurements.
 The new run does not repeat rank 1. `--summary` accepts two or more result
-files/directories and matches each MPI case to its serial resolution/ocean/
-radiation baseline. It prints all timings and, where conditions permit,
+files/directories and matches each MPI case to its serial resolution/ocean
+baseline. It prints all timings and, where conditions permit,
 speedup and efficiency. You can also collect ranks 2, 4, and 8 in separate
 runs and supply all their files to the same command.
 
@@ -199,7 +205,7 @@ For a coupling-heavy investigation:
 
 ```sh
 python3 benchmarks/run.py --output benchmarks/results/daily-coupling \
-  --cases lsg lsg-spectral --coupling-days 1 --days 120
+  --cases lsg --coupling-days 1 --days 120
 ```
 
 Daily coupling changes the numerical workload and ocean timestep. Compare
