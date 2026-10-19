@@ -26,7 +26,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 RESOLUTIONS = {"T21": (32, 32), "T42": (64, 48)}  # latitudes, steps per Earth day
-CASES = ("mixed", "mixed-spectral", "lsg", "lsg-spectral")
+CASES = ("mixed", "lsg")
 NAMELISTS = ("fluxmod", "icemod", "landmod", "miscmod", "oceanmod", "planet",
              "radmod", "rainmod", "seamod", "surfmod", "vegmod")
 FIELDS = ("dt", "dq", "dalb", "ysst", "dicec", "yfldo", "sz", "sd", "st", "sq", "sp")
@@ -306,7 +306,7 @@ def prepare(args, directory: Path, resolution: str, case: str) -> dict:
         f"kick=0, ngui=0, seed=1, noutput={int(args.io == 'daily')}, "
         f"nwpd=1, ndiagcf=0, ntime={int(not args.no_timers)}\n/\n")
     configs["radmod_namelist"] = (
-        f"&radmod_nl\n nstartemp={int('spectral' in case)}, starbbtemp=5778.0\n/\n")
+        "&radmod_nl\n nstartemp=0, starbbtemp=5778.0\n/\n")
     if lsg:
         configs["oceanmod_namelist"] = (
             f"&oceanmod_nl\n nlsg=1, naomod={args.coupling_days*RESOLUTIONS[resolution][1]}, "
@@ -338,7 +338,8 @@ def arguments():
                         help="Maximum simultaneous serial processes/MPI ranks (default: available logical CPUs)")
     parser.add_argument("--days", type=int, default=120)
     parser.add_argument("--repeats", type=int, default=5)
-    parser.add_argument("--warmups", type=int, default=1)
+    parser.add_argument("--warmups", type=int, default=0,
+                        help="Excluded runs per case before measurements (default: 0)")
     parser.add_argument("--coupling-days", type=int, choices=(1, 10), default=10)
     parser.add_argument("--io", choices=("minimal", "daily"), default="minimal")
     parser.add_argument("--fc", default="gfortran")
