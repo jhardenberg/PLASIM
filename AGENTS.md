@@ -2,8 +2,10 @@
 
 ## Project and layout
 
-PlaSim is a Fortran climate model with a mixed-layer ocean and optional LSG
-coupling. Read `README.md` and `tests/README.md` before changing a workflow.
+PlaSim-LSG TNG (The Next Generation) is a Fortran climate model with a mixed-layer
+ocean and optional LSG coupling. Use this name for the maintained model while
+preserving historical attributions and existing file/command names.
+Read `README.md` and `tests/README.md` before changing a workflow.
 
 - `plasim/src`: permanent model sources and the `make_plasim` build rules.
 - `plasim/dat`: atmospheric boundary data and configuration files.
@@ -11,6 +13,10 @@ coupling. Read `README.md` and `tests/README.md` before changing a workflow.
 - `most.c` and `configure.sh`: model configuration and build setup.
 - `postprocessor` and `scripts`: output conversion and experiment helpers.
 - `tests`: Python `unittest` regression tests and reference data.
+- `benchmarks`: standalone performance workloads, reports, and comparisons.
+- `docs`: Sphinx/MyST user documentation and runnable examples.
+- `contributing`: documentation maintenance, verification, and coverage notes, outside the published manual.
+- `plasim/doc`: historical manuals and reference material.
 
 Edit permanent sources, not generated copies in `plasim/bld`, `plasim/bin`, or
 `plasim/run`. Build and run tests in temporary directories. Do not commit
@@ -63,6 +69,39 @@ Report any checks that could not be completed and why.
 
 ## Documentation and changelog
 
+- When migrating or writing documentation, compare each described interface,
+  default, unit, file format, and workflow with the actual code. Record the
+  source files/routines used for verification in
+  `contributing/documentation-verification.md`. Treat historical manuals as
+  source material, not current authority.
+- Bugs discovered during documentation work belong in GitHub issues. Search
+  for existing reports, then open a focused issue with code evidence and
+  reproduction details when needed. Do not fix them or turn their workarounds
+  into manual instructions in the documentation PR; handle fixes separately
+  unless the user explicitly requests otherwise.
+- Update the affected Sphinx documentation in `docs` in the same PR
+  as user-visible developments: features, commands, dependencies, namelist
+  parameters/defaults/units, calendars, output, restart compatibility, and
+  testing workflows. Check the manual even when the code change is small;
+  when no documentation update is needed, explain why in the PR description.
+- Consult `contributing/documentation-coverage.md` and `docs/sources.md` for migration
+  coverage. Update existing chapters and examples as behavior changes; for
+  material not yet migrated, update the relevant repository guide and record
+  the remaining work in the outline. Keep coverage and source attribution
+  current. The scientific Reference Manual remains outside this migration
+  phase unless explicitly requested.
+- Keep the manual's user and developer parts distinct. Recommend MoSt
+  (`most.x`, including its headless option) for user compilation and run
+  preparation; present direct-Make builds as an additional developer option.
+- Follow `contributing/documentation.md` when editing the manual.
+  Maintain each affected row in `docs/reference/parameters/` alongside
+  summary tables and input migrations. Run `python3 docs/generate_reference.py
+  --check` for source inventories and complete parameter membership coverage;
+  this does not replace checking the row's defaults, units, and semantics.
+  Run the strict Sphinx HTML build with warnings treated as errors, check links, and run
+  affected examples when commands or behavior change. Edit MyST sources and
+  example scripts, not generated `_build` files; use `literalinclude` to keep
+  displayed examples consistent with the runnable files.
 - Include a `CHANGELOG.md` update in every PR that changes model behavior,
   fixes, tests, build/tooling, or significant documentation or workflows.
   Before opening or updating a PR, explicitly check that its changes are
