@@ -71,7 +71,9 @@ def doubles(data: bytes) -> tuple[float, ...]:
     return struct.unpack(f"={len(data) // 8}d", data)
 
 
-def build_model(build: Path, *, lsg: bool = False, ranks: int = 1) -> Path:
+def build_model(
+    build: Path, *, lsg: bool = False, ranks: int = 1, precision: str = "-fdefault-real-8",
+) -> Path:
     """Build T21/L10 with serial or MPI communication and optional real LSG."""
     compiler = "mpif90" if ranks > 1 else "gfortran"
     for program in (compiler, "make", "cc"):
@@ -94,7 +96,7 @@ def build_model(build: Path, *, lsg: bool = False, ranks: int = 1) -> Path:
     env.update({
         "MOST_CC": "cc", "MOST_CC_OPTS": "-O0",
         "MOST_F90": compiler, "MOST_F90_OPTS": "-O0",
-        "MOST_PREC": "-fdefault-real-8",
+        "MOST_PREC": precision,
         "MPIMOD": "mpimod" if ranks > 1 else "mpimod_stub",
         "GUIMOD": "guimod_stub", "PUMAX": "pumax_stub",
         "GUILIB": "", "OCEAN": "lsgmod" if lsg else "lsgmod_stub",
@@ -432,6 +434,13 @@ class PlaSimTests(unittest.TestCase):
         namelist = run / "landmod_namelist"
         namelist.write_text("&landmod_nl\n albsmin=0.5\n/\n", encoding="ascii")
         self.run_model(run)
+
+    def test_single_precision_build(self) -> None:
+        """Verify PlaSim builds and runs in single precision without type mismatches."""
+        executable = build_model(self.work / "build_single", precision="")
+        self.assertTrue(executable.is_file())
+        run = self.prepare_run("single-precision-smoke", days=1)
+        run_model(executable, run)
 
 
 class CalendarTests(unittest.TestCase):
