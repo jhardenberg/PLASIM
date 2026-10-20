@@ -2,11 +2,32 @@
 
 rm -f *.x most_* F90_*
 
+# Production builds use host-specific instructions where supported
+# (gfortran: -march=native or -mcpu=native, Intel: -xHost on Intel CPUs).
+# Such executables may not run on older or different CPUs, e.g. cluster
+# compute nodes that differ from the build host. Set MOST_ARCH_OPTS to
+# replace these options, or to an empty string for a portable build:
+#    MOST_ARCH_OPTS= ./configure.sh
+#    MOST_ARCH_OPTS="-march=x86-64-v3" ./configure.sh
+
+# f90_accepts <compiler> <options>: succeeds if <compiler> can compile
+# and link a small program with <options>
+f90_accepts() {
+   FLAGDIR=`mktemp -d 2>/dev/null || echo /tmp/most_flags_$$`
+   mkdir -p $FLAGDIR
+   printf 'program t\nreal :: x\nx = 1.0\nprint *, x\nend program t\n' \
+          > $FLAGDIR/t.f90
+   $1 $2 -o $FLAGDIR/t.x $FLAGDIR/t.f90 >/dev/null 2>&1
+   FLAGRC=$?
+   rm -rf $FLAGDIR
+   return $FLAGRC
+}
+
 # check for FORTRAN-90 compiler
 # put your favourite compiler in front if you have more than one
 # WARNING: Portland Group Compiler pgf is reported to be buggy
 
-for MOST_F90 in ifort gfortran xlf sunf90 nagfor f90 f95 pgf90 g95 af90 NO_F90
+for MOST_F90 in ifx ifort gfortran xlf sunf90 nagfor f90 f95 pgf90 g95 af90 NO_F90
 do
    `hash 2>/dev/null $MOST_F90`
    if [ $? = 0 ] ; then break ; fi
@@ -15,31 +36,48 @@ done
 if [ $MOST_F90 != "NO_F90" ] ; then
    F90_PATH=`which $MOST_F90`
    echo "Found FORTRAN-90 compiler     at: $F90_PATH"
+   ARCH_OPTS=""
    if [ $MOST_F90 = "sunf90" ] ; then
       MOST_F90_OPTS="-O3"
       DEBUG_F90_OPTS="-g -C -ftrap=common"
       echo > most_precision_options "MOST_PREC=-r8"
-   elif [ $MOST_F90 = "ifort" ] ; then
-      MOST_F90_OPTS="-O3"
+   elif [ $MOST_F90 = "ifx" -o $MOST_F90 = "ifort" ] ; then
+      # -fp-model precise: no value-unsafe reassociation (the Intel
+      # default is -fp-model fast=1), for reproducible climate runs.
+      # -xHost adds an Intel-only processor check to the executable,
+      # so it is only used on Intel CPUs.
+      MOST_F90_OPTS="-O3 -fp-model precise"
       DEBUG_F90_OPTS="-g -C -fpe0 -traceback"
+      if grep -q GenuineIntel /proc/cpuinfo 2>/dev/null || \
+         sysctl -n machdep.cpu.vendor 2>/dev/null | grep -q GenuineIntel
+      then
+         ARCH_OPTS="-xHost"
+      fi
       echo > most_precision_options "MOST_PREC=-r8"
    elif [ $MOST_F90 = "nagfor" ] ; then
       MOST_F90_OPTS="-O -kind=byte"
       DEBUG_F90_OPTS="-g -C -fpe0 -traceback -kind=byte"
    elif [ $MOST_F90 = "gfortran" ] ; then
-      # get major and minor version number
-      GFMAJ=`gfortran -dumpversion | head -1 | sed -e 's/.*)//' | awk 'BEGIN {FS="."}{print $1}'`
-      GFMIN=`gfortran -dumpversion | head -1 | sed -e 's/.*)//' | awk 'BEGIN {FS="."}{print $2}'`
+      # get major and minor version number; since GCC 7, -dumpversion
+      # may print only the major version, so prefer -dumpfullversion
+      GFFULL=`gfortran -dumpfullversion 2>/dev/null || gfortran -dumpversion`
+      GFFULL=`echo "$GFFULL" | head -1 | sed -e 's/.*)//' -e 's/^ *//'`
+      GFMAJ=`echo "$GFFULL" | awk 'BEGIN {FS="."}{print $1+0}'`
+      GFMIN=`echo "$GFFULL" | awk 'BEGIN {FS="."}{print $2+0}'`
       GFVER=`expr 100 '*' $GFMAJ + $GFMIN`
       echo "gfortran version " $GFMAJ.$GFMIN
+      # Production: no -finit-real=snan (initialization costs time on
+      # every call; it stays in the debug options). Floating point traps
+      # are kept because they are the only NaN guard during a run.
+      # -funroll-loops is value-safe and does not change results.
       # flags for gfortran version >= 4.9 [ -ffpe-summary ]
       if [ "$GFVER" -ge "409" ] ; then
-         MOST_F90_OPTS="-O3 -ffpe-trap=invalid,zero,overflow -ffpe-summary=none -finit-real=snan"
+         MOST_F90_OPTS="-O3 -funroll-loops -ffpe-trap=invalid,zero,overflow -ffpe-summary=none"
          DEBUG_F90_OPTS="-g -O0 -ffpe-trap=invalid,zero,overflow -ffpe-summary=none -fcheck=all -finit-real=snan"
          echo > most_precision_options "MOST_PREC=-fdefault-real-8"
       # flags for gfortran version 4.5 - 4.8
       elif [ "$GFVER" -ge "405" ] ; then
-         MOST_F90_OPTS="-O3 -ffpe-trap=invalid,zero,overflow -finit-real=snan"
+         MOST_F90_OPTS="-O3 -funroll-loops -ffpe-trap=invalid,zero,overflow"
          DEBUG_F90_OPTS="-g -O0 -ffpe-trap=invalid,zero,overflow -fcheck=all -finit-real=snan"
          echo > most_precision_options "MOST_PREC=-fdefault-real-8"
       # flags for gfortran version 4.2, 4.3 and 4.4
@@ -47,9 +85,25 @@ if [ $MOST_F90 != "NO_F90" ] ; then
          MOST_F90_OPTS="-O3"
          DEBUG_F90_OPTS="-g -ffpe-trap=invalid,zero,overflow -fbounds-check"
       fi
+      # tune for the build host: -march on x86, -mcpu on ARM and POWER
+      case `uname -m` in
+         x86_64|amd64|i?86)       ARCH_OPTS="-march=native" ;;
+         arm64|aarch64|ppc64*)    ARCH_OPTS="-mcpu=native"  ;;
+      esac
    else
       MOST_F90_OPTS="-O"
       DEBUG_F90_OPTS="-g"
+   fi
+   # host-specific options: user override, then check compiler support
+   ARCH_OPTS="${MOST_ARCH_OPTS-$ARCH_OPTS}"
+   if [ -n "$ARCH_OPTS" ] ; then
+      if f90_accepts $MOST_F90 "$MOST_F90_OPTS $ARCH_OPTS" ; then
+         MOST_F90_OPTS="$MOST_F90_OPTS $ARCH_OPTS"
+         echo "Host-specific Fortran options   : $ARCH_OPTS"
+      else
+         echo "Host-specific Fortran options   : $ARCH_OPTS not supported - skipped"
+         ARCH_OPTS=""
+      fi
    fi
    echo  > most_compiler "MOST_F90=$MOST_F90"
    echo >> most_compiler "MOST_F90_OPTS=$MOST_F90_OPTS"
@@ -159,7 +213,13 @@ if [ $MPI_F90 != "NO_F90" ] ; then
    fi
    echo  > most_compiler_mpi "MPI_RUN=$MPI_RUN"
    echo >> most_compiler_mpi MOST_F90=$MPI_F90
-   echo >> most_compiler_mpi "MOST_F90_OPTS=$MOST_F90_OPTS"
+   # the MPI wrapper may use another compiler than MOST_F90
+   MPI_F90_OPTS="$MOST_F90_OPTS"
+   if ! f90_accepts $MPI_F90 "$MPI_F90_OPTS" ; then
+      echo "MPI FORTRAN-90 compiler rejects: $MPI_F90_OPTS - using -O3"
+      MPI_F90_OPTS="-O3"
+   fi
+   echo >> most_compiler_mpi "MOST_F90_OPTS=$MPI_F90_OPTS"
    echo >> most_compiler_mpi "MPIMOD=mpimod"
    echo "Found MPI FORTRAN-90 compiler at: $F90_PATH"
 else
