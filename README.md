@@ -1,11 +1,14 @@
 [![DOI](https://zenodo.org/badge/101884206.svg)](https://zenodo.org/badge/latestdoi/101884206)
+[![Documentation Status](https://readthedocs.org/projects/plasim-lsg/badge/?version=latest)](https://plasim-lsg.readthedocs.io/en/latest/?badge=latest)
 ![Stand with Ukraine](https://badgen.net/badge/stand%20with/UKRAINE/?color=0057B8&labelColor=FFD700)
 
-# PLASIM-LSG TNG (The Next Generation)
+# PlaSim-LSG TNG (The Next Generation)
 
-PlaSim is the Planet Simulator, a general circulation model used in meteorology and Earth sciences. This repository was originally a streamlined fork of [Hartmut Borth's PLASIM repository](https://github.com/HartmutBorth/PLASIM) and is now maintained independently. It contains the components needed to build and run PlaSim, its LSG ocean configuration, MoSt (the model starter), postprocessors, and tests.
+PlaSim-LSG TNG (The Next Generation) builds on and improves the original Planet Simulator (PlaSim), a general circulation model used in meteorology and Earth sciences. This version is maintained in [jhardenberg/PLASIM](https://github.com/jhardenberg/PLASIM). This repository was originally a streamlined fork of [Hartmut Borth's PLASIM repository](https://github.com/HartmutBorth/PLASIM) and is now maintained independently. It contains the components needed to build and run PlaSim-LSG TNG, its LSG ocean configuration, MoSt (the model starter), postprocessors, and tests.
 
-Running and interpreting the model requires some knowledge of meteorology and climatology, as well as familiarity with Linux, C, and Fortran. Start with the [Planet Simulator User's Guide](plasim/doc/PS_UsersGuide.pdf) and [Reference Manual](plasim/doc/PS_ReferenceManual.pdf). See also the [FAQ](FAQ.md) and [changelog](CHANGELOG.md).
+Running and interpreting the model requires some knowledge of meteorology and climatology, as well as familiarity with Linux, C, and Fortran. Start with the [Sphinx user manual](docs/index.md). The original [User's Guide](plasim/doc/PS_UsersGuide.pdf) is retained for historical context; the scientific [Reference Manual](plasim/doc/PS_ReferenceManual.pdf) remains separate. See also the [FAQ](FAQ.md) and [changelog](CHANGELOG.md).
+
+The [Sphinx manual](docs/index.md) provides a user guide and a separate developer guide, migrated from the practical User's Guide and checked against current code. Start with [MoSt compilation and preparation](docs/user/most.md); then consult chapters on experiments, components, planetary settings, MPI/LSG, boundary data, GUI, restarts, postprocessing, and output/configuration reference. Advanced users can consult the [detailed namelist tables](docs/reference/parameters/index.md), including types, units, defaults, and interactions for each current input. The developer part includes the [optional direct-Make/CI example](docs/development/direct-build.md), testing, and performance benchmarking. Contributor [documentation maintenance notes](contributing/documentation.md) are kept separately from the published manual. The scientific Reference Manual is outside this migration.
 
 ## Features in this repository
 
@@ -18,20 +21,29 @@ Running and interpreting the model requires some knowledge of meteorology and cl
 
 For the standard build, install a C compiler, a C++ compiler, a Fortran 90 compiler such as `gfortran`, and `make`. The graphical MoSt interface also needs X11 headers and libraries. `configure.sh` searches for these tools and reports what it finds. For parallel execution, install MPI with Fortran and C compiler wrappers (for example, `mpif90`, `mpicc`, and `mpiexec`). MPI is optional for serial runs.
 
-The `burn7` postprocessor needs the legacy NetCDF C++ library and its `netcdfcpp.h` header. The `srv2nc` and `burn.sh` scripts use CDO; `burn.sh` also invokes `burn7`. Other useful analysis tools mentioned in the earlier documentation are GrADS and ImageMagick.
+The `burn7` postprocessor needs the legacy NetCDF C++ library and its `netcdfcpp.h` header. The `srv2nc` and `burn.sh` scripts use CDO; `burn.sh` also invokes `burn7`. The Python map example uses optional xarray and Matplotlib packages, with netCDF4 and cftime for reading NetCDF files and model calendars.
 
-## Configure and run
+## Configure, compile, and run
 
-From the repository root:
+Running an experiment in PlaSim-LSG TNG uses **MoSt** (`most.x`), the model starter, from the repository root:
 
 ```sh
 ./configure.sh
 ./most.x
 ```
 
-In the MoSt GUI, select **Planet Simulator** and use **Save & Run** to build and start a run. The original MoSt instructions also describe a PUMA selection, but PUMA is not part of this streamlined checkout. For a configuration-file run without the GUI, use `./most.x -c` or `./most.x -c path/to/config.cfg` after configuring. MoSt's standard PlaSim resolutions include T21 (64 × 32), T31 (96 × 48), and T42 (128 × 64).
+1. **Build MoSt (`./configure.sh`):** Detects your Fortran/C/C++/MPI compilers and X11 libraries, creates `plasim/bld`, `plasim/bin`, and `plasim/run`, and builds `most.x`.
+2. **Configure and compile PlaSim (`./most.x` or `./most.x -c`):**
+   - **Interactive GUI (`./most.x`):** Select **Planet Simulator**, choose your planet (`Earth`, `Mars`, or `Exo`), resolution (`T21` at 64 × 32, `T31` at 96 × 48, or `T42` at 128 × 64), levels, cores, and ocean modules (`ML Ocean`, `Sea Ice`, or `LSG Ocean`). Click **Save & Exit** to compile the model and prepare `plasim/run/` (or **Save & Run** to also launch the simulation immediately).
+   - **Headless config file (`./most.x -c`):** Run `./most.x -c docs/examples/most-earth.cfg` (or `./most.x -c` to use `most_last_used.cfg`) to compile and prepare `plasim/run/` without opening an X11 display.
+3. **Run the simulation (`most_plasim_run`):** MoSt places the compiled executable (`most_plasim_t21_l10_p1.x`), boundary data (`*.sra`), runtime namelists (`*_namelist`), and the driver script `most_plasim_run` inside `plasim/run/`:
+   ```sh
+   cd plasim/run
+   ./most_plasim_run
+   ```
+   With the simulation GUI disabled (`NGUI=0`), `most_plasim_run` loops from `YEAR1` to `YEAR2` (one model year per segment), converts raw Service output to compressed NetCDF4 in `output/` (`MOST_PLA.0001.nc`, `MOST_OCE.0001.nc`, `MOST_ICE.0001.nc`, `MOST_DIAG.0001.txt`, plus `MOST_LSG.0001.nc` when LSG is enabled) using `scripts/srv2nc`, and copies `plasim_status` to `plasim_restart` (and `restart/MOST_REST.0001`) to hand off state between years.
 
-Configuration and builds create files under `plasim/bld`, `plasim/bin`, and `plasim/run`. Edit permanent model sources in [`plasim/src`](plasim/src). Running `./cleanplasim` removes the generated build, binary, and run files before rebuilding; save any run output you need first.
+For multi-year experiments, copy `plasim/run/` to a dedicated experiment directory before editing namelists or `most_plasim_run`; see [Configure, compile, and run with MoSt](docs/user/most.md) and [Experiment directories and long simulations](docs/user/experiments.md). Edit permanent model sources in [`plasim/src`](plasim/src). Running `./cleanplasim` removes all generated files in `plasim/bld`, `plasim/bin`, and `plasim/run`; save any outputs you need first.
 
 ### Orbital parameters and experiment dates
 
@@ -201,6 +213,8 @@ benchmark cases within a shared rank budget; `compare.py --summary` combines
 separately collected serial and MPI results. It records timings and build/input metadata
 and compares source revisions. Benchmarks are run manually, outside regression
 tests and test CI; their state summaries do not replace correctness checks.
+See the manual's [benchmarking chapter](docs/development/benchmarking.md)
+for a small runnable example, timing scope, and revision/MPI comparisons.
 
 ## Tests
 
