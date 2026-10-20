@@ -622,6 +622,39 @@ class ConfigureOptionsTests(unittest.TestCase):
             rows = compare.compare(baseline, candidate, allow_mismatch=True)
         self.assertTrue(any("mpifflags" in d for d in rows[0]["configuration_differences"]))
 
+    def test_compiler_family_detection_and_toolchain_validation(self):
+        self.assertEqual(run.detect_compiler_family("ifx"), "intel")
+        self.assertEqual(run.detect_compiler_family("/opt/intel/bin/mpiifort"), "intel")
+        self.assertEqual(run.detect_compiler_family("gfortran"), "gnu")
+        self.assertEqual(run.detect_compiler_family("/usr/bin/gfortran"), "gnu")
+        self.assertEqual(run.detect_compiler_family(""), "unknown")
+
+        class MockArgs:
+            ranks = [1, 2]
+            fc = "ifx"
+            mpifc = "gfortran"
+            allow_mixed_compilers = False
+
+        # Mismatched toolchain raises RuntimeError by default
+        with self.assertRaises(RuntimeError) as ctx:
+            run.validate_compiler_toolchain(MockArgs())
+        self.assertIn("Inconsistent compiler toolchain detected", str(ctx.exception))
+
+        # --allow-mixed-compilers permits it with warning
+        MockArgs.allow_mixed_compilers = True
+        with contextlib.redirect_stderr(io.StringIO()):
+            run.validate_compiler_toolchain(MockArgs())
+
+        # Matching toolchains pass without error
+        MockArgs.allow_mixed_compilers = False
+        MockArgs.mpifc = "mpiifort"
+        run.validate_compiler_toolchain(MockArgs())
+
+        # Rank 1 only skips check even if mpifc differs
+        MockArgs.ranks = [1]
+        MockArgs.mpifc = "gfortran"
+        run.validate_compiler_toolchain(MockArgs())
+
 
 if __name__ == '__main__':
     unittest.main()

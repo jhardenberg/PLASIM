@@ -253,6 +253,28 @@ def timers(diag: str) -> dict:
             if (match := re.search(pattern, diag, re.S))}
 
 
+def detect_compiler_family(command: str) -> str:
+    """Determine compiler family ('intel', 'gnu', etc.) from executable name and --version."""
+    if not command:
+        return "unknown"
+    name = Path(command).name.lower()
+    if any(k in name for k in ("ifx", "ifort", "mpiifx", "mpiifort", "mpiicx", "mpiicc")):
+        return "intel"
+    if "gfortran" in name or name in ("gcc", "g++"):
+        return "gnu"
+    try:
+        ver = capture([command, "--version"]).lower()
+        if "intel" in ver or "ifx" in ver or "ifort" in ver:
+            return "intel"
+        if "gnu fortran" in ver or "free software foundation" in ver or "gfortran" in ver:
+            return "gnu"
+        if "clang" in ver:
+            return "clang"
+    except Exception:
+        pass
+    return "unknown"
+
+
 def build(args, work: Path, output: Path, resolution: str, lsg: bool, ranks: int,
           env: dict) -> tuple[Path, dict]:
     name = f"{resolution}-{'lsg' if lsg else 'mixed'}-p{ranks}"
@@ -275,19 +297,13 @@ def build(args, work: Path, output: Path, resolution: str, lsg: bool, ranks: int
     build_env.pop("MAKEFLAGS", None)
     current_fc = args.mpifc if ranks > 1 else args.fc
     build_prec = args.precision_flags
-    if any(k in current_fc for k in ("ifx", "ifort", "mpiifx", "mpiifort")):
+    family = detect_compiler_family(current_fc)
+    if family == "intel" and build_prec == "-fdefault-real-8":
         build_prec = "-r8"
-    elif "gfortran" in current_fc:
+    elif family == "gnu" and build_prec == "-r8":
         build_prec = "-fdefault-real-8"
-    else:
-        try:
-            ver = capture([current_fc, "--version"]).lower()
-            if "gnu" in ver or "gfortran" in ver:
-                build_prec = "-fdefault-real-8"
-            elif "intel" in ver or "ifx" in ver or "ifort" in ver:
-                build_prec = "-r8"
-        except Exception:
-            pass
+    elif not build_prec:
+        build_prec = "-r8" if family == "intel" else "-fdefault-real-8"
     build_env.update(
         MOST_CC=args.cc, MOST_CC_OPTS=args.cflags,
         MOST_F90=current_fc,
@@ -450,6 +466,8 @@ def arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--work-dir", type=Path, help="Parent for temporary builds/runs (default: system temp)")
     parser.add_argument("--keep-work", action="store_true", help="Retain binaries and run directories for inspection")
     parser.add_argument("--no-timers", action="store_true", help="Disable model component timing instrumentation")
+    parser.add_argument("--allow-mixed-compilers", action="store_true",
+                        help="Allow running even if serial compiler and MPI wrapper belong to different toolchains")
     args = parser.parse_args(argv)
     args.launcher = shlex.split(args.launcher)
     if not args.launcher:
@@ -550,6 +568,27 @@ def continuation_differences(existing: dict, current: dict, expected_cases: list
     return differences
 
 
+def validate_compiler_toolchain(args) -> None:
+    """Check that serial and parallel Fortran compilers belong to the same family."""
+    if any(rank > 1 for rank in getattr(args, "ranks", [1])):
+        fc = getattr(args, "fc", None)
+        mpifc = getattr(args, "mpifc", None)
+        if fc and mpifc:
+            fc_family = detect_compiler_family(fc)
+            mpifc_family = detect_compiler_family(mpifc)
+            if (fc_family != "unknown" and mpifc_family != "unknown" and
+                    fc_family != mpifc_family):
+                msg = (
+                    f"Inconsistent compiler toolchain detected: serial Fortran compiler ({fc}) "
+                    f"is {fc_family.upper()}, but MPI Fortran wrapper ({mpifc}) wraps {mpifc_family.upper()}."
+                )
+                if not getattr(args, "allow_mixed_compilers", False):
+                    raise RuntimeError(
+                        f"{msg} Use matching compilers or specify --allow-mixed-compilers to override."
+                    )
+                print(f"WARNING: {msg}", file=sys.stderr)
+
+
 def main():
     args = arguments()
     tools = {"make": "make", "cc": args.cc}
@@ -560,6 +599,7 @@ def main():
     for name, command in tools.items():
         if shutil.which(command) is None:
             raise RuntimeError(f"Required {name} executable not found: {command}")
+    validate_compiler_toolchain(args)
     env = os.environ.copy()
     thread_env = {name: "1" for name in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS",
                                         "MKL_NUM_THREADS", "VECLIB_MAXIMUM_THREADS")}
