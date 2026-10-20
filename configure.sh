@@ -27,7 +27,7 @@ f90_accepts() {
 # put your favourite compiler in front if you have more than one
 # WARNING: Portland Group Compiler pgf is reported to be buggy
 
-for MOST_F90 in ifx ifort gfortran xlf sunf90 nagfor f90 f95 pgf90 g95 af90 NO_F90
+for MOST_F90 in ifort ifx gfortran xlf sunf90 nagfor f90 f95 pgf90 g95 af90 NO_F90
 do
    `hash 2>/dev/null $MOST_F90`
    if [ $? = 0 ] ; then break ; fi
@@ -44,19 +44,19 @@ if [ $MOST_F90 != "NO_F90" ] ; then
    elif [ $MOST_F90 = "ifx" -o $MOST_F90 = "ifort" ] ; then
       # -fp-model precise: no value-unsafe reassociation (the Intel
       # default is -fp-model fast=1), for reproducible climate runs.
+      # -assume dummy_aliases: prevent compiler from assuming dummy
+      # arguments never alias in memory across legacy Fortran routines.
       # -xHost adds an Intel-only processor check to the executable,
       # so it is only used on Intel CPUs.
-      # On non-Intel CPUs (e.g. AMD EPYC / Ryzen), ifx (LLVM backend)
-      # supports -march=native directly without Intel CPU checks;
-      # ifort supports -march=core-avx2 on AVX2-capable hosts.
-      MOST_F90_OPTS="-O3 -fp-model precise"
+      # On non-Intel CPUs (e.g. AMD EPYC / Ryzen), use -march=core-avx2
+      # on AVX2-capable hosts for both ifort and ifx to avoid LLVM znver2
+      # code-generation quirks in early ifx releases.
+      MOST_F90_OPTS="-O3 -fp-model precise -assume dummy_aliases"
       DEBUG_F90_OPTS="-g -C -fpe0 -traceback"
       if grep -q GenuineIntel /proc/cpuinfo 2>/dev/null || \
          sysctl -n machdep.cpu.vendor 2>/dev/null | grep -q GenuineIntel
       then
          ARCH_OPTS="-xHost"
-      elif [ "$MOST_F90" = "ifx" ] ; then
-         ARCH_OPTS="-march=native"
       elif grep -q "avx2" /proc/cpuinfo 2>/dev/null || \
            sysctl -n machdep.cpu.features 2>/dev/null | grep -q AVX2
       then
