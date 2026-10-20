@@ -1448,9 +1448,9 @@
        zroff(:,:)=zroff(:,:)+zvroff(:,:)*zrip(:,:)/zarea(:,:)
        zrop(:,:)=-zvroff(:,:)*zrip(:,:)
       endwhere
-      call mpshiftgp_south(zrop,zrop)
+      call mpshiftgp_south(zrop,zrip)
 
-      zroff(:,:)=zroff(:,:)+zrop(:,:)/zarea(:,:)
+      zroff(:,:)=zroff(:,:)+zrip(:,:)/zarea(:,:)
 
       return
       end subroutine mkradv
