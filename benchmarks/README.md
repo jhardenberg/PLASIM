@@ -42,9 +42,33 @@ Each selected MPI rank count gets its own build; `1` selects serial stubs,
 while `2`, `4`, etc. select the real MPI module. Rank counts must be powers
 of two dividing both selected latitude counts.
 
-Default optimization is `-O3 -fdefault-real-8`, with `-O3` for C. No fast-math
-or native-architecture flag is added. Set compiler executables and flags
-explicitly to investigate those choices; they are recorded in the results.
+### Compilers and optimization flags
+
+By default, `benchmarks/run.py` probes compilers and optimization flags by
+running `configure.sh` from the target `--source` in an isolated temporary
+directory. This automatically adopts the compiler executables (`most_compiler`,
+`most_compiler_mpi`) and production optimization flags configured for that
+checkout (such as `-O3 -funroll-loops` and host architecture tuning on GNU Fortran,
+or `-O3 -fp-model precise -xHost` on Intel Fortran). Model precision is fixed
+to double precision (`-fdefault-real-8` for GNU Fortran, `-r8` for Intel Fortran).
+
+Use `--no-configure` (or `--reuse-configure`) to inhibit running `configure.sh`
+and reuse existing `most_compiler` and `most_compiler_mpi` files in `--source`,
+falling back to default tool names (`gfortran`, `mpif90`, `cc`, `-O3`) if none
+exist.
+
+Compiler executables and optimization flags can also be overridden explicitly:
+- `--fc <compiler>`: Fortran compiler for serial runs
+- `--mpifc <wrapper>`: MPI Fortran wrapper for parallel runs
+- `--cc <compiler>`: C compiler
+- `--fflags "<flags>"`: Fortran optimization flags for serial builds
+- `--mpifflags "<flags>"`: Fortran optimization flags for MPI builds (defaults to configured MPI flags or `--fflags`)
+- `--cflags "<flags>"`: C optimization flags (defaults to configured C flags or `-O3`)
+- `--precision-flags "<flags>"`: Fortran precision flags (defaults to auto-detected `-r8` or `-fdefault-real-8`)
+- `--allow-mixed-compilers`: Bypass the consistency check if serial and MPI Fortran compilers belong to different toolchains
+
+`benchmarks/run.py` verifies that the serial Fortran compiler and MPI Fortran wrapper belong to the same compiler family (e.g. both Intel or both GNU) when parallel ranks are executed, stopping with an error if an inconsistent toolchain is detected. All compiler settings and flags are recorded in `results.json` and verified for
+compatibility during comparison.
 
 ## Run a benchmark
 
@@ -84,16 +108,21 @@ python3 benchmarks/run.py --output benchmarks/results/serial-and-mpi \
 python3 benchmarks/compare.py benchmarks/results/serial-and-mpi
 ```
 
-The one-file summary prints wall-time medians, ranges, and MPI speedup and
+The summary prints the recorded compiler executables and optimization/precision
+flags at the top, followed by wall-time medians, ranges, and MPI speedup and
 efficiency relative to a matching serial case when present. It includes
 launcher overhead and is not a pure communication or strong-scaling kernel
 measurement. Use a quiet machine and document CPU allocation and binding.
-For example, Open MPI launcher options can be passed as a quoted command:
+The default MPI launcher is `mpiexec --bind-to none`, avoiding core-binding
+crashes and contention on shared nodes, SLURM allocations, or concurrent runs.
+Custom launcher options or specific binding policies can be passed via `--launcher`:
 
 ```sh
 python3 benchmarks/run.py --output benchmarks/results/bound-mpi \
   --ranks 2 --launcher 'mpiexec --bind-to core'
 ```
+
+To deactivate `--bind-to none` and use standard `mpiexec` defaults, specify `--launcher mpiexec`.
 
 The script sets common OpenMP/BLAS thread counts to one. It does not select
 CPU affinity, change power settings, or enable oversubscription automatically.
@@ -172,11 +201,11 @@ process affinity, or the machine's logical CPU count on other hosts.
 Set it explicitly to match your job allocation, particularly in containers
 or schedulers where CPU quotas are not reflected in process affinity.
 This is a process/rank budget, not CPU pinning or a limit on physical cores;
-launcher/helper processes and the Python coordinator add some overhead.
-Concurrent MPI launchers may bind to overlapping CPUs: use an external
-allocation/launcher that partitions CPUs (or pass `--bind-to none` to Open MPI
-when running concurrent MPI jobs on a shared host) if default core binding
-would pin multiple jobs to the same low-numbered cores.
+Concurrent MPI launchers may bind to overlapping CPUs: by default,
+`benchmarks/run.py` invokes `mpiexec --bind-to none` to prevent core-binding
+conflicts and aborts when multiple MPI jobs or restricted affinity masks are present.
+If dedicated core binding is desired on an isolated machine, specify
+`--launcher 'mpiexec --bind-to core'`.
 
 Without `--parallel`, cases run one at a time; `--max-cores` still bounds the
 selected MPI rank count. Builds use one compiler process at a time and all

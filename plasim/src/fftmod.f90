@@ -37,7 +37,7 @@
          call fftini(n)
       endif
 
-      call dfft8(a,a,n,lot)
+      call dfft8(a,n,lot)
       la = n / 8
       do while (la >= 4)
          call dfft4(a,trigs,n,lot,la)
@@ -82,7 +82,7 @@
       do while (la < n/8)
          call ifft4(a,trigs,n,lot,la)
       enddo
-      call ifft8(a,a,n,lot)
+      call ifft8(a,n,lot)
       return
       end subroutine fc2gp
 
@@ -330,7 +330,7 @@
 !     SUBROUTINE DFFT8
 !     ================
 
-      subroutine dfft8(a,c,n,lot)
+      subroutine dfft8(a,n,lot)
       real a(n*lot),c(n*lot)
       la = n / 8
       z  = 1.0 / n
@@ -369,6 +369,7 @@
          c(i2) = a7m3p5m1 + a6m2
          c(i6) = a7m3p5m1 - a6m2
       enddo
+      a = c
       return
       end subroutine dfft8
 
@@ -575,7 +576,7 @@
 !     SUBROUTINE IFFT8
 !     ================
 
-      subroutine ifft8(a,c,n,lot)
+      subroutine ifft8(a,n,lot)
       parameter(SQRT2 = 1.414213562373095D0)
       dimension a(n*lot),c(n*lot)
       la = n / 8
@@ -614,5 +615,6 @@
          c(i5)  = a0m7m4 - a1m5m2p6
          c(i7)  = a0m7p4 + a1m5p2p6
       enddo
+      a = c
       return
       end
