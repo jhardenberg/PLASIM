@@ -42,9 +42,31 @@ Each selected MPI rank count gets its own build; `1` selects serial stubs,
 while `2`, `4`, etc. select the real MPI module. Rank counts must be powers
 of two dividing both selected latitude counts.
 
-Default optimization is `-O3 -fdefault-real-8`, with `-O3` for C. No fast-math
-or native-architecture flag is added. Set compiler executables and flags
-explicitly to investigate those choices; they are recorded in the results.
+### Compilers and optimization flags
+
+By default, `benchmarks/run.py` probes compilers and optimization flags by
+running `configure.sh` from the target `--source` in an isolated temporary
+directory. This automatically adopts the compiler executables (`most_compiler`,
+`most_compiler_mpi`) and production optimization flags configured for that
+checkout (such as `-O3 -funroll-loops` and host architecture tuning on GNU Fortran,
+or `-O3 -fp-model precise -xHost` on Intel Fortran). Model precision is fixed
+to double precision (`-fdefault-real-8`).
+
+Use `--no-configure` (or `--reuse-configure`) to inhibit running `configure.sh`
+and reuse existing `most_compiler` and `most_compiler_mpi` files in `--source`,
+falling back to default tool names (`gfortran`, `mpif90`, `cc`, `-O3`) if none
+exist.
+
+Compiler executables and optimization flags can also be overridden explicitly:
+- `--fc <compiler>`: Fortran compiler for serial runs
+- `--mpifc <wrapper>`: MPI Fortran wrapper for parallel runs
+- `--cc <compiler>`: C compiler
+- `--fflags "<flags>"`: Fortran optimization flags for serial builds
+- `--mpifflags "<flags>"`: Fortran optimization flags for MPI builds (defaults to configured MPI flags or `--fflags`)
+- `--cflags "<flags>"`: C optimization flags (defaults to configured C flags or `-O3`)
+
+All compiler settings and flags are recorded in `results.json` and verified for
+compatibility during comparison.
 
 ## Run a benchmark
 

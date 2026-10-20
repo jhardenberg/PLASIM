@@ -276,7 +276,8 @@ def build(args, work: Path, output: Path, resolution: str, lsg: bool, ranks: int
     build_env.pop("MFLAGS", None)
     build_env.update(
         MOST_CC=args.cc, MOST_CC_OPTS=args.cflags,
-        MOST_F90=args.mpifc if ranks > 1 else args.fc, MOST_F90_OPTS=args.fflags,
+        MOST_F90=args.mpifc if ranks > 1 else args.fc,
+        MOST_F90_OPTS=args.mpifflags if ranks > 1 else args.fflags,
         MOST_PREC="-fdefault-real-8", MPIMOD="mpimod" if ranks > 1 else "mpimod_stub",
         GUIMOD="guimod_stub", PUMAX="pumax_stub", GUILIB="", FFTMOD="fftmod",
         RAINMOD="rainmod", VEGMOD="simba", PLAMOD="p_earth", LANDMOD="landmod",
@@ -323,7 +324,79 @@ def prepare(args, directory: Path, resolution: str, case: str) -> dict:
     return configs
 
 
-def arguments():
+def parse_make_vars(content: str) -> dict[str, str]:
+    """Parse simple Makefile/shell variable assignments."""
+    variables = {}
+    for line in content.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" in line:
+            key, val = line.split("=", 1)
+            key = key.strip()
+            if " # " in val:
+                val = val.split(" # ", 1)[0]
+            variables[key] = val.strip().strip('"\'')
+    return variables
+
+
+def load_configured_options(directory: Path) -> dict[str, str]:
+    """Extract compiler and flag settings from most_compiler and most_compiler_mpi."""
+    result = {}
+    compiler_file = directory / "most_compiler"
+    if compiler_file.is_file():
+        parsed = parse_make_vars(compiler_file.read_text())
+        if "MOST_F90" in parsed:
+            result["fc"] = parsed["MOST_F90"]
+        if "MOST_F90_OPTS" in parsed:
+            result["fflags"] = parsed["MOST_F90_OPTS"]
+        if "MOST_CC" in parsed:
+            result["cc"] = parsed["MOST_CC"]
+        if "MOST_CC_OPTS" in parsed:
+            copts = []
+            skip_next = False
+            for token in parsed["MOST_CC_OPTS"].split():
+                if skip_next:
+                    skip_next = False
+                    continue
+                if token == "-I":
+                    skip_next = True
+                    continue
+                if token.startswith("-I"):
+                    continue
+                copts.append(token)
+            result["cflags"] = " ".join(copts) if copts else "-O3"
+    mpi_compiler_file = directory / "most_compiler_mpi"
+    if mpi_compiler_file.is_file():
+        parsed_mpi = parse_make_vars(mpi_compiler_file.read_text())
+        if "MOST_F90" in parsed_mpi:
+            result["mpifc"] = parsed_mpi["MOST_F90"]
+        if "MOST_F90_OPTS" in parsed_mpi:
+            result["mpifflags"] = parsed_mpi["MOST_F90_OPTS"]
+    prec_file = directory / "most_precision_options"
+    if prec_file.is_file():
+        parsed_prec = parse_make_vars(prec_file.read_text())
+        if "MOST_PREC" in parsed_prec:
+            result["precision_flags"] = parsed_prec["MOST_PREC"]
+    return result
+
+
+def probe_configure(source: Path, work_dir: Path | None = None) -> dict[str, str]:
+    """Run configure.sh from source in an isolated temporary directory to obtain fresh compiler options."""
+    configure_script = source / "configure.sh"
+    if not configure_script.is_file():
+        return {}
+    with tempfile.TemporaryDirectory(prefix="plasim-configure-", dir=work_dir) as temp_dir:
+        temp = Path(temp_dir)
+        for name in ("configure.sh", "makecheck", "f90check.f90", "cc_check.c", "most.c"):
+            src_file = source / name
+            if src_file.is_file():
+                shutil.copy2(src_file, temp / name)
+        subprocess.run(["bash", "configure.sh"], cwd=temp, capture_output=True, text=True)
+        return load_configured_options(temp)
+
+
+def arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=ROOT, help="Checkout to build (default: this repo)")
     parser.add_argument("--output", type=Path, required=True,
@@ -342,17 +415,26 @@ def arguments():
                         help="Excluded runs per case before measurements (default: 0)")
     parser.add_argument("--coupling-days", type=int, choices=(1, 10), default=10)
     parser.add_argument("--io", choices=("minimal", "daily"), default="minimal")
-    parser.add_argument("--fc", default="gfortran")
-    parser.add_argument("--mpifc", default="mpif90")
-    parser.add_argument("--cc", default="cc")
-    parser.add_argument("--fflags", default="-O3", help="Fortran optimization flags; precision is fixed separately")
-    parser.add_argument("--cflags", default="-O3")
+    parser.add_argument("--fc", default=None,
+                        help="Fortran compiler for serial runs (default: auto-detected via configure.sh)")
+    parser.add_argument("--mpifc", default=None,
+                        help="MPI Fortran compiler wrapper (default: auto-detected via configure.sh)")
+    parser.add_argument("--cc", default=None,
+                        help="C compiler (default: auto-detected via configure.sh)")
+    parser.add_argument("--fflags", default=None,
+                        help="Fortran optimization flags (default: auto-detected via configure.sh)")
+    parser.add_argument("--mpifflags", default=None,
+                        help="MPI Fortran optimization flags (default: auto-detected via configure.sh or --fflags)")
+    parser.add_argument("--cflags", default=None,
+                        help="C optimization flags (default: auto-detected via configure.sh)")
+    parser.add_argument("--no-configure", "--reuse-configure", dest="no_configure", action="store_true",
+                        help="Inhibit running configure.sh; reuse existing most_compiler in source or fallback defaults")
     parser.add_argument("--launcher", default="mpiexec", help="Quoted MPI launcher command/flags, before -n")
     parser.add_argument("--timeout", type=int, default=3600, help="Seconds per build/run")
     parser.add_argument("--work-dir", type=Path, help="Parent for temporary builds/runs (default: system temp)")
     parser.add_argument("--keep-work", action="store_true", help="Retain binaries and run directories for inspection")
     parser.add_argument("--no-timers", action="store_true", help="Disable model component timing instrumentation")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     args.launcher = shlex.split(args.launcher)
     if not args.launcher:
         parser.error("launcher must not be empty")
@@ -373,6 +455,32 @@ def arguments():
         parser.error("LSG days must be a positive multiple of --coupling-days")
     for name in ("resolutions", "cases", "ranks"):
         setattr(args, name, list(dict.fromkeys(getattr(args, name))))
+
+    all_specified = (
+        args.fc is not None and args.fflags is not None and
+        args.cc is not None and args.cflags is not None and
+        (args.mpifc is not None and args.mpifflags is not None if any(r > 1 for r in args.ranks) else True)
+    )
+    if all_specified:
+        configured = {}
+    elif args.no_configure:
+        configured = load_configured_options(args.source)
+    else:
+        configured = probe_configure(args.source, args.work_dir)
+
+    if args.fc is None:
+        args.fc = configured.get("fc", "gfortran")
+    if args.fflags is None:
+        args.fflags = configured.get("fflags", "-O3")
+    if args.cc is None:
+        args.cc = configured.get("cc", "cc")
+    if args.cflags is None:
+        args.cflags = configured.get("cflags", "-O3")
+    if args.mpifc is None:
+        args.mpifc = configured.get("mpifc", "mpif90")
+    if args.mpifflags is None:
+        args.mpifflags = configured.get("mpifflags", args.fflags)
+
     return args
 
 
@@ -398,6 +506,12 @@ def continuation_differences(existing: dict, current: dict, expected_cases: list
     if existing.get("source", {}).get("model_sha256") != current["source"]["model_sha256"]:
         differences.append("model-source SHA-256")
     for key, value in current["settings"].items():
+        if key == "mpifflags" and key not in existing.get("settings", {}):
+            if existing.get("settings", {}).get("fflags") != value:
+                differences.append(
+                    f"setting {key} ({existing.get('settings', {}).get('fflags')!r} vs {value!r})"
+                )
+            continue
         if existing.get("settings", {}).get(key) != value:
             differences.append(
                 f"setting {key} ({existing.get('settings', {}).get(key)!r} vs {value!r})"
@@ -460,6 +574,7 @@ def main():
               "settings": {"days": args.days, "repeats": args.repeats, "warmups": args.warmups,
                            "coupling_days": args.coupling_days, "io": args.io,
                            "timers": not args.no_timers, "fflags": args.fflags,
+                           "mpifflags": args.mpifflags,
                            "cflags": args.cflags, "precision_flags": "-fdefault-real-8",
                            "parallel": args.parallel, "max_cores": args.max_cores},
               "work_directory": None, "kept_work": args.keep_work, "cases": []}

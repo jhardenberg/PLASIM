@@ -68,6 +68,11 @@ def summary_conditions(reference: dict, candidate: dict) -> list[str]:
                     "fflags", "cflags", "precision_flags"):
         if reference["settings"][setting] != candidate["settings"][setting]:
             differences.append(f"setting {setting}")
+    if "mpifflags" in reference["settings"] or "mpifflags" in candidate["settings"]:
+        ref_mpifflags = reference["settings"].get("mpifflags", reference["settings"].get("fflags"))
+        cand_mpifflags = candidate["settings"].get("mpifflags", candidate["settings"].get("fflags"))
+        if ref_mpifflags != cand_mpifflags:
+            differences.append("setting mpifflags")
     before, after = reference["environment"], candidate["environment"]
     for setting in ("machine", "thread_environment", "runtime_environment", "workspace_storage"):
         if before.get(setting) != after.get(setting):
@@ -169,6 +174,11 @@ def compare(baseline: dict, candidate: dict, allow_mismatch: bool) -> list[dict]
                     "fflags", "cflags", "precision_flags"):
         if baseline["settings"][setting] != candidate["settings"][setting]:
             differences.append(f"setting {setting}: {baseline['settings'][setting]!r} vs {candidate['settings'][setting]!r}")
+    if "mpifflags" in baseline["settings"] or "mpifflags" in candidate["settings"]:
+        base_mpifflags = baseline["settings"].get("mpifflags", baseline["settings"].get("fflags"))
+        cand_mpifflags = candidate["settings"].get("mpifflags", candidate["settings"].get("fflags"))
+        if base_mpifflags != cand_mpifflags:
+            differences.append(f"setting mpifflags: {base_mpifflags!r} vs {cand_mpifflags!r}")
     for setting, default in (("parallel", False), ("max_cores", None)):
         if baseline["settings"].get(setting, default) != candidate["settings"].get(setting, default):
             differences.append(f"scheduling setting {setting}")

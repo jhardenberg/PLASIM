@@ -474,5 +474,141 @@ class ContinuationTests(unittest.TestCase):
                     run.main()
 
 
+class ConfigureOptionsTests(unittest.TestCase):
+    def test_parse_make_vars(self):
+        text = """
+        # Comment line
+        MOST_F90 = gfortran # trailing comment
+        MOST_F90_OPTS = -O3 -funroll-loops
+        MOST_CC = "cc"
+        EMPTY =
+        """
+        parsed = run.parse_make_vars(text)
+        self.assertEqual(parsed["MOST_F90"], "gfortran")
+        self.assertEqual(parsed["MOST_F90_OPTS"], "-O3 -funroll-loops")
+        self.assertEqual(parsed["MOST_CC"], "cc")
+        self.assertEqual(parsed["EMPTY"], "")
+
+    def test_load_configured_options(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            (directory / "most_compiler").write_text(
+                "MOST_F90 = gfortran\n"
+                "MOST_F90_OPTS = -O3 -funroll-loops -march=native\n"
+                "MOST_CC = clang\n"
+                "MOST_CC_OPTS = -O3 -I /usr/X11/include -I/usr/local/include\n"
+            )
+            (directory / "most_compiler_mpi").write_text(
+                "MOST_F90 = mpifort\n"
+                "MOST_F90_OPTS = -O3 -funroll-loops\n"
+            )
+            opts = run.load_configured_options(directory)
+            self.assertEqual(opts["fc"], "gfortran")
+            self.assertEqual(opts["fflags"], "-O3 -funroll-loops -march=native")
+            self.assertEqual(opts["cc"], "clang")
+            self.assertEqual(opts["cflags"], "-O3")
+            self.assertEqual(opts["mpifc"], "mpifort")
+            self.assertEqual(opts["mpifflags"], "-O3 -funroll-loops")
+
+    def test_probe_configure_runs_in_isolation(self):
+        with tempfile.TemporaryDirectory() as src_dir, tempfile.TemporaryDirectory() as work_dir:
+            src = Path(src_dir)
+            work = Path(work_dir)
+            mock_configure = (
+                "#!/bin/sh\n"
+                "echo 'MOST_F90 = fake-f90' > most_compiler\n"
+                "echo 'MOST_F90_OPTS = -O-test' >> most_compiler\n"
+                "echo 'MOST_CC = fake-cc' >> most_compiler\n"
+                "echo 'MOST_CC_OPTS = -O3' >> most_compiler\n"
+                "echo 'MOST_F90 = fake-mpif90' > most_compiler_mpi\n"
+                "echo 'MOST_F90_OPTS = -O-mpi' >> most_compiler_mpi\n"
+            )
+            (src / "configure.sh").write_text(mock_configure)
+            (src / "makecheck").write_text("#!/bin/sh\n")
+
+            opts = run.probe_configure(src, work)
+            self.assertEqual(opts["fc"], "fake-f90")
+            self.assertEqual(opts["fflags"], "-O-test")
+            self.assertEqual(opts["cc"], "fake-cc")
+            self.assertEqual(opts["mpifc"], "fake-mpif90")
+            self.assertEqual(opts["mpifflags"], "-O-mpi")
+
+            self.assertFalse((src / "most_compiler").exists())
+            self.assertFalse((src / "most_compiler_mpi").exists())
+
+    def test_arguments_auto_detection_and_inhibition(self):
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory) / "out"
+            fake_opts = {
+                "fc": "my-fc", "fflags": "-O-my-f",
+                "cc": "my-cc", "cflags": "-O-my-c",
+                "mpifc": "my-mpifc", "mpifflags": "-O-my-mpif",
+            }
+            with patch.object(run, "probe_configure", return_value=fake_opts) as mock_probe:
+                args = run.arguments(["--output", str(out)])
+                self.assertTrue(mock_probe.called)
+                self.assertEqual(args.fc, "my-fc")
+                self.assertEqual(args.fflags, "-O-my-f")
+                self.assertEqual(args.cc, "my-cc")
+                self.assertEqual(args.cflags, "-O-my-c")
+                self.assertEqual(args.mpifc, "my-mpifc")
+                self.assertEqual(args.mpifflags, "-O-my-mpif")
+
+            with patch.object(run, "probe_configure") as mock_probe, \
+                    patch.object(run, "load_configured_options", return_value=fake_opts) as mock_load:
+                args = run.arguments(["--output", str(out), "--no-configure"])
+                self.assertFalse(mock_probe.called)
+                self.assertTrue(mock_load.called)
+                self.assertEqual(args.fc, "my-fc")
+
+            with patch.object(run, "probe_configure", return_value=fake_opts):
+                args = run.arguments([
+                    "--output", str(out),
+                    "--fc", "custom-f90",
+                    "--fflags=-O1",
+                    "--mpifflags=-O2",
+                ])
+                self.assertEqual(args.fc, "custom-f90")
+                self.assertEqual(args.fflags, "-O1")
+                self.assertEqual(args.mpifflags, "-O2")
+                self.assertEqual(args.cc, "my-cc")
+
+            with patch.object(run, "probe_configure") as mock_probe, \
+                    patch.object(run, "load_configured_options") as mock_load:
+                args = run.arguments([
+                    "--output", str(out),
+                    "--fc", "custom-f90", "--fflags=-O1",
+                    "--cc", "custom-cc", "--cflags=-O0",
+                    "--ranks", "1",
+                ])
+                self.assertFalse(mock_probe.called)
+                self.assertFalse(mock_load.called)
+                self.assertEqual(args.fc, "custom-f90")
+
+    def test_mpifflags_continuation_and_comparison(self):
+        baseline = ComparisonTests().report()
+        baseline["settings"]["fflags"] = "-O3 -funroll-loops"
+        baseline["settings"]["mpifflags"] = "-O3 -funroll-loops"
+
+        current = copy.deepcopy(baseline)
+        current["source"] = {"model_sha256": "dummy"}
+        baseline["source"] = {"model_sha256": "dummy"}
+        diffs = run.continuation_differences(baseline, current, ["T21-mixed-p1"])
+        self.assertEqual(diffs, [])
+
+        legacy_baseline = copy.deepcopy(baseline)
+        del legacy_baseline["settings"]["mpifflags"]
+        diffs_legacy = run.continuation_differences(legacy_baseline, current, ["T21-mixed-p1"])
+        self.assertNotIn("setting mpifflags", str(diffs_legacy))
+
+        candidate = copy.deepcopy(baseline)
+        candidate["settings"]["mpifflags"] = "-O2"
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(ValueError):
+                compare.compare(baseline, candidate, allow_mismatch=False)
+            rows = compare.compare(baseline, candidate, allow_mismatch=True)
+        self.assertTrue(any("mpifflags" in d for d in rows[0]["configuration_differences"]))
+
+
 if __name__ == '__main__':
     unittest.main()
