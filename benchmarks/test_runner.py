@@ -602,6 +602,16 @@ class ConfigureOptionsTests(unittest.TestCase):
             args_custom_launcher = run.arguments(["--output", str(out), "--launcher", "mpiexec", "--no-configure"])
             self.assertEqual(args_custom_launcher.launcher, ["mpiexec"])
 
+            args_single = run.arguments(["--output", str(out), "--single-precision", "--no-configure"])
+            self.assertEqual(args_single.precision_flags, "")
+
+            args_none = run.arguments(["--output", str(out), "--precision-flags", "none", "--no-configure"])
+            self.assertEqual(args_none.precision_flags, "")
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit):
+                    run.arguments(["--output", str(out), "--single-precision", "--precision-flags", "-r8"])
+
     def test_mpifflags_continuation_and_comparison(self):
         baseline = ComparisonTests().report()
         baseline["settings"]["fflags"] = "-O3 -funroll-loops"
@@ -707,6 +717,12 @@ class ConfigureOptionsTests(unittest.TestCase):
         output_cmp = stream_cmp.getvalue()
         self.assertIn("Compiler:", output_cmp)
         self.assertIn("Fortran: /opt/intel/bin/ifx (-O3 -fp-model precise -r8)", output_cmp)
+
+        # Single precision display
+        single_report = copy.deepcopy(report)
+        single_report["settings"]["precision_flags"] = ""
+        single_lines = compare.format_compiler_info(single_report)
+        self.assertIn("Fortran: /opt/intel/bin/ifx (-O3 -fp-model precise [single precision])", single_lines)
 
 
 if __name__ == '__main__':

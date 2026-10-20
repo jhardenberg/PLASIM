@@ -298,12 +298,11 @@ def build(args, work: Path, output: Path, resolution: str, lsg: bool, ranks: int
     current_fc = args.mpifc if ranks > 1 else args.fc
     build_prec = args.precision_flags
     family = detect_compiler_family(current_fc)
-    if family == "intel" and build_prec == "-fdefault-real-8":
-        build_prec = "-r8"
-    elif family == "gnu" and build_prec == "-r8":
-        build_prec = "-fdefault-real-8"
-    elif not build_prec:
-        build_prec = "-r8" if family == "intel" else "-fdefault-real-8"
+    if build_prec:
+        if family == "intel" and build_prec == "-fdefault-real-8":
+            build_prec = "-r8"
+        elif family == "gnu" and build_prec == "-r8":
+            build_prec = "-fdefault-real-8"
     build_env.update(
         MOST_CC=args.cc, MOST_CC_OPTS=args.cflags,
         MOST_F90=current_fc,
@@ -459,6 +458,8 @@ def arguments(argv: list[str] | None = None) -> argparse.Namespace:
                         help="C optimization flags (default: auto-detected via configure.sh)")
     parser.add_argument("--precision-flags", default=None,
                         help="Fortran precision flags (default: auto-detected via configure.sh, e.g. -fdefault-real-8 or -r8)")
+    parser.add_argument("--single-precision", action="store_true",
+                        help="Build and benchmark in single precision (MOST_PREC='', default 32-bit real)")
     parser.add_argument("--no-configure", "--reuse-configure", dest="no_configure", action="store_true",
                         help="Inhibit running configure.sh; reuse existing most_compiler in source or fallback defaults")
     parser.add_argument("--launcher", default="mpiexec --bind-to none",
@@ -470,6 +471,12 @@ def arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--allow-mixed-compilers", action="store_true",
                         help="Allow running even if serial compiler and MPI wrapper belong to different toolchains")
     args = parser.parse_args(argv)
+    if args.single_precision:
+        if args.precision_flags:
+            parser.error("cannot specify both --single-precision and --precision-flags")
+        args.precision_flags = ""
+    elif args.precision_flags in ("none", "None", ""):
+        args.precision_flags = ""
     args.launcher = shlex.split(args.launcher)
     if not args.launcher:
         parser.error("launcher must not be empty")
