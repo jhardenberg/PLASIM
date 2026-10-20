@@ -273,12 +273,17 @@ def build(args, work: Path, output: Path, resolution: str, lsg: bool, ranks: int
     shutil.copy2(directory / "make_plasim", directory / "makefile")
     build_env = env.copy()
     build_env.pop("MAKEFLAGS", None)
-    build_env.pop("MFLAGS", None)
+    current_fc = args.mpifc if ranks > 1 else args.fc
+    build_prec = args.precision_flags
+    if any(k in current_fc for k in ("ifx", "ifort", "mpiifx", "mpiifort")):
+        build_prec = "-r8"
+    elif "gfortran" in current_fc:
+        build_prec = "-fdefault-real-8"
     build_env.update(
         MOST_CC=args.cc, MOST_CC_OPTS=args.cflags,
-        MOST_F90=args.mpifc if ranks > 1 else args.fc,
+        MOST_F90=current_fc,
         MOST_F90_OPTS=args.mpifflags if ranks > 1 else args.fflags,
-        MOST_PREC=args.precision_flags, MPIMOD="mpimod" if ranks > 1 else "mpimod_stub",
+        MOST_PREC=build_prec, MPIMOD="mpimod" if ranks > 1 else "mpimod_stub",
         GUIMOD="guimod_stub", PUMAX="pumax_stub", GUILIB="", FFTMOD="fftmod",
         RAINMOD="rainmod", VEGMOD="simba", PLAMOD="p_earth", LANDMOD="landmod",
         OCEAN="lsgmod" if lsg else "lsgmod_stub", OCEANCOUP="cpl" if lsg else "cpl_stub",

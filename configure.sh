@@ -198,7 +198,15 @@ else
 fi
 
 #check for MPI-FORTRAN-90 compiler
-for MPI_F90 in openmpif90 mpif90 mpf90 mpxlf90 NO_F90
+if [ "$MOST_F90" = "ifx" ] ; then
+   MPI_F90_LIST="mpiifx mpifort mpiifort mpif90 openmpif90 mpf90 mpxlf90"
+elif [ "$MOST_F90" = "ifort" ] ; then
+   MPI_F90_LIST="mpiifort mpifort mpiifx mpif90 openmpif90 mpf90 mpxlf90"
+else
+   MPI_F90_LIST="mpifort openmpif90 mpif90 mpf90 mpxlf90 mpiifx mpiifort"
+fi
+
+for MPI_F90 in $MPI_F90_LIST NO_F90
 do
    `hash 2>/dev/null $MPI_F90`
    if [ $? = 0 ] ; then break ; fi
@@ -232,7 +240,14 @@ fi
 
 #check for MPI-C compiler
 if [ $MPI_F90 != "NO_F90" ] ; then
-   for MPI_CC in openmpicc gxlc mpicc mpcc g++ gcc NO_CC
+   if [ "$MOST_F90" = "ifx" ] ; then
+      MPI_CC_LIST="mpiicx mpicc openmpicc mpiicc gxlc mpcc gcc"
+   elif [ "$MOST_F90" = "ifort" ] ; then
+      MPI_CC_LIST="mpiicc mpicc openmpicc mpiicx gxlc mpcc gcc"
+   else
+      MPI_CC_LIST="mpicc openmpicc mpiicx mpiicc gxlc mpcc gcc"
+   fi
+   for MPI_CC in $MPI_CC_LIST NO_CC
    do
       `hash 2>/dev/null $MPI_CC`
       if [ $? = 0 ] ; then break ; fi
@@ -251,7 +266,14 @@ fi
 
 #check for MPI-C++ compiler
 if [ $MPI_F90 != "NO_F90" ] ; then
-   for MPI_PP in openmpicxx mpicxx NO_PP
+   if [ "$MOST_F90" = "ifx" ] ; then
+      MPI_PP_LIST="mpiicpx mpicxx openmpicxx mpiicpc"
+   elif [ "$MOST_F90" = "ifort" ] ; then
+      MPI_PP_LIST="mpiicpc mpicxx openmpicxx mpiicpx"
+   else
+      MPI_PP_LIST="mpicxx openmpicxx mpiicpx mpiicpc"
+   fi
+   for MPI_PP in $MPI_PP_LIST NO_PP
    do
       `hash 2>/dev/null $MPI_PP`
       if [ $? = 0 ] ; then break ; fi
