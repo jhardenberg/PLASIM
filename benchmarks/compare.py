@@ -56,6 +56,64 @@ def report_incomplete(report: dict, label: str):
         if partial:
             print(f"  Cases with partial measured samples: {', '.join(partial)}")
 
+def format_compiler_info(report: dict) -> list[str]:
+    """Format compiler paths and options recorded in a benchmark report."""
+    tools = report.get("environment", {}).get("tools", {})
+    settings = report.get("settings", {})
+    cases = report.get("cases", [])
+    has_serial = any(case.get("ranks", 1) == 1 for case in cases) if cases else True
+    has_mpi = any(case.get("ranks", 1) > 1 for case in cases) if cases else False
+
+    lines = []
+    fc_info = tools.get("fc", {})
+    fc_cmd = fc_info.get("path") or fc_info.get("version")
+    fflags = settings.get("fflags")
+    prec = settings.get("precision_flags")
+
+    mpifc_info = tools.get("mpifc", {})
+    mpifc_cmd = mpifc_info.get("path") or mpifc_info.get("version")
+    mpifflags = settings.get("mpifflags") or fflags
+
+    cc_info = tools.get("cc", {})
+    cc_cmd = cc_info.get("path") or cc_info.get("version")
+    cflags = settings.get("cflags")
+
+    def combine_opts(flags: str | None, precision: str | None) -> str:
+        parts = []
+        if flags:
+            parts.append(flags)
+        if precision and precision not in (flags or ""):
+            parts.append(precision)
+        return " ".join(parts)
+
+    # Serial Fortran
+    if (fc_cmd or fflags) and (has_serial or not has_mpi or "fc" in tools):
+        opts = combine_opts(fflags, prec)
+        opts_str = f" ({opts})" if opts else ""
+        if fc_cmd:
+            lines.append(f"Fortran: {fc_cmd}{opts_str}")
+        elif opts:
+            lines.append(f"Fortran options: {opts}")
+
+    # MPI Fortran
+    if (mpifc_cmd or settings.get("mpifflags")) and (has_mpi or "mpifc" in tools):
+        opts = combine_opts(mpifflags, prec)
+        opts_str = f" ({opts})" if opts else ""
+        if mpifc_cmd:
+            lines.append(f"MPI Fortran: {mpifc_cmd}{opts_str}")
+        elif opts:
+            lines.append(f"MPI Fortran options: {opts}")
+
+    # C compiler
+    if cc_cmd or cflags:
+        opts_str = f" ({cflags})" if cflags else ""
+        if cc_cmd:
+            lines.append(f"C compiler: {cc_cmd}{opts_str}")
+        elif cflags:
+            lines.append(f"C options: {cflags}")
+
+    return lines
+
 
 def summary_conditions(reference: dict, candidate: dict) -> list[str]:
     """Conditions shared by serial/MPI reports, allowing their different tools."""
@@ -100,6 +158,17 @@ def summarize(reports: list[dict], allow_mismatch: bool = False) -> list[dict]:
     differences = []
     for index, report in enumerate(reports):
         report_incomplete(report, f"Report {index+1}")
+    if len(reports) == 1:
+        for line in format_compiler_info(reports[0]):
+            print(line)
+    else:
+        for index, report in enumerate(reports, 1):
+            info_lines = format_compiler_info(report)
+            if info_lines:
+                print(f"Report {index} compiler:")
+                for line in info_lines:
+                    print(f"  {line}")
+    for index, report in enumerate(reports):
         if index:
             differences.extend(f"report {index+1}: {item}"
                                for item in summary_conditions(reports[0], report))
@@ -165,6 +234,21 @@ def summary(report: dict):
 def compare(baseline: dict, candidate: dict, allow_mismatch: bool) -> list[dict]:
     report_incomplete(baseline, "Baseline report")
     report_incomplete(candidate, "Candidate report")
+    base_info = format_compiler_info(baseline)
+    cand_info = format_compiler_info(candidate)
+    if base_info and base_info == cand_info:
+        print("Compiler:")
+        for line in base_info:
+            print(f"  {line}")
+    else:
+        if base_info:
+            print("Baseline compiler:")
+            for line in base_info:
+                print(f"  {line}")
+        if cand_info:
+            print("Candidate compiler:")
+            for line in cand_info:
+                print(f"  {line}")
     differences = []
     if baseline["suite_sha256"] != candidate["suite_sha256"]:
         differences.append("benchmark runner SHA-256")

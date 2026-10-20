@@ -655,6 +655,55 @@ class ConfigureOptionsTests(unittest.TestCase):
         MockArgs.mpifc = "gfortran"
         run.validate_compiler_toolchain(MockArgs())
 
+    def test_format_compiler_info_and_summary_display(self):
+        report = {
+            "suite_sha256": "fake_suite",
+            "source": {"model_sha256": "fake_model"},
+            "environment": {
+                "tools": {
+                    "fc": {"path": "/opt/intel/bin/ifx"},
+                    "mpifc": {"path": "/opt/intel/bin/mpiifort"},
+                    "cc": {"path": "/usr/bin/gcc"},
+                    "make": {"path": "/usr/bin/make"},
+                    "launcher": {"path": "/usr/bin/mpiexec"},
+                },
+                "launcher": ["mpiexec"],
+            },
+            "settings": {
+                "days": 120, "warmups": 0, "coupling_days": 10, "io": "minimal", "timers": True,
+                "fflags": "-O3 -fp-model precise",
+                "mpifflags": "-O3 -fp-model precise",
+                "cflags": "-O3",
+                "precision_flags": "-r8",
+            },
+            "cases": [
+                {"name": "T21-mixed-p1", "resolution": "T21", "case": "mixed", "ranks": 1,
+                 "input_sha256": "in1", "samples": [{"wall_seconds": 1.0, "warmup": False, "state": {"fields": {}}, "timers": {}}]},
+                {"name": "T21-mixed-p2", "resolution": "T21", "case": "mixed", "ranks": 2,
+                 "input_sha256": "in1", "samples": [{"wall_seconds": 0.5, "warmup": False, "state": {"fields": {}}, "timers": {}}]},
+            ]
+        }
+        lines = compare.format_compiler_info(report)
+        self.assertIn("Fortran: /opt/intel/bin/ifx (-O3 -fp-model precise -r8)", lines)
+        self.assertIn("MPI Fortran: /opt/intel/bin/mpiifort (-O3 -fp-model precise -r8)", lines)
+        self.assertIn("C compiler: /usr/bin/gcc (-O3)", lines)
+
+        # In summarize()
+        stream = io.StringIO()
+        with contextlib.redirect_stdout(stream):
+            compare.summarize([report])
+        output = stream.getvalue()
+        self.assertIn("Fortran: /opt/intel/bin/ifx (-O3 -fp-model precise -r8)", output)
+        self.assertIn("MPI Fortran: /opt/intel/bin/mpiifort (-O3 -fp-model precise -r8)", output)
+
+        # In compare()
+        stream_cmp = io.StringIO()
+        with contextlib.redirect_stdout(stream_cmp):
+            compare.compare(report, report, allow_mismatch=False)
+        output_cmp = stream_cmp.getvalue()
+        self.assertIn("Compiler:", output_cmp)
+        self.assertIn("Fortran: /opt/intel/bin/ifx (-O3 -fp-model precise -r8)", output_cmp)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -108,7 +108,8 @@ python3 benchmarks/run.py --output benchmarks/results/serial-and-mpi \
 python3 benchmarks/compare.py benchmarks/results/serial-and-mpi
 ```
 
-The one-file summary prints wall-time medians, ranges, and MPI speedup and
+The summary prints the recorded compiler executables and optimization/precision
+flags at the top, followed by wall-time medians, ranges, and MPI speedup and
 efficiency relative to a matching serial case when present. It includes
 launcher overhead and is not a pure communication or strong-scaling kernel
 measurement. Use a quiet machine and document CPU allocation and binding.
