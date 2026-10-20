@@ -554,6 +554,19 @@ class ConfigureOptionsTests(unittest.TestCase):
                 self.assertEqual(args.mpifc, "my-mpifc")
                 self.assertEqual(args.mpifflags, "-O-my-mpif")
 
+            intel_opts = {"fc": "ifx", "fflags": "-O3 -fp-model precise", "precision_flags": "-r8"}
+            with patch.object(run, "probe_configure", return_value=intel_opts):
+                args = run.arguments(["--output", str(out)])
+                self.assertEqual(args.fc, "ifx")
+                self.assertEqual(args.precision_flags, "-r8")
+
+            with patch.object(run, "probe_configure", return_value={}), \
+                    patch.object(run, "load_configured_options", return_value={}):
+                args_intel = run.arguments(["--output", str(out), "--fc", "ifx", "--no-configure"])
+                self.assertEqual(args_intel.precision_flags, "-r8")
+                args_gnu = run.arguments(["--output", str(out), "--fc", "gfortran", "--no-configure"])
+                self.assertEqual(args_gnu.precision_flags, "-fdefault-real-8")
+
             with patch.object(run, "probe_configure") as mock_probe, \
                     patch.object(run, "load_configured_options", return_value=fake_opts) as mock_load:
                 args = run.arguments(["--output", str(out), "--no-configure"])

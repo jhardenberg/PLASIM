@@ -278,7 +278,7 @@ def build(args, work: Path, output: Path, resolution: str, lsg: bool, ranks: int
         MOST_CC=args.cc, MOST_CC_OPTS=args.cflags,
         MOST_F90=args.mpifc if ranks > 1 else args.fc,
         MOST_F90_OPTS=args.mpifflags if ranks > 1 else args.fflags,
-        MOST_PREC="-fdefault-real-8", MPIMOD="mpimod" if ranks > 1 else "mpimod_stub",
+        MOST_PREC=args.precision_flags, MPIMOD="mpimod" if ranks > 1 else "mpimod_stub",
         GUIMOD="guimod_stub", PUMAX="pumax_stub", GUILIB="", FFTMOD="fftmod",
         RAINMOD="rainmod", VEGMOD="simba", PLAMOD="p_earth", LANDMOD="landmod",
         OCEAN="lsgmod" if lsg else "lsgmod_stub", OCEANCOUP="cpl" if lsg else "cpl_stub",
@@ -427,6 +427,8 @@ def arguments(argv: list[str] | None = None) -> argparse.Namespace:
                         help="MPI Fortran optimization flags (default: auto-detected via configure.sh or --fflags)")
     parser.add_argument("--cflags", default=None,
                         help="C optimization flags (default: auto-detected via configure.sh)")
+    parser.add_argument("--precision-flags", default=None,
+                        help="Fortran precision flags (default: auto-detected via configure.sh, e.g. -fdefault-real-8 or -r8)")
     parser.add_argument("--no-configure", "--reuse-configure", dest="no_configure", action="store_true",
                         help="Inhibit running configure.sh; reuse existing most_compiler in source or fallback defaults")
     parser.add_argument("--launcher", default="mpiexec", help="Quoted MPI launcher command/flags, before -n")
@@ -480,6 +482,13 @@ def arguments(argv: list[str] | None = None) -> argparse.Namespace:
         args.mpifc = configured.get("mpifc", "mpif90")
     if args.mpifflags is None:
         args.mpifflags = configured.get("mpifflags", args.fflags)
+    if args.precision_flags is None:
+        if "precision_flags" in configured:
+            args.precision_flags = configured["precision_flags"]
+        elif any(name in (args.fc or "") or name in (args.mpifc or "") for name in ("ifx", "ifort")):
+            args.precision_flags = "-r8"
+        else:
+            args.precision_flags = "-fdefault-real-8"
 
     return args
 
@@ -575,7 +584,7 @@ def main():
                            "coupling_days": args.coupling_days, "io": args.io,
                            "timers": not args.no_timers, "fflags": args.fflags,
                            "mpifflags": args.mpifflags,
-                           "cflags": args.cflags, "precision_flags": "-fdefault-real-8",
+                           "cflags": args.cflags, "precision_flags": args.precision_flags,
                            "parallel": args.parallel, "max_cores": args.max_cores},
               "work_directory": None, "kept_work": args.keep_work, "cases": []}
     result_path = args.output / "results.json"

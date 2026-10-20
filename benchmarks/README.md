@@ -50,7 +50,7 @@ directory. This automatically adopts the compiler executables (`most_compiler`,
 `most_compiler_mpi`) and production optimization flags configured for that
 checkout (such as `-O3 -funroll-loops` and host architecture tuning on GNU Fortran,
 or `-O3 -fp-model precise -xHost` on Intel Fortran). Model precision is fixed
-to double precision (`-fdefault-real-8`).
+to double precision (`-fdefault-real-8` for GNU Fortran, `-r8` for Intel Fortran).
 
 Use `--no-configure` (or `--reuse-configure`) to inhibit running `configure.sh`
 and reuse existing `most_compiler` and `most_compiler_mpi` files in `--source`,
@@ -64,6 +64,7 @@ Compiler executables and optimization flags can also be overridden explicitly:
 - `--fflags "<flags>"`: Fortran optimization flags for serial builds
 - `--mpifflags "<flags>"`: Fortran optimization flags for MPI builds (defaults to configured MPI flags or `--fflags`)
 - `--cflags "<flags>"`: C optimization flags (defaults to configured C flags or `-O3`)
+- `--precision-flags "<flags>"`: Fortran precision flags (defaults to auto-detected `-r8` or `-fdefault-real-8`)
 
 All compiler settings and flags are recorded in `results.json` and verified for
 compatibility during comparison.
