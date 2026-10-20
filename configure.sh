@@ -199,18 +199,33 @@ fi
 
 #check for MPI-FORTRAN-90 compiler
 if [ "$MOST_F90" = "ifx" ] ; then
-   MPI_F90_LIST="mpiifx mpifort mpiifort mpif90 openmpif90 mpf90 mpxlf90"
+   MPI_F90_LIST="mpiifx mpiifort mpifc mpifort mpif90 openmpif90 mpf90 mpxlf90"
 elif [ "$MOST_F90" = "ifort" ] ; then
-   MPI_F90_LIST="mpiifort mpifort mpiifx mpif90 openmpif90 mpf90 mpxlf90"
+   MPI_F90_LIST="mpiifort mpiifx mpifc mpifort mpif90 openmpif90 mpf90 mpxlf90"
 else
-   MPI_F90_LIST="mpifort openmpif90 mpif90 mpf90 mpxlf90 mpiifx mpiifort"
+   MPI_F90_LIST="mpifort openmpif90 mpif90 mpf90 mpxlf90 mpiifx mpiifort mpifc"
 fi
 
-for MPI_F90 in $MPI_F90_LIST NO_F90
+BEST_MPI_F90="NO_F90"
+for MPI_F90 in $MPI_F90_LIST
 do
-   `hash 2>/dev/null $MPI_F90`
-   if [ $? = 0 ] ; then break ; fi
+   if hash 2>/dev/null $MPI_F90 ; then
+      if [ "$BEST_MPI_F90" = "NO_F90" ] ; then
+         BEST_MPI_F90=$MPI_F90
+      fi
+      # When serial compiler is Intel, prefer a wrapper that accepts Intel options
+      if [ "$MOST_F90" = "ifx" -o "$MOST_F90" = "ifort" ] ; then
+         CAND_PATH=`which $MPI_F90`
+         if f90_accepts $CAND_PATH "$MOST_F90_OPTS" || f90_accepts $CAND_PATH "-fc=ifx $MOST_F90_OPTS" ; then
+            BEST_MPI_F90=$MPI_F90
+            break
+         fi
+      else
+         break
+      fi
+   fi
 done
+MPI_F90=$BEST_MPI_F90
 
 if [ $MPI_F90 != "NO_F90" ] ; then
    MPI_F90_PATH=`which $MPI_F90`
@@ -224,6 +239,11 @@ if [ $MPI_F90 != "NO_F90" ] ; then
    echo >> most_compiler_mpi "MOST_F90=$MPI_F90_PATH"
    # the MPI wrapper may use another compiler than MOST_F90
    MPI_F90_OPTS="$MOST_F90_OPTS"
+   if [ "$MOST_F90" = "ifx" ] ; then
+      if f90_accepts $MPI_F90_PATH "-fc=ifx $MPI_F90_OPTS" ; then
+         MPI_F90_OPTS="-fc=ifx $MPI_F90_OPTS"
+      fi
+   fi
    if ! f90_accepts $MPI_F90_PATH "$MPI_F90_OPTS" ; then
       echo "MPI FORTRAN-90 compiler rejects: $MPI_F90_OPTS - using -O3"
       MPI_F90_OPTS="-O3"

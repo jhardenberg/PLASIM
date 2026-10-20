@@ -279,6 +279,15 @@ def build(args, work: Path, output: Path, resolution: str, lsg: bool, ranks: int
         build_prec = "-r8"
     elif "gfortran" in current_fc:
         build_prec = "-fdefault-real-8"
+    else:
+        try:
+            ver = capture([current_fc, "--version"]).lower()
+            if "gnu" in ver or "gfortran" in ver:
+                build_prec = "-fdefault-real-8"
+            elif "intel" in ver or "ifx" in ver or "ifort" in ver:
+                build_prec = "-r8"
+        except Exception:
+            pass
     build_env.update(
         MOST_CC=args.cc, MOST_CC_OPTS=args.cflags,
         MOST_F90=current_fc,
