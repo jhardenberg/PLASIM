@@ -46,12 +46,21 @@ if [ $MOST_F90 != "NO_F90" ] ; then
       # default is -fp-model fast=1), for reproducible climate runs.
       # -xHost adds an Intel-only processor check to the executable,
       # so it is only used on Intel CPUs.
+      # On non-Intel CPUs (e.g. AMD EPYC / Ryzen), ifx (LLVM backend)
+      # supports -march=native directly without Intel CPU checks;
+      # ifort supports -march=core-avx2 on AVX2-capable hosts.
       MOST_F90_OPTS="-O3 -fp-model precise"
       DEBUG_F90_OPTS="-g -C -fpe0 -traceback"
       if grep -q GenuineIntel /proc/cpuinfo 2>/dev/null || \
          sysctl -n machdep.cpu.vendor 2>/dev/null | grep -q GenuineIntel
       then
          ARCH_OPTS="-xHost"
+      elif [ "$MOST_F90" = "ifx" ] ; then
+         ARCH_OPTS="-march=native"
+      elif grep -q "avx2" /proc/cpuinfo 2>/dev/null || \
+           sysctl -n machdep.cpu.features 2>/dev/null | grep -q AVX2
+      then
+         ARCH_OPTS="-march=core-avx2"
       fi
       echo > most_precision_options "MOST_PREC=-r8"
    elif [ $MOST_F90 = "nagfor" ] ; then
@@ -245,8 +254,13 @@ if [ $MPI_F90 != "NO_F90" ] ; then
       fi
    fi
    if ! f90_accepts $MPI_F90_PATH "$MPI_F90_OPTS" ; then
-      echo "MPI FORTRAN-90 compiler rejects: $MPI_F90_OPTS - using -O3"
-      MPI_F90_OPTS="-O3"
+      ALT_OPTS=`echo "$MPI_F90_OPTS" | sed 's/-march=native/-march=core-avx2/'`
+      if [ "$ALT_OPTS" != "$MPI_F90_OPTS" ] && f90_accepts $MPI_F90_PATH "$ALT_OPTS" ; then
+         MPI_F90_OPTS="$ALT_OPTS"
+      else
+         echo "MPI FORTRAN-90 compiler rejects: $MPI_F90_OPTS - using -O3"
+         MPI_F90_OPTS="-O3"
+      fi
    fi
    echo >> most_compiler_mpi "MOST_F90_OPTS=$MPI_F90_OPTS"
    echo >> most_compiler_mpi "MPIMOD=mpimod"
