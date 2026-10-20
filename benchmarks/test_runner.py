@@ -240,7 +240,7 @@ class MultiReportSummaryTests(unittest.TestCase):
         if ranks > 1:
             tools['launcher'] = tool('mpiexec')
         report['environment'] = dict(machine={'hostname': 'same-host'}, tools=tools,
-                                     launcher=[] if ranks == 1 else ['mpiexec'],
+                                     launcher=[] if ranks == 1 else ['mpiexec', '--bind-to', 'none'],
                                      thread_environment={'OMP_NUM_THREADS': '1'},
                                      runtime_environment={}, workspace_storage={'parent': '/tmp'})
         case = report['cases'][0]
@@ -309,7 +309,7 @@ class MultiReportSummaryTests(unittest.TestCase):
 
     def test_checks_launcher_between_separate_mpi_files(self):
         reports = [self.report(1, 80), self.report(2, 40), self.report(4, 25)]
-        reports[2]['environment']['launcher'].append('--bind-to=none')
+        reports[2]['environment']['launcher'] = ['mpiexec', '--bind-to', 'core']
         with self.assertRaisesRegex(ValueError, 'MPI compiler/launcher'):
             self.summarize(reports)
 
@@ -597,6 +597,10 @@ class ConfigureOptionsTests(unittest.TestCase):
                 self.assertFalse(mock_probe.called)
                 self.assertFalse(mock_load.called)
                 self.assertEqual(args.fc, "custom-f90")
+                self.assertEqual(args.launcher, ["mpiexec", "--bind-to", "none"])
+
+            args_custom_launcher = run.arguments(["--output", str(out), "--launcher", "mpiexec", "--no-configure"])
+            self.assertEqual(args_custom_launcher.launcher, ["mpiexec"])
 
     def test_mpifflags_continuation_and_comparison(self):
         baseline = ComparisonTests().report()
@@ -667,7 +671,7 @@ class ConfigureOptionsTests(unittest.TestCase):
                     "make": {"path": "/usr/bin/make"},
                     "launcher": {"path": "/usr/bin/mpiexec"},
                 },
-                "launcher": ["mpiexec"],
+                "launcher": ["mpiexec", "--bind-to", "none"],
             },
             "settings": {
                 "days": 120, "warmups": 0, "coupling_days": 10, "io": "minimal", "timers": True,

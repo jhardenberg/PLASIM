@@ -113,12 +113,16 @@ flags at the top, followed by wall-time medians, ranges, and MPI speedup and
 efficiency relative to a matching serial case when present. It includes
 launcher overhead and is not a pure communication or strong-scaling kernel
 measurement. Use a quiet machine and document CPU allocation and binding.
-For example, Open MPI launcher options can be passed as a quoted command:
+The default MPI launcher is `mpiexec --bind-to none`, avoiding core-binding
+crashes and contention on shared nodes, SLURM allocations, or concurrent runs.
+Custom launcher options or specific binding policies can be passed via `--launcher`:
 
 ```sh
 python3 benchmarks/run.py --output benchmarks/results/bound-mpi \
   --ranks 2 --launcher 'mpiexec --bind-to core'
 ```
+
+To deactivate `--bind-to none` and use standard `mpiexec` defaults, specify `--launcher mpiexec`.
 
 The script sets common OpenMP/BLAS thread counts to one. It does not select
 CPU affinity, change power settings, or enable oversubscription automatically.
@@ -197,11 +201,11 @@ process affinity, or the machine's logical CPU count on other hosts.
 Set it explicitly to match your job allocation, particularly in containers
 or schedulers where CPU quotas are not reflected in process affinity.
 This is a process/rank budget, not CPU pinning or a limit on physical cores;
-launcher/helper processes and the Python coordinator add some overhead.
-Concurrent MPI launchers may bind to overlapping CPUs: use an external
-allocation/launcher that partitions CPUs (or pass `--bind-to none` to Open MPI
-when running concurrent MPI jobs on a shared host) if default core binding
-would pin multiple jobs to the same low-numbered cores.
+Concurrent MPI launchers may bind to overlapping CPUs: by default,
+`benchmarks/run.py` invokes `mpiexec --bind-to none` to prevent core-binding
+conflicts and aborts when multiple MPI jobs or restricted affinity masks are present.
+If dedicated core binding is desired on an isolated machine, specify
+`--launcher 'mpiexec --bind-to core'`.
 
 Without `--parallel`, cases run one at a time; `--max-cores` still bounds the
 selected MPI rank count. Builds use one compiler process at a time and all

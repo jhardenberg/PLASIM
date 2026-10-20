@@ -461,7 +461,8 @@ def arguments(argv: list[str] | None = None) -> argparse.Namespace:
                         help="Fortran precision flags (default: auto-detected via configure.sh, e.g. -fdefault-real-8 or -r8)")
     parser.add_argument("--no-configure", "--reuse-configure", dest="no_configure", action="store_true",
                         help="Inhibit running configure.sh; reuse existing most_compiler in source or fallback defaults")
-    parser.add_argument("--launcher", default="mpiexec", help="Quoted MPI launcher command/flags, before -n")
+    parser.add_argument("--launcher", default="mpiexec --bind-to none",
+                        help="Quoted MPI launcher command/flags, before -n (default: 'mpiexec --bind-to none')")
     parser.add_argument("--timeout", type=int, default=3600, help="Seconds per build/run")
     parser.add_argument("--work-dir", type=Path, help="Parent for temporary builds/runs (default: system temp)")
     parser.add_argument("--keep-work", action="store_true", help="Retain binaries and run directories for inspection")
