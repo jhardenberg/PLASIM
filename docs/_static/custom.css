@@ -1,0 +1,38 @@
+/* Keep wide parameter tables and equations usable in narrow preview panels. */
+.wy-nav-content {
+    max-width: 1100px;
+}
+
+.wy-table-responsive table td,
+.wy-table-responsive table th {
+    white-space: normal;
+}
+
+table.docutils,
+div.math {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+/* Keep detailed input descriptions visible beside their types and defaults. */
+table.docutils.parameter-table {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+table.parameter-table th:nth-child(1) { width: 18%; }
+table.parameter-table th:nth-child(2) { width: 20%; }
+table.parameter-table th:nth-child(3) { width: 18%; }
+table.parameter-table th:nth-child(4) { width: 44%; }
+
+table.parameter-table td,
+table.parameter-table th,
+table.parameter-table span.pre {
+    overflow-wrap: anywhere;
+}
+
+table.parameter-table span.pre {
+    white-space: normal;
+}

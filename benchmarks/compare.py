@@ -123,11 +123,11 @@ def summarize(reports: list[dict], allow_mismatch: bool = False) -> list[dict]:
         details = "\n".join("- " + difference for difference in differences)
         if not allow_mismatch:
             raise ValueError("Incompatible summary conditions:\n" + details +
-                             "\nUse --allow-mismatch to display timings without scaling ratios.")
-        print("Configuration differences explicitly allowed; scaling is unavailable:\n" + details)
+                             "\nUse --allow-mismatch for an intentional descriptive comparison.")
+        print("WARNING: configuration differences explicitly allowed; scaling ratios are descriptive:\n" + details)
     if any(report["settings"].get("parallel", False) for report in reports):
-        print("Concurrent cases share CPU/memory/I/O; isolated MPI scaling is not reported "
-              "for rows using a concurrent run or serial baseline.")
+        print("WARNING: concurrent benchmark cases may affect timings through shared CPU/memory/I/O. "
+              "Reported speedup and efficiency include these effects and are not isolated MPI scaling measurements.")
     print("Case                         n   Median(s)    Min–max(s)         Speedup/p1  Efficiency")
     rows = []
     for key in sorted(cases):
@@ -136,19 +136,19 @@ def summarize(reports: list[dict], allow_mismatch: bool = False) -> list[dict]:
         serial_key = (*key[:2], 1)
         serial = cases.get(serial_key)
         serial_report = reports[origins[serial_key]] if serial else None
-        eligible = (serial is not None and not differences and
-                    not reports[index]["settings"].get("parallel", False) and
-                    not serial_report["settings"].get("parallel", False))
-        speedup = median(serial)/median(case) if eligible else None
+        speedup = median(serial)/median(case) if serial is not None else None
         efficiency = 100*speedup/key[2] if speedup is not None else None
-        scaling = f"{speedup:10.3f}x  {efficiency:8.1f}%" if eligible else "        n/a        n/a"
+        scaling = f"{speedup:10.3f}x  {efficiency:8.1f}%" if speedup is not None else "        n/a        n/a"
         print(f"{case['name']:28} {len(values):2} {median(case):10.3f} "
               f"{min(values):8.3f}–{max(values):8.3f} {scaling}")
         rows.append({"name": case["name"], "resolution": key[0], "case": key[1], "ranks": key[2],
                      "source_report": index+1, "measured_samples": len(values),
                      "median_wall_seconds": median(case), "min_wall_seconds": min(values),
                      "max_wall_seconds": max(values), "speedup": speedup,
-                     "efficiency_percent": efficiency, "configuration_differences": differences})
+                     "efficiency_percent": efficiency, "configuration_differences": differences,
+                     "concurrent_run": bool(reports[index]["settings"].get("parallel", False)),
+                     "concurrent_serial_baseline": bool(serial_report and
+                                                        serial_report["settings"].get("parallel", False))})
     print("Scaling includes launch and initialization costs; independently collected runs can differ in machine load.")
     return rows
 
