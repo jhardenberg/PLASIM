@@ -254,20 +254,38 @@ def timers(diag: str) -> dict:
 
 
 def detect_compiler_family(command: str) -> str:
-    """Determine compiler family ('intel', 'gnu', etc.) from executable name and --version."""
+    """Determine compiler family ('intel', 'gnu', etc.) from executable name and underlying compiler."""
     if not command:
         return "unknown"
     name = Path(command).name.lower()
-    if any(k in name for k in ("ifx", "ifort", "mpiifx", "mpiifort", "mpiicx", "mpiicc")):
+    if any(k in name for k in ("mpiifx", "mpiifort", "mpiicx", "mpiicc")):
+        return "intel"
+    if name in ("ifx", "ifort") or name.startswith(("ifx-", "ifort-", "ifx_", "ifort_")):
         return "intel"
     if "gfortran" in name or name in ("gcc", "g++"):
         return "gnu"
+
+    # For MPI wrappers (mpifort, mpif90, etc.), query the underlying compiler
+    for show_flag in ("-show", "-showme:command", "-showme"):
+        try:
+            underlying = capture([command, show_flag]).strip()
+            if underlying:
+                first_word = Path(shlex.split(underlying)[0]).name.lower()
+                if first_word in ("ifx", "ifort") or first_word.startswith(("ifx-", "ifort-")):
+                    return "intel"
+                if "gfortran" in first_word or first_word in ("gcc", "g++"):
+                    return "gnu"
+                if "clang" in first_word:
+                    return "clang"
+        except Exception:
+            pass
+
     try:
         ver = capture([command, "--version"]).lower()
-        if "intel" in ver or "ifx" in ver or "ifort" in ver:
-            return "intel"
         if "gnu fortran" in ver or "free software foundation" in ver or "gfortran" in ver:
             return "gnu"
+        if "intel(r) fortran" in ver or "ifort" in ver or "ifx" in ver:
+            return "intel"
         if "clang" in ver:
             return "clang"
     except Exception:

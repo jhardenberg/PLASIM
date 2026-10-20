@@ -219,18 +219,20 @@ BEST_MPI_F90="NO_F90"
 for MPI_F90 in $MPI_F90_LIST
 do
    if hash 2>/dev/null $MPI_F90 ; then
+      CAND_PATH=`which $MPI_F90`
       if [ "$BEST_MPI_F90" = "NO_F90" ] ; then
          BEST_MPI_F90=$MPI_F90
       fi
-      # When serial compiler is Intel, prefer a wrapper that accepts Intel options
       if [ "$MOST_F90" = "ifx" -o "$MOST_F90" = "ifort" ] ; then
-         CAND_PATH=`which $MPI_F90`
          if f90_accepts $CAND_PATH "$MOST_F90_OPTS" || f90_accepts $CAND_PATH "-fc=ifx $MOST_F90_OPTS" ; then
             BEST_MPI_F90=$MPI_F90
             break
          fi
       else
-         break
+         if f90_accepts $CAND_PATH "$MOST_F90_OPTS" ; then
+            BEST_MPI_F90=$MPI_F90
+            break
+         fi
       fi
    fi
 done

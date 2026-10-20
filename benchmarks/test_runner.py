@@ -643,6 +643,21 @@ class ConfigureOptionsTests(unittest.TestCase):
         self.assertEqual(run.detect_compiler_family("/usr/bin/gfortran"), "gnu")
         self.assertEqual(run.detect_compiler_family(""), "unknown")
 
+        # Intel MPI wrapper wrapping gfortran (both via -show and via --version banner)
+        with patch.object(run, "capture") as mock_cap:
+            mock_cap.side_effect = lambda cmd: (
+                "gfortran -I/opt/intel/oneapi/mpi/include" if cmd[1] == "-show" else ""
+            )
+            self.assertEqual(run.detect_compiler_family("/usr/bin/mpifort"), "gnu")
+
+        with patch.object(run, "capture") as mock_cap:
+            def fake_capture(cmd):
+                if cmd[1] in ("-show", "-showme:command", "-showme"):
+                    raise RuntimeError("no show")
+                return "Intel(R) MPI Library for Linux* OS\nGNU Fortran (Ubuntu 11.4.0) 11.4.0\n"
+            mock_cap.side_effect = fake_capture
+            self.assertEqual(run.detect_compiler_family("/usr/bin/mpifort"), "gnu")
+
         class MockArgs:
             ranks = [1, 2]
             fc = "ifx"
