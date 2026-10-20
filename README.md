@@ -1,5 +1,6 @@
 [![DOI](https://zenodo.org/badge/101884206.svg)](https://zenodo.org/badge/latestdoi/101884206)
 ![Stand with Ukraine](https://badgen.net/badge/stand%20with/UKRAINE/?color=0057B8&labelColor=FFD700)
+[![Documentation Status](https://readthedocs.org/projects/plasim-lsg/badge/?version=latest)](https://plasim-lsg.readthedocs.io/en/latest/?badge=latest)
 
 # PlaSim-LSG TNG (The Next Generation)
 
