@@ -105,7 +105,7 @@ if [ $MOST_F90 != "NO_F90" ] ; then
          ARCH_OPTS=""
       fi
    fi
-   echo  > most_compiler "MOST_F90=$MOST_F90"
+   echo  > most_compiler "MOST_F90=$F90_PATH"
    echo >> most_compiler "MOST_F90_OPTS=$MOST_F90_OPTS"
    echo >> most_compiler "MPIMOD=mpimod_stub"
    echo  > most_debug_options "MOST_F90_OPTS=$DEBUG_F90_OPTS"
@@ -158,7 +158,7 @@ done
 
 if [ $MOST_CC != "NO_CC" ] ; then
    CC_PATH=`which $MOST_CC`
-   echo >> most_compiler MOST_CC=$MOST_CC " # " $CC_PATH
+   echo >> most_compiler "MOST_CC=$CC_PATH"
    echo >> most_compiler "MOST_CC_OPTS=-O3 -I" $XINC_PATH
    echo "Found C compiler              at: $CC_PATH"
    if [ $MOST_CC = "suncc" ] ; then
@@ -186,7 +186,7 @@ done
 
 if [ $MOST_PP != "NO_PP" ] ; then
    PP_PATH=`which $MOST_PP`
-   echo >> most_compiler MOST_PP=$MOST_PP " # " $PP_PATH
+   echo >> most_compiler "MOST_PP=$PP_PATH"
    echo "Found C++ compiler            at: $PP_PATH"
 else
    echo "****************************************************"
@@ -213,23 +213,24 @@ do
 done
 
 if [ $MPI_F90 != "NO_F90" ] ; then
-   F90_PATH=`which $MPI_F90`
+   MPI_F90_PATH=`which $MPI_F90`
    if [ $MPI_F90 = "openmpif90" ] ; then
       MPI_RUN="openmpiexec"
    else
       MPI_RUN="mpiexec"
    fi
-   echo  > most_compiler_mpi "MPI_RUN=$MPI_RUN"
-   echo >> most_compiler_mpi MOST_F90=$MPI_F90
+   MPI_RUN_PATH=`which $MPI_RUN 2>/dev/null || echo $MPI_RUN`
+   echo  > most_compiler_mpi "MPI_RUN=$MPI_RUN_PATH"
+   echo >> most_compiler_mpi "MOST_F90=$MPI_F90_PATH"
    # the MPI wrapper may use another compiler than MOST_F90
    MPI_F90_OPTS="$MOST_F90_OPTS"
-   if ! f90_accepts $MPI_F90 "$MPI_F90_OPTS" ; then
+   if ! f90_accepts $MPI_F90_PATH "$MPI_F90_OPTS" ; then
       echo "MPI FORTRAN-90 compiler rejects: $MPI_F90_OPTS - using -O3"
       MPI_F90_OPTS="-O3"
    fi
    echo >> most_compiler_mpi "MOST_F90_OPTS=$MPI_F90_OPTS"
    echo >> most_compiler_mpi "MPIMOD=mpimod"
-   echo "Found MPI FORTRAN-90 compiler at: $F90_PATH"
+   echo "Found MPI FORTRAN-90 compiler at: $MPI_F90_PATH"
 else
    echo "********************************************"
    echo "* No Message Passing Interface (MPI) found *"
@@ -253,10 +254,10 @@ if [ $MPI_F90 != "NO_F90" ] ; then
       if [ $? = 0 ] ; then break ; fi
    done
    if [ $MPI_CC != "NO_CC" ] ; then
-      CC_PATH=`which $MPI_CC`
-      echo >> most_compiler_mpi MOST_CC=$MPI_CC
+      MPI_CC_PATH=`which $MPI_CC`
+      echo >> most_compiler_mpi "MOST_CC=$MPI_CC_PATH"
       echo >> most_compiler_mpi "MOST_CC_OPTS=-O3"
-      echo "Found MPI C compiler          at: $CC_PATH"
+      echo "Found MPI C compiler          at: $MPI_CC_PATH"
    else
       echo "********************************************"
       echo "* No MPI C compiler found                  *"
@@ -279,11 +280,11 @@ if [ $MPI_F90 != "NO_F90" ] ; then
       if [ $? = 0 ] ; then break ; fi
    done
    if [ $MPI_PP != "NO_PP" ] ; then
-      PP_PATH=`which $MPI_PP`
-      echo >> most_compiler_mpi MOST_PP=$MPI_PP
+      MPI_PP_PATH=`which $MPI_PP`
+      echo >> most_compiler_mpi "MOST_PP=$MPI_PP_PATH"
       echo >> most_compiler_mpi "MOST_PP_OPTS=-O3 -DMPI"
       echo >> most_debug_options "MOST_PP_OPTS=-g -DMPI"
-      echo "Found MPI C++ compiler        at: $PP_PATH"
+      echo "Found MPI C++ compiler        at: $MPI_PP_PATH"
    else
       echo "********************************************"
       echo "* No MPI C++ compiler found                *"
@@ -303,8 +304,8 @@ done
 
 if [ $MOST_AS != "NO_AS" ] ; then
    AS_PATH=`which $MOST_AS`
-   echo >> most_compiler     MOST_AS=$MOST_AS
-   echo >> most_compiler_mpi MOST_AS=$MOST_AS
+   echo >> most_compiler     "MOST_AS=$AS_PATH"
+   echo >> most_compiler_mpi "MOST_AS=$AS_PATH"
    echo "Found GNU assembler           at: $AS_PATH"
 fi
 
@@ -337,7 +338,7 @@ echo >> most_compiler_mpi "GUIMOD=guimod"
 echo >> most_compiler     "PUMAX=pumax"
 echo >> most_compiler_mpi "PUMAX=pumax"
 echo  > makefile "most.x: most.c"
-echo >> makefile "	$MOST_CC -o most.x most.c -I$XINC_PATH -lm $GUILIB"
+echo >> makefile "	$CC_PATH -o most.x most.c -I$XINC_PATH -lm $GUILIB"
 echo >> makefile "clean:"
 echo >> makefile "	rm -f *.o *.x F90* most_*"
 
@@ -360,6 +361,8 @@ mkdir -p plasim/dat/T42_exo
 
 #check FORTRAN I/O
 
+MOST_F90=$F90_PATH
+MOST_CC=$CC_PATH
 export MOST_F90
 export MOST_CC
 HOSTNAME=`hostname`
@@ -369,8 +372,8 @@ export MOSTARCH
 make -e -f makecheck
 ./f90check.x
 ./cc_check.x
-echo >> most_info.txt "FORTRAN Compiler: $MOST_F90"
-echo >> most_info.txt "C       Compiler: $MOST_CC"
+echo >> most_info.txt "FORTRAN Compiler: $F90_PATH"
+echo >> most_info.txt "C       Compiler: $CC_PATH"
 cat most_info.txt
 make
 
