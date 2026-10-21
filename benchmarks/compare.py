@@ -84,6 +84,8 @@ def format_compiler_info(report: dict) -> list[str]:
             parts.append(flags)
         if precision and precision not in (flags or ""):
             parts.append(precision)
+        elif precision == "":
+            parts.append("[single precision]")
         return " ".join(parts)
 
     # Serial Fortran

@@ -64,7 +64,8 @@ Compiler executables and optimization flags can also be overridden explicitly:
 - `--fflags "<flags>"`: Fortran optimization flags for serial builds
 - `--mpifflags "<flags>"`: Fortran optimization flags for MPI builds (defaults to configured MPI flags or `--fflags`)
 - `--cflags "<flags>"`: C optimization flags (defaults to configured C flags or `-O3`)
-- `--precision-flags "<flags>"`: Fortran precision flags (defaults to auto-detected `-r8` or `-fdefault-real-8`)
+- `--precision-flags "<flags>"`: Fortran precision flags (defaults to auto-detected `-r8` or `-fdefault-real-8`, or pass `none` for single precision)
+- `--single-precision`: Build and benchmark in single precision (`MOST_PREC=""`, default 32-bit `real`)
 - `--allow-mixed-compilers`: Bypass the consistency check if serial and MPI Fortran compilers belong to different toolchains
 
 `benchmarks/run.py` verifies that the serial Fortran compiler and MPI Fortran wrapper belong to the same compiler family (e.g. both Intel or both GNU) when parallel ranks are executed, stopping with an error if an inconsistent toolchain is detected. All compiler settings and flags are recorded in `results.json` and verified for

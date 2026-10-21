@@ -254,20 +254,38 @@ def timers(diag: str) -> dict:
 
 
 def detect_compiler_family(command: str) -> str:
-    """Determine compiler family ('intel', 'gnu', etc.) from executable name and --version."""
+    """Determine compiler family ('intel', 'gnu', etc.) from executable name and underlying compiler."""
     if not command:
         return "unknown"
     name = Path(command).name.lower()
-    if any(k in name for k in ("ifx", "ifort", "mpiifx", "mpiifort", "mpiicx", "mpiicc")):
+    if any(k in name for k in ("mpiifx", "mpiifort", "mpiicx", "mpiicc")):
+        return "intel"
+    if name in ("ifx", "ifort") or name.startswith(("ifx-", "ifort-", "ifx_", "ifort_")):
         return "intel"
     if "gfortran" in name or name in ("gcc", "g++"):
         return "gnu"
+
+    # For MPI wrappers (mpifort, mpif90, etc.), query the underlying compiler
+    for show_flag in ("-show", "-showme:command", "-showme"):
+        try:
+            underlying = capture([command, show_flag]).strip()
+            if underlying:
+                first_word = Path(shlex.split(underlying)[0]).name.lower()
+                if first_word in ("ifx", "ifort") or first_word.startswith(("ifx-", "ifort-")):
+                    return "intel"
+                if "gfortran" in first_word or first_word in ("gcc", "g++"):
+                    return "gnu"
+                if "clang" in first_word:
+                    return "clang"
+        except Exception:
+            pass
+
     try:
         ver = capture([command, "--version"]).lower()
-        if "intel" in ver or "ifx" in ver or "ifort" in ver:
-            return "intel"
         if "gnu fortran" in ver or "free software foundation" in ver or "gfortran" in ver:
             return "gnu"
+        if "intel(r) fortran" in ver or "ifort" in ver or "ifx" in ver:
+            return "intel"
         if "clang" in ver:
             return "clang"
     except Exception:
@@ -298,12 +316,11 @@ def build(args, work: Path, output: Path, resolution: str, lsg: bool, ranks: int
     current_fc = args.mpifc if ranks > 1 else args.fc
     build_prec = args.precision_flags
     family = detect_compiler_family(current_fc)
-    if family == "intel" and build_prec == "-fdefault-real-8":
-        build_prec = "-r8"
-    elif family == "gnu" and build_prec == "-r8":
-        build_prec = "-fdefault-real-8"
-    elif not build_prec:
-        build_prec = "-r8" if family == "intel" else "-fdefault-real-8"
+    if build_prec:
+        if family == "intel" and build_prec == "-fdefault-real-8":
+            build_prec = "-r8"
+        elif family == "gnu" and build_prec == "-r8":
+            build_prec = "-fdefault-real-8"
     build_env.update(
         MOST_CC=args.cc, MOST_CC_OPTS=args.cflags,
         MOST_F90=current_fc,
@@ -459,6 +476,8 @@ def arguments(argv: list[str] | None = None) -> argparse.Namespace:
                         help="C optimization flags (default: auto-detected via configure.sh)")
     parser.add_argument("--precision-flags", default=None,
                         help="Fortran precision flags (default: auto-detected via configure.sh, e.g. -fdefault-real-8 or -r8)")
+    parser.add_argument("--single-precision", action="store_true",
+                        help="Build and benchmark in single precision (MOST_PREC='', default 32-bit real)")
     parser.add_argument("--no-configure", "--reuse-configure", dest="no_configure", action="store_true",
                         help="Inhibit running configure.sh; reuse existing most_compiler in source or fallback defaults")
     parser.add_argument("--launcher", default="mpiexec --bind-to none",
@@ -470,6 +489,12 @@ def arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--allow-mixed-compilers", action="store_true",
                         help="Allow running even if serial compiler and MPI wrapper belong to different toolchains")
     args = parser.parse_args(argv)
+    if args.single_precision:
+        if args.precision_flags:
+            parser.error("cannot specify both --single-precision and --precision-flags")
+        args.precision_flags = ""
+    elif args.precision_flags in ("none", "None", ""):
+        args.precision_flags = ""
     args.launcher = shlex.split(args.launcher)
     if not args.launcher:
         parser.error("launcher must not be empty")
