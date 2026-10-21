@@ -140,7 +140,7 @@ def load_variable_metadata() -> dict[int, tuple[str, str, str]]:
             if code_int not in meta:
                 meta[code_int] = (m.group(2).strip(), m.group(3).strip(), m.group(4).strip())
 
-    # 3. Special cases: clear-sky fluxes, entropy, tendencies, pressure gradients
+    # 3. Special cases: clear-sky fluxes, entropy, tendencies
     special = {
         91: ("dtdt1", "Temperature tendency term 1 (advection)", "K/s"),
         93: ("dtdt3", "Temperature tendency term 3 (diffusion)", "K/s"),
@@ -152,7 +152,6 @@ def load_variable_metadata() -> dict[int, tuple[str, str, str]]:
         105: ("cl_dfu_top", "Clear-sky top upward solar flux", "W/m²"),
         106: ("cl_dfu_sfc", "Clear-sky surface upward solar flux", "W/m²"),
         107: ("cl_dftu_sfc", "Clear-sky surface upward thermal flux", "W/m²"),
-        274: ("dpdy", "Meridional surface pressure gradient d(ps)/dy", "Pa/m"),
         797: ("xentro", "Entropy production", "W/(m² K)"),
     }
     for code_int, val in special.items():

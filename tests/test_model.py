@@ -508,5 +508,98 @@ class CalendarTests(unittest.TestCase):
                         self.assertIn("YDAY2MMDD: day of year out of range", result.stdout)
 
 
+class Srv2ncTests(unittest.TestCase):
+    """Regression tests for srv2nc metadata and conversion (issue #55)."""
+
+    def test_srv2nc_table_uniqueness_and_mappings(self) -> None:
+        srv_text = (ROOT / "scripts" / "srv2nc").read_text()
+        tables = re.findall(r"cat > (param(?:lsg)?)\$\$\.tab << EOT\n(.*?)\nEOT", srv_text, re.S)
+        self.assertEqual(len(tables), 2)
+        for name, content in tables:
+            seen_codes: dict[int, str] = {}
+            for line in content.splitlines():
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                m = re.match(r"^(\d+)\s+(\S+)\s+(.*?)\s+\[([^]]*)\]", line)
+                self.assertIsNotNone(m, f"Invalid parameter table row in {name}: {line}")
+                code = int(m.group(1))
+                var = m.group(2)
+                long_name = m.group(3)
+                units = m.group(4)
+                self.assertNotIn(code, seen_codes, f"Duplicate code {code} ({var} vs {seen_codes.get(code)}) in {name}")
+                seen_codes[code] = var
+                if name == "param":
+                    if code == 273:
+                        self.assertEqual(var, "dpdx")
+                        self.assertEqual(long_name, "d(ps)/dx")
+                        self.assertEqual(units, "Pa/m")
+                    elif code == 274:
+                        self.assertEqual(var, "dpdy")
+                        self.assertEqual(long_name, "d(ps)/dy")
+                        self.assertEqual(units, "Pa/m")
+                    elif code == 904:
+                        self.assertEqual(var, "dssta")
+                        self.assertIn("vertical diffusion", long_name.lower())
+                        self.assertEqual(units, "W/m2")
+                    elif code == 905:
+                        self.assertEqual(var, "qhda")
+                        self.assertIn("horizontal diffusion", long_name.lower())
+                        self.assertEqual(units, "W/m2")
+
+    def test_srv2nc_synthetic_conversion_metadata(self) -> None:
+        if shutil.which("cdo") is None:
+            raise unittest.SkipTest("cdo is required")
+        with tempfile.TemporaryDirectory(prefix="plasim-srv2nc-") as tmpdir:
+            work = Path(tmpdir)
+            nlon, nlat = 64, 32
+
+            def make_record(data: bytes) -> bytes:
+                size = len(data)
+                return struct.pack("=i", size) + data + struct.pack("=i", size)
+
+            records = []
+            for code in (273, 274, 904, 905):
+                header = struct.pack("=8i", code, 0, 20000101, 0, nlon, nlat, 0, 0)
+                payload = struct.pack(f"={nlon*nlat}f", *([1.0] * (nlon * nlat)))
+                records.append(make_record(header) + make_record(payload))
+
+            srv_file = work / "synthetic.srv"
+            srv_file.write_bytes(b"".join(records))
+            nc_file = work / "synthetic.nc"
+
+            command([str(ROOT / "scripts" / "srv2nc"), str(srv_file), str(nc_file)], cwd=work)
+            self.assertTrue(nc_file.exists())
+
+            result = subprocess.run(
+                ["cdo", "-s", "showname", str(nc_file)],
+                cwd=work, capture_output=True, text=True, check=True,
+            )
+            names = result.stdout.split()
+            self.assertIn("dpdx", names)
+            self.assertIn("dpdy", names)
+            self.assertIn("dssta", names)
+            self.assertIn("qhda", names)
+            self.assertNotIn("var274", names)
+
+            partab_res = subprocess.run(
+                ["cdo", "-s", "partab", str(nc_file)],
+                cwd=work, capture_output=True, text=True, check=True,
+            )
+            partab = partab_res.stdout
+            self.assertIn("name=dpdy", partab)
+            self.assertIn("param=274", partab)
+            self.assertIn('long_name="d(ps)/dy"', partab)
+            self.assertIn('units="Pa/m"', partab)
+
+            self.assertIn("name=dssta", partab)
+            self.assertIn("param=904", partab)
+            self.assertIn('units="W/m2"', partab)
+
+            self.assertIn("name=qhda", partab)
+            self.assertIn("param=905", partab)
+            self.assertIn('units="W/m2"', partab)
+
+
 if __name__ == "__main__":
     unittest.main()

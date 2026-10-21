@@ -52,6 +52,11 @@ flux diagnostics (Service codes 101–107) and require finite values and
 nonzero output for each code, so disabling diagnostic output cannot satisfy
 the state-invariance check.
 
+Conversion tests verify parameter table uniqueness and code mappings in
+`scripts/srv2nc` (including meridional pressure gradient `dpdy` under code 274
+and mixed-layer vertical/horizontal diffusion heat-flux codes 904/905 in W/m²),
+and perform synthetic NetCDF conversion checks when CDO is installed.
+
 The current numerical baselines come from source commit `d4802a1`, built
 with `gfortran -O0 -fdefault-real-8` and the new default date and orbit mode.
 They are intentionally tolerant of small compiler and platform differences.
