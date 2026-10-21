@@ -59,8 +59,9 @@ and mixed-layer vertical/horizontal diffusion heat-flux codes 904/905 in W/m²),
 and perform synthetic NetCDF conversion checks when CDO is installed.
 They also verify that `scripts/nc2sra` detects grid sizes and preserves
 header and array dimensions across T21 (F16), T31 (F24), and T42 (F32) resolutions,
-checks roundtrip array value and orientation preservation against `scripts/sra2nc`,
-and rejects unsupported grids with an explicit error when CDO is installed.
+checks roundtrip array value, orientation, and timestamp preservation against `scripts/sra2nc`,
+confirms `scripts/sra2nc` preserves non-midnight HHMM timestamps while mapping missing-time
+headers to midnight, and rejects unsupported grids with an explicit error when CDO is installed.
 
 The current numerical baselines come from source commit `d4802a1`, built
 with `gfortran -O0 -fdefault-real-8` and the new default date and orbit mode.
