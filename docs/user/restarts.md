@@ -23,8 +23,10 @@ script runs one model year per loop iteration and hands the state to the next
 iteration:
 
 ```bash
-[ -e plasim_status ] && cp plasim_status plasim_restart
-[ -e plasim_status ] && mv plasim_status restart/$RESTNAME
+if [ -e plasim_status ]; then
+   cp plasim_status plasim_restart
+   mv plasim_status restart/$RESTNAME
+fi
 ```
 
 However, before entering the `for ((YEAR=$YEAR1; YEAR<=$YEAR2; YEAR++))` loop,
