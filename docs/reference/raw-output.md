@@ -121,8 +121,8 @@ Source: {repo}`plasim/src/oceanmod.f90`.
 | 901 | `heata` | Heat Flux From The Atmosphere/Ice | W/m² | `yheata` | 0 | `mpwritegph` |
 | 902 | `ifluxa` | Heat Flux Into The Ice | W/m² | `yifluxa` | 0 | `mpwritegph` |
 | 903 | `fssta` | Flux Correction | W/m² | `yfssta` | 0 | `mpwritegph` |
-| 904 | `dssta` | Vertical Diffusion | m²/s | `ydssta` | 0 | `mpwritegph` |
-| 905 | `qhda` | Horizontal Diffusion | m²/s | `yqhda` | 0 | `mpwritegph` |
+| 904 | `dssta` | Heat Flux From Vertical Diffusion | W/m² | `ydssta` | 0 | `mpwritegph` |
+| 905 | `qhda` | Heat Flux From Horizontal Diffusion | W/m² | `yqhda` | 0 | `mpwritegph` |
 | 906 | `fldoa` | Flux From Deep Ocean (LSG) | W/m² | `yfldoa` | 0 | `mpwritegph` |
 | 910 | `icec` | Sea Ice Cover | fraction [0, 1] | `yicec` | 0 | `mpwritegph` |
 | 939 | `sst` | Sea Surface Temperature (Mixed Layer Ocean) | K | `ysst(1,jlev)` | ocean level index (jlev-1) | `mpwritegph` |
@@ -213,6 +213,6 @@ vertical coordinate interpolation, or energy/water budget sums).
 | 263 | `hfns` | Net Heat Flux | W/m² | `rss + rls - hfss - hfls (net downward heat flux)` | 0 | `srv2nc net heat flux` |
 | 264 | `wfn` | Net Water Flux | m/s | `pr - evap (net surface water flux)` | 0 | `srv2nc net water flux` |
 | 273 | `dpdx` | d(ps)/dx | Pa/m | `d(ps)/dx (zonal surface pressure gradient)` | 0 | `srv2nc pressure gradient` |
-| 274 | `dpdy` | Meridional surface pressure gradient d(ps)/dy | Pa/m | `d(ps)/dy (meridional surface pressure gradient)` | 0 | `srv2nc pressure gradient` |
+| 274 | `dpdy` | d(ps)/dy | Pa/m | `d(ps)/dy (meridional surface pressure gradient)` | 0 | `srv2nc pressure gradient` |
 | 277 | `hlpr` | Half level pressure | Pa | `half-level atmospheric pressure` | `jlev` | `srv2nc vertical hybrid grid` |
 | 278 | `flpr` | Full level pressure | Pa | `full-level atmospheric pressure` | `jlev` | `srv2nc vertical hybrid grid` |

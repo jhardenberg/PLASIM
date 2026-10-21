@@ -93,8 +93,8 @@
 |    heata |                    Heat Flux From The Atmosphere/Ice |       W/m2 |            901 |
 |   ifluxa |                               Heat Flux Into The Ice |       W/m2 |            902 |
 |    fssta |                                      Flux Correction |       W/m2 |            903 |
-|    dssta |                                   Vertical Diffusion |       m2/s |            904 |
-|     qhda |                                 Horizontal Diffusion |       m2/s |            905 |
+|    dssta |                    Heat Flux From Vertical Diffusion |       W/m2 |            904 |
+|     qhda |                  Heat Flux From Horizontal Diffusion |       W/m2 |            905 |
 |    fldoa |                           Flux From Deep Ocean (LSG) |       W/m2 |            906 |
 |     icec |                                        Sea Ice Cover |        0-1 |            910 |
 |      sst |          Sea Surface Temperature (Mixed Layer Ocean) |          K |            939 |

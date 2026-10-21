@@ -53,7 +53,11 @@ flux diagnostics (Service codes 101–107) and require finite values and
 nonzero output for each code, so disabling diagnostic output cannot satisfy
 the state-invariance check.
 
-Conversion tests verify that `scripts/nc2sra` detects grid sizes and preserves
+Conversion tests verify parameter table uniqueness and code mappings in
+`scripts/srv2nc` (including meridional pressure gradient `dpdy` under code 274
+and mixed-layer vertical/horizontal diffusion heat-flux codes 904/905 in W/m²),
+and perform synthetic NetCDF conversion checks when CDO is installed.
+They also verify that `scripts/nc2sra` detects grid sizes and preserves
 header and array dimensions across T21 (F16), T31 (F24), and T42 (F32) resolutions,
 checks roundtrip array value and orientation preservation against `scripts/sra2nc`,
 and rejects unsupported grids with an explicit error when CDO is installed.
