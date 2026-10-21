@@ -128,6 +128,79 @@ class Nc2SraTests(unittest.TestCase):
         self.assertNotEqual(conv.returncode, 0)
         self.assertIn("Unknown grid size", conv.stdout + conv.stderr)
 
+    def test_sra2nc_timestamp_handling(self) -> None:
+        """Verify sra2nc preserves non-midnight HHMM timestamps and maps missing time to midnight."""
+        sra2nc = SCRIPTS / "sra2nc"
+        cases = [
+            ("1230", "2000-01-01T12:30:00"),
+            ("600", "2000-01-01T06:00:00"),
+            ("0", "2000-01-01T00:00:00"),
+            ("0000", "2000-01-01T00:00:00"),
+            ("-1", "2000-01-01T00:00:00"),
+        ]
+        for time_header, expected_timestamp in cases:
+            with self.subTest(time_header=time_header):
+                sra_file = self.work / f"test_time_{time_header}.sra"
+                nc_file = self.work / f"test_time_{time_header}.nc"
+
+                with sra_file.open("w", encoding="ascii") as f:
+                    f.write(f"       172         0  20000101      {time_header:>4}        64        32         0         0\n")
+                    for _ in range(256):
+                        f.write("  42.0  42.0  42.0  42.0  42.0  42.0  42.0  42.0\n")
+
+                res = run_command(["bash", str(sra2nc), str(sra_file), str(nc_file)])
+                self.assertEqual(res.returncode, 0, f"sra2nc failed: {res.stderr}")
+
+                res_ts = run_command(["cdo", "-s", "showtimestamp", str(nc_file)])
+                self.assertEqual(res_ts.returncode, 0, f"cdo showtimestamp failed: {res_ts.stderr}")
+                self.assertEqual(res_ts.stdout.strip(), expected_timestamp)
+
+    def test_roundtrip_non_midnight_timestamp(self) -> None:
+        """Verify sra2nc and nc2sra roundtrip preserves non-midnight timestamps and values."""
+        sra2nc = SCRIPTS / "sra2nc"
+        nc2sra = SCRIPTS / "nc2sra"
+
+        orig_sra = self.work / "orig_noon.sra"
+        nc_file = self.work / "noon.nc"
+        roundtrip_sra = self.work / "roundtrip_noon.sra"
+
+        with orig_sra.open("w", encoding="ascii") as f:
+            f.write("       172         0  20000101      1230        64        32         0         0\n")
+            for _ in range(256):
+                f.write("  42.0  42.0  42.0  42.0  42.0  42.0  42.0  42.0\n")
+
+        res1 = run_command(["bash", str(sra2nc), str(orig_sra), str(nc_file)])
+        self.assertEqual(res1.returncode, 0, f"sra2nc failed: {res1.stderr}")
+
+        res_ts = run_command(["cdo", "-s", "showtimestamp", str(nc_file)])
+        self.assertEqual(res_ts.returncode, 0, f"cdo showtimestamp failed: {res_ts.stderr}")
+        self.assertEqual(res_ts.stdout.strip(), "2000-01-01T12:30:00")
+
+        res2 = run_command([
+            "bash", str(nc2sra),
+            "-d", "20000101", "-t", "1230",
+            str(nc_file), str(roundtrip_sra), "172",
+        ])
+        self.assertEqual(res2.returncode, 0, f"nc2sra failed: {res2.stderr}")
+
+        with orig_sra.open("r", encoding="ascii") as f1, roundtrip_sra.open("r", encoding="ascii") as f2:
+            lines1 = f1.readlines()
+            lines2 = f2.readlines()
+
+        header1 = lines1[0].split()
+        header2 = lines2[0].split()
+        self.assertEqual(header2[0], header1[0])
+        self.assertEqual(header2[2], header1[2])
+        self.assertEqual(header2[3], header1[3])
+        self.assertEqual(header2[4], header1[4])
+        self.assertEqual(header2[5], header1[5])
+
+        vals1 = [float(x) for line in lines1[1:] for x in line.split()]
+        vals2 = [float(x) for line in lines2[1:] for x in line.split()]
+        self.assertEqual(len(vals1), len(vals2))
+        max_diff = max(abs(a - b) for a, b in zip(vals1, vals2))
+        self.assertLess(max_diff, 1e-5)
+
 
 if __name__ == "__main__":
     unittest.main()
