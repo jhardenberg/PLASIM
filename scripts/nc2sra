@@ -39,19 +39,19 @@ fi
 input=$1
 output=$2
 
-gridsize=$(cdo -s griddes $input|grep gridsize -|cut -d= -f2 |tr -d ' ')
+gridsize=$(cdo -s griddes "$input" | grep gridsize - | head -n 1 | cut -d= -f2 | tr -d ' ')
 
-if gridsize=2048; then
+if [ "$gridsize" = 2048 ]; then
     grid=t21
     gridout=F16
     nx=64
     ny=32
-elif gridsize=4608; then
+elif [ "$gridsize" = 4608 ]; then
     grid=t31
     gridout=F24
     nx=96
     ny=48
-elif gridsize=8192; then
+elif [ "$gridsize" = 8192 ]; then
     grid=t42
     gridout=F32
     nx=128

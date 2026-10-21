@@ -25,7 +25,8 @@ jobs:
       - name: Install compilers and MPI
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential gfortran libopenmpi-dev openmpi-bin
+          sudo apt-get install -y --no-install-recommends build-essential gfortran libopenmpi-dev openmpi-bin cdo
+          cdo --version
           mpif90 --version
           mpiexec --version
       - name: Run tests
