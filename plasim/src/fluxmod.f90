@@ -195,7 +195,7 @@
 !     windspeed (squared):
 !
 
-      zabsu2(:)=AMAX1(zumin,du(:,NLEV)*du(:,NLEV)+dv(:,NLEV)*dv(:,NLEV))
+      zabsu2(:)=AMAX1(zumin*zumin,du(:,NLEV)*du(:,NLEV)+dv(:,NLEV)*dv(:,NLEV))
 
 !
 !     z off lowermost layer

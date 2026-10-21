@@ -146,8 +146,8 @@ class PlaSimTests(unittest.TestCase):
         cls.default_status.write_bytes(gzip.decompress(DEFAULT_RESTART.read_bytes()))
 
     @classmethod
-    def prepare_run(cls, name: str, *, days: int) -> Path:
-        return prepare_run(cls.work, name, days=days)
+    def prepare_run(cls, name: str, *, days: int, steps: int = 0) -> Path:
+        return prepare_run(cls.work, name, days=days, steps=steps)
 
     @classmethod
     def run_model(cls, run: Path) -> None:
@@ -432,6 +432,26 @@ class PlaSimTests(unittest.TestCase):
         namelist = run / "landmod_namelist"
         namelist.write_text("&landmod_nl\n albsmin=0.5\n/\n", encoding="ascii")
         self.run_model(run)
+
+    def test_zumin_namelist_option(self) -> None:
+        control = self.prepare_run("control-zumin", days=0, steps=1)
+        self.run_model(control)
+        control_state = records(control / "plasim_status")
+
+        run = self.prepare_run("namelist-zumin", days=0, steps=1)
+        (run / "fluxmod_namelist").write_text(
+            "&fluxmod_nl\n zumin=4.0\n/\n", encoding="ascii"
+        )
+        self.run_model(run)
+        state = records(run / "plasim_status")
+
+        self.assertEqual(state["nstep"], control_state["nstep"])
+        self.assertNotEqual(state["dt"], control_state["dt"])
+        self.assertNotEqual(state["st"], control_state["st"])
+        for field in ("dt", "dq", "st", "sp"):
+            with self.subTest(field=field):
+                values = doubles(state[field])
+                self.assertTrue(all(map(math.isfinite, values)))
 
 
 class CalendarTests(unittest.TestCase):

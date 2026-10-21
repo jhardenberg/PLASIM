@@ -24,7 +24,7 @@ T21 run with broad numerical baselines, and byte equality between continuous
 two day runs and runs restarted after one day in broadband and spectral modes.
 It also checks every value in selected Earth state fields against a one-day
 reference for the year-2000, fixed-orbit defaults, resumes the older year-1
-Berger-orbit restart, and runs one step with a non-default `albsmin` value.
+Berger-orbit restart, and checks non-default `albsmin` and `zumin` namelist options.
 The default reference test omits both `N_START_YEAR` and `NFIXORB` to verify
 the Fortran defaults independently of MoSt.
 Orbital tests cross December–January in both the 360-day and Gregorian
