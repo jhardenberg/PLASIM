@@ -586,7 +586,7 @@ class Srv2ncTests(unittest.TestCase):
                 ["cdo", "-s", "partab", str(nc_file)],
                 cwd=work, capture_output=True, text=True, check=True,
             )
-            partab = partab_res.stdout
+            partab = re.sub(r"\s*=\s*", "=", partab_res.stdout)
             self.assertIn("name=dpdy", partab)
             self.assertIn("param=274", partab)
             self.assertIn('long_name="d(ps)/dy"', partab)
