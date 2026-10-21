@@ -551,8 +551,17 @@ class ConfigurePrecisionTests(unittest.TestCase):
 
         env = dict(os.environ)
         if isolate_path:
-            standard_paths = [p for p in env.get("PATH", "").split(os.pathsep) if "homebrew" not in p and "local" not in p]
-            env["PATH"] = os.pathsep.join([str(bin_dir), *standard_paths])
+            clean_bin = work / "clean_bin"
+            clean_bin.mkdir()
+            for util in (
+                "cat", "sed", "awk", "head", "expr", "which", "make", "sh", "bash",
+                "rm", "mkdir", "cp", "touch", "printf", "mktemp", "uname", "hostname",
+                "gcc", "cc", "g++", "c++", "as",
+            ):
+                util_path = shutil.which(util)
+                if util_path:
+                    (clean_bin / util).symlink_to(util_path)
+            env["PATH"] = f"{bin_dir}{os.pathsep}{clean_bin}"
         else:
             env["PATH"] = f"{bin_dir}{os.pathsep}{env.get('PATH', '')}"
 
@@ -577,6 +586,18 @@ class ConfigurePrecisionTests(unittest.TestCase):
         self.assertNotIn("integer expression expected", result.stdout)
         prec_file = work / "most_precision_options"
         self.assertTrue(prec_file.is_file(), f"most_precision_options was not created:\n{result.stdout}\n{result.stderr}")
+        self.assertIn("MOST_PREC=-fdefault-real-8", prec_file.read_text())
+
+    def test_full_gfortran_version(self) -> None:
+        """Full version strings (major.minor.patch) emit precision options correctly."""
+        work, result = self.run_configure_with_mock_compiler(
+            dumpversion="15",
+            dumpfullversion="15.2.0",
+        )
+        self.assertNotIn("syntax error", result.stdout)
+        self.assertNotIn("integer expression expected", result.stdout)
+        prec_file = work / "most_precision_options"
+        self.assertTrue(prec_file.is_file(), f"most_precision_options was not created:\n{result.stdout}")
         self.assertIn("MOST_PREC=-fdefault-real-8", prec_file.read_text())
 
     def test_legacy_gfortran_version(self) -> None:
