@@ -601,5 +601,134 @@ class Srv2ncTests(unittest.TestCase):
             self.assertIn('units="W/m2"', partab)
 
 
+class ConfigurePrecisionTests(unittest.TestCase):
+    """Verify compiler detection and precision-option generation in configure.sh."""
+
+    def run_configure_with_mock_compiler(
+        self,
+        *,
+        dumpversion: str | None = None,
+        dumpfullversion: str | None = None,
+        compiler_name: str = "gfortran",
+        isolate_path: bool = False,
+    ) -> tuple[Path, subprocess.CompletedProcess[str]]:
+        work_dir = tempfile.TemporaryDirectory(prefix="plasim-test-configure-")
+        self.addCleanup(work_dir.cleanup)
+        work = Path(work_dir.name)
+
+        for name in ("configure.sh", "makecheck", "f90check.f90", "cc_check.c", "most.c"):
+            src = ROOT / name
+            if src.is_file():
+                shutil.copy2(src, work / name)
+
+        bin_dir = work / "mock_bin"
+        bin_dir.mkdir()
+        mock_compiler = bin_dir / compiler_name
+
+        real_gfortran = shutil.which("gfortran")
+        real_compiler = real_gfortran or shutil.which("gcc") or "true"
+        script_lines = ["#!/bin/sh"]
+        if dumpfullversion is not None:
+            script_lines.append(f'if [ "$1" = "-dumpfullversion" ]; then echo "{dumpfullversion}"; exit 0; fi')
+        else:
+            script_lines.append('if [ "$1" = "-dumpfullversion" ]; then exit 1; fi')
+
+        if dumpversion is not None:
+            script_lines.append(f'if [ "$1" = "-dumpversion" ]; then echo "{dumpversion}"; exit 0; fi')
+        else:
+            script_lines.append('if [ "$1" = "-dumpversion" ]; then exit 1; fi')
+
+        script_lines.append(f'exec {real_compiler} "$@"')
+        mock_compiler.write_text("\n".join(script_lines) + "\n")
+        mock_compiler.chmod(0o755)
+
+        env = dict(os.environ)
+        if isolate_path:
+            clean_bin = work / "clean_bin"
+            clean_bin.mkdir()
+            for util in (
+                "cat", "sed", "awk", "head", "expr", "which", "make", "sh", "bash",
+                "rm", "mkdir", "cp", "touch", "printf", "mktemp", "uname", "hostname",
+                "gcc", "cc", "g++", "c++", "as",
+            ):
+                util_path = shutil.which(util)
+                if util_path:
+                    (clean_bin / util).symlink_to(util_path)
+            env["PATH"] = f"{bin_dir}{os.pathsep}{clean_bin}"
+        else:
+            env["PATH"] = f"{bin_dir}{os.pathsep}{env.get('PATH', '')}"
+
+        result = subprocess.run(
+            ["bash", "configure.sh"],
+            cwd=work,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        return work, result
+
+    def test_major_only_gfortran_version(self) -> None:
+        """Issue 51: major-only gfortran -dumpversion must not trigger syntax errors or omit precision options."""
+        work, result = self.run_configure_with_mock_compiler(
+            dumpversion="15",
+            dumpfullversion=None,
+        )
+        self.assertNotIn("syntax error", result.stdout)
+        self.assertNotIn("integer expression expected", result.stdout)
+        prec_file = work / "most_precision_options"
+        self.assertTrue(prec_file.is_file(), f"most_precision_options was not created:\n{result.stdout}\n{result.stderr}")
+        self.assertIn("MOST_PREC=-fdefault-real-8", prec_file.read_text())
+
+    def test_full_gfortran_version(self) -> None:
+        """Full version strings (major.minor.patch) emit precision options correctly."""
+        work, result = self.run_configure_with_mock_compiler(
+            dumpversion="15",
+            dumpfullversion="15.2.0",
+        )
+        self.assertNotIn("syntax error", result.stdout)
+        self.assertNotIn("integer expression expected", result.stdout)
+        prec_file = work / "most_precision_options"
+        self.assertTrue(prec_file.is_file(), f"most_precision_options was not created:\n{result.stdout}")
+        self.assertIn("MOST_PREC=-fdefault-real-8", prec_file.read_text())
+
+    def test_legacy_gfortran_version(self) -> None:
+        """Legacy gfortran versions (< 4.5 or major-only 4) must still emit precision options."""
+        for ver in ("4", "4.4.7"):
+            with self.subTest(version=ver):
+                work, result = self.run_configure_with_mock_compiler(
+                    dumpversion=ver,
+                    dumpfullversion=None,
+                )
+                self.assertNotIn("syntax error", result.stdout)
+                self.assertNotIn("integer expression expected", result.stdout)
+                prec_file = work / "most_precision_options"
+                self.assertTrue(prec_file.is_file(), f"most_precision_options was not created for {ver}:\n{result.stdout}")
+                self.assertIn("MOST_PREC=-fdefault-real-8", prec_file.read_text())
+
+    def test_empty_version_fallback(self) -> None:
+        """Unparseable/empty version output falls back gracefully and preserves precision options."""
+        work, result = self.run_configure_with_mock_compiler(
+            dumpversion=None,
+            dumpfullversion=None,
+        )
+        self.assertNotIn("syntax error", result.stdout)
+        self.assertNotIn("integer expression expected", result.stdout)
+        prec_file = work / "most_precision_options"
+        self.assertTrue(prec_file.is_file(), f"most_precision_options was not created:\n{result.stdout}")
+        self.assertIn("MOST_PREC=-fdefault-real-8", prec_file.read_text())
+
+    def test_nagfor_precision_options(self) -> None:
+        """nagfor compiler detection emits -r8 in most_precision_options."""
+        work, result = self.run_configure_with_mock_compiler(
+            compiler_name="nagfor",
+            isolate_path=True,
+        )
+        prec_file = work / "most_precision_options"
+        self.assertTrue(prec_file.is_file(), f"most_precision_options was not created for nagfor:\n{result.stdout}")
+        self.assertIn("MOST_PREC=-r8", prec_file.read_text())
+
+
 if __name__ == "__main__":
     unittest.main()
