@@ -13,6 +13,8 @@ Changes on `master` since the `v1.0.1` tag.
 
 ### Detailed changes
 
+- **T31 benchmarks:** Added optional T31/L10 workloads for both mixed-layer and real LSG oceans via `--resolutions T31`, including serial and compatible MPI rank counts. Uses checked-in 96 × 48 boundary data and the model's 40 steps/day; the default T21/T42 matrix and model/restart interfaces are unchanged. Added selection, input/coupling-cadence, and rank-validation checks and updated the benchmark documentation and smoke example.
+
 The `devel_planets` branch was merged on 2026-10-15 ([#13](https://github.com/jhardenberg/PLASIM/pull/13), [`bac0eb7`](https://github.com/jhardenberg/PLASIM/commit/bac0eb7)). Its changes relative to the preceding `master` include:
 
 - **Planet setup and normalization:** Harmonized Earth, Mars, and Exo parameter handling and added planetary soil-water field capacity (`p_wsmax`). The new `normalization_day` option selects solar or sidereal day normalization for damping and dissipation coefficients. Earth defaults to `"solar"` for classic behavior; Mars and Exo default to `"sidereal"`.

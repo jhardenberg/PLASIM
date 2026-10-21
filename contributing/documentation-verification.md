@@ -12,6 +12,18 @@ updates check the merged developments identified below, including mainline
 change model sources. Source checks and runtime checks below are deliberately
 distinguished.
 
+## T31 benchmark extension
+
+Checked `benchmarks/run.py` (`RESOLUTIONS`, `arguments`, `build`, `prepare`,
+`state_summary`) against atmospheric timestep selection in `readnl` in
+`plasim/src/plasim.f90`: T31 has 48 latitudes, 96 longitudes, and a
+36-minute timestep (40 steps per Earth day). Checked `plasim/dat/T31` and
+`lsg/dat`: coupled T31 retains its native N048 land mask; the only LSG
+replacement is N032. Coupling cadence is 40 or 400 atmospheric steps for
+one or ten days. The default T21/T42 selection, model sources, namelist
+interfaces, and restart formats are unchanged. Updated the benchmark guide,
+manual chapter, and optional resolution argument in the smoke example.
+
 ## Historical chapter coverage
 
 | Original material | Current Sphinx destination | Code comparison and resulting update |

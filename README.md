@@ -228,8 +228,8 @@ are unchanged.
 ## Performance benchmarks
 
 A separate [benchmark suite](benchmarks/README.md) measures repeated optimized
-T21/T42 runs with mixed-layer and real LSG oceans, classic broadband radiation,
-and selectable MPI rank counts. Use `--parallel --max-cores N` to run independent
+T21/T42 runs (or optional T31 via `--resolutions T31`) with mixed-layer and
+real LSG oceans, classic broadband radiation, and selectable MPI rank counts. Use `--parallel --max-cores N` to run independent
 benchmark cases within a shared rank budget; `compare.py --summary` combines
 separately collected serial and MPI results. It records timings and build/input metadata
 and compares source revisions. Benchmarks are run manually, outside regression
