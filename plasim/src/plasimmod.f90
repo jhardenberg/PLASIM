@@ -126,7 +126,7 @@
       integer :: nstep1          =       0 ! start timestep for this run
       integer :: mstep           =       0 ! timestep # in current month
       integer :: mocd            =       0 ! month countdown
-      integer :: n_start_year    =    0001 ! start year
+      integer :: n_start_year    =    2000 ! start year
       integer :: n_start_month   =      01 ! start month
       integer :: n_start_step    =       0 ! start step since 1-Jan-0000
       integer :: n_days_per_month=      30 ! needed for time interpolation
@@ -519,7 +519,7 @@
 
       character(len=80) :: yplanet=" " ! Planet name
 
-      integer :: nfixorb = 0           ! Global switch to fix orbit
+      integer :: nfixorb = 1           ! Global switch to fix orbit
 
       real :: akap   = 0.0             ! Kappa
       real :: alr    = 0.0             ! Lapse rate

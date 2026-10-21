@@ -241,6 +241,7 @@
       call mpbcr(tau_soil)
       call mpbcr(rinifor)
       call mpbcr(rnbiocats)
+      call mpbcr(soilcap)
       call mpbcrn(dsoilz,NLSOIL)
 
       call mpbcrn(dsnowalbmn,2)
@@ -1402,9 +1403,6 @@
 
       real zrip(NLON,NLPP)
       real zrop(NLON,NLPP)
-
-      real zrigl(NLON,NLAT),zriglp(NLON,NLAT)
-      real zrogl(NLON,NLAT),zroglp(NLON,NLAT)
 !
 
       zrivin(:,:)=zriver(:,:)*zarea(:,:)*zls(:,:)
@@ -1440,15 +1438,9 @@
 
 !
 !     make advection in meridional direction (partitioning in mpp)
-!     simple schema (exchange all gps)
 !
 
-      call mpgagp(zrigl,zrivin,1)
-      if(mypid==NROOT) then
-       zriglp(:,1:NLAT-1)=zrigl(:,2:NLAT)
-       zriglp(:,NLAT)=0.
-      endif
-      call mpscgp(zriglp,zrip,1)
+      call mpshiftgp_north(zrivin,zrip)
       where(zvroff(:,:) < 0.)
        zroff(:,:)=zroff(:,:)+zvroff(:,:)*zrivin(:,:)/zarea(:,:)
        zrop(:,:)=-zvroff(:,:)*zrivin(:,:)
@@ -1456,14 +1448,9 @@
        zroff(:,:)=zroff(:,:)+zvroff(:,:)*zrip(:,:)/zarea(:,:)
        zrop(:,:)=-zvroff(:,:)*zrip(:,:)
       endwhere
-      call mpgagp(zroglp,zrop,1)
-      if(mypid==NROOT) then
-       zrogl(:,2:NLAT)=zroglp(:,1:NLAT-1)
-       zrogl(:,1)=0.
-      endif
-      call mpscgp(zrogl,zrop,1)
+      call mpshiftgp_south(zrop,zrip)
 
-      zroff(:,:)=zroff(:,:)+zrop(:,:)/zarea(:,:)
+      zroff(:,:)=zroff(:,:)+zrip(:,:)/zarea(:,:)
 
       return
       end subroutine mkradv

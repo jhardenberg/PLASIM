@@ -1,6 +1,8 @@
 # Frequently asked questions
 
-These answers update the older `FAQ` for the current PlaSim-focused repository. For the supported workflows, start with the [README](README.md) and the [Planet Simulator User's Guide](plasim/doc/PS_UsersGuide.pdf).
+These answers update the older `FAQ` for the current PlaSim-focused repository. For current workflows, start with the [README](README.md) and the [Sphinx user manual](docs/index.md). The original [User's Guide](plasim/doc/PS_UsersGuide.pdf) is retained for historical context.
+
+The developing Sphinx manual starts with the recommended [MoSt workflow](docs/user/most.md), including headless preparation, followed by [experiment directories and long simulations](docs/user/experiments.md). An [alternative direct-Make build](docs/development/direct-build.md) is in its separate developer part. Contributor [documentation build instructions](contributing/documentation.md) are kept separately from the published manual.
 
 ## `configure.sh` cannot find `make`, Fortran, or another compiler. What do I need?
 
@@ -16,11 +18,28 @@ Run MoSt from the repository root as `./most.x` after `./configure.sh`, and chec
 
 ## The model rejects a namelist variable. What does that mean?
 
-The variable is not recognized by the version of the model being run. Check the spelling, the namelist group, and whether the file was written for another PlaSim version. The old FAQ specifically mentions `NRESTART` in older namelists; remove or update unsupported options before retrying. The [legacy namelist regression tests](README.md#tests) cover selected classic inputs, but not every historical option.
+The variable is not recognized by the version of the model being run. Check the spelling, the namelist group, and whether the file was written for another PlaSim version. The old FAQ specifically mentions `NRESTART` in older namelists; remove or update unsupported options before retrying. Use the [detailed namelist tables](docs/reference/parameters/index.md) and [legacy-input crosswalk](docs/reference/parameters/legacy.md) to check current names, units, defaults, and migration guidance. The [legacy namelist regression tests](README.md#tests) cover selected classic inputs, but not every historical option.
 
 ## I edited Fortran source, but the model behaves as before. Why?
 
 Make permanent edits in `plasim/src`, not the copied sources under `plasim/bld`. MoSt can reuse binaries from `plasim/bin`. After saving any outputs you need, run `./cleanplasim` from the repository root and rebuild. This command removes the generated contents of `plasim/bld`, `plasim/bin`, and `plasim/run`.
+
+## Why do orbital parameters depend on how I split a run?
+
+Earth runs now default to `N_START_YEAR=2000` and `NFIXORB=1`, including
+direct executable runs. Existing namelists that omit these fields inherit
+the new defaults; explicitly specify older values when reproducing an old
+experiment.
+
+With `NFIXORB=0`, Berger orbital elements are calculated at radiation
+initialization from the current model year, including the restored year
+when restarting. They remain unchanged during that executable invocation.
+A continuous multiyear run and annual restart chunks therefore use different
+orbital forcing. For annual evolution, restart at each year boundary and
+omit an explicit `IYRBP` override. For a prescribed fixed orbit, use
+`NFIXORB=1` with explicit `ECCEN`, `OBLIQ`, and `MVELP`. This is a known
+limitation, not a guarantee of restart-independent transient forcing; see
+the [orbital configuration notes](README.md#orbital-parameters-and-experiment-dates).
 
 ## Can I edit orography with MoSt?
 

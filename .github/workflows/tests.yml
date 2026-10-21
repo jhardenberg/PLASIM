@@ -22,10 +22,11 @@ jobs:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
-      - name: Install compilers, MPI, and X11 headers
+      - name: Install compilers, MPI, CDO, and X11 headers
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential gfortran libopenmpi-dev openmpi-bin libx11-dev
+          sudo apt-get install -y --no-install-recommends build-essential gfortran libopenmpi-dev openmpi-bin cdo libx11-dev
+          cdo --version
           mpif90 --version
           mpiexec --version
       - name: Run tests

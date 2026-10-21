@@ -14,7 +14,81 @@ from test_lsg import floats, lsg_output_records, prepare_coupled_run
 from test_model import build_model, doubles, prepare_run, records, run_model
 
 
-class MPITests(unittest.TestCase):
+class FieldComparison:
+    def assert_values_close(self, actual, expected, *, atol, rtol, label,
+                            field_norm=False, unit_fraction=False) -> None:
+        self.assertEqual(len(actual), len(expected), label)
+        self.assertTrue(all(map(math.isfinite, actual)), label)
+        self.assertTrue(all(map(math.isfinite, expected)), label)
+        differences = [abs(a - b) for a, b in zip(actual, expected)]
+        if field_norm:
+            # Serial transforms pair opposite latitudes; MPI transforms sum
+            # rank-local contributions. Coupling amplifies their roundoff.
+            # Scale relative error by the physical field, including its zeros.
+            peak = max(map(abs, expected))
+            if unit_fraction:
+                self.assertTrue(all(0.0 <= v <= 1.0 for v in actual), label)
+                self.assertTrue(all(0.0 <= v <= 1.0 for v in expected), label)
+                # Albedo and ice fraction have a fixed physical scale of one,
+                # independent of the largest value in this particular run.
+                peak = 1.0
+            reference_rms = math.sqrt(math.fsum(b*b for b in expected)
+                                      / len(expected))
+            error_rms = math.sqrt(math.fsum(d*d for d in differences)
+                                  / len(differences))
+            worst = max(range(len(differences)), key=differences.__getitem__)
+            self.assertLessEqual(
+                differences[worst], atol + rtol * peak,
+                f"{label}[{worst}]: max error {differences[worst]}, "
+                f"reference max {peak}, error RMS {error_rms}, "
+                f"reference RMS {reference_rms}",
+            )
+            # A large field maximum must not hide a distributed bias.
+            self.assertLessEqual(
+                error_rms, atol + rtol * reference_rms,
+                f"{label}: error RMS {error_rms}, reference RMS {reference_rms}",
+            )
+            return
+        limits = [atol + rtol * abs(b) for b in expected]
+        worst = max(range(len(actual)), key=lambda i: differences[i] / limits[i])
+        self.assertLessEqual(
+            differences[worst], limits[worst],
+            f"{label}[{worst}]: MPI {actual[worst]} vs serial {expected[worst]}",
+        )
+
+
+class MPIComparisonTests(FieldComparison, unittest.TestCase):
+    def test_coupled_comparison_handles_small_values(self) -> None:
+        self.assert_values_close([2e-9, 0.8], [0.0, 0.8],
+                                 atol=1e-10, rtol=1e-8, label="albedo",
+                                 field_norm=True)
+
+    def test_coupled_comparison_uses_fraction_range(self) -> None:
+        self.assert_values_close([9e-9, 0.8, 0.8], [0.0, 0.8, 0.8],
+                                 atol=1e-10, rtol=1e-8, label="albedo",
+                                 field_norm=True, unit_fraction=True)
+
+    def test_coupled_comparison_rejects_invalid_fraction(self) -> None:
+        with self.assertRaises(AssertionError):
+            self.assert_values_close([1.0 + 1e-9], [1.0],
+                                     atol=1e-10, rtol=1e-8, label="albedo",
+                                     field_norm=True, unit_fraction=True)
+
+    def test_coupled_comparison_rejects_local_error(self) -> None:
+        with self.assertRaises(AssertionError):
+            self.assert_values_close([1e-4, 0.8], [0.0, 0.8],
+                                     atol=1e-10, rtol=1e-8, label="albedo",
+                                     field_norm=True)
+
+    def test_coupled_comparison_rejects_distributed_bias(self) -> None:
+        with self.assertRaisesRegex(AssertionError, "error RMS"):
+            self.assert_values_close([1.0 + 8e-9, 8e-9, 8e-9, 8e-9],
+                                     [1.0, 0.0, 0.0, 0.0],
+                                     atol=1e-10, rtol=1e-8, label="field",
+                                     field_norm=True)
+
+
+class MPITests(FieldComparison, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         for program in ("mpif90", "mpiexec"):
@@ -24,23 +98,69 @@ class MPITests(unittest.TestCase):
         cls.addClassCleanup(cls.temp.cleanup)
         cls.work = Path(cls.temp.name)
 
-    def assert_values_close(self, actual, expected, *, atol, rtol, label) -> None:
-        self.assertEqual(len(actual), len(expected), label)
-        self.assertTrue(all(map(math.isfinite, actual)), label)
-        self.assertTrue(all(map(math.isfinite, expected)), label)
-        differences = [abs(a - b) for a, b in zip(actual, expected)]
-        limits = [atol + rtol * abs(b) for b in expected]
-        worst = max(range(len(actual)), key=lambda i: differences[i] / limits[i])
-        self.assertLessEqual(
-            differences[worst], limits[worst],
-            f"{label}[{worst}]: MPI {actual[worst]} vs serial {expected[worst]}",
+    def test_mpi_nondefault_parameters_match_serial(self) -> None:
+        serial_exe = build_model(self.work / "parameters-serial-build")
+        mpi_exe = build_model(self.work / "parameters-mpi-build", ranks=2)
+        tidal_settings = (
+            "nfixorb=1, eccen=0., obliq=0., ltidally_locked=.true., "
         )
+        cases = (
+            ("soilcap", "landmod", "soilcap=1.2e6"),
+            ("tidal-lock", "planet", tidal_settings + "tl_substellar=180."),
+            ("substellar-longitude", "planet", tidal_settings + "tl_substellar=90."),
+        )
+        for steps in (1, 64):
+            # Check parameter propagation strictly before roundoff can grow.
+            # Longer perturbed trajectories allow small numerical drift; the
+            # existing two-day default comparisons retain their tighter limits.
+            atol, rtol = (1e-10, 1e-8) if steps == 1 else (1e-8, 1e-6)
+            control = prepare_run(self.work, f"parameters-control-{steps}",
+                                  days=0, steps=steps)
+            run_model(serial_exe, control)
+            control_state = records(control / "plasim_status")
+            serial_responses = {}
+            for name, module, settings in cases:
+                with self.subTest(steps=steps, parameter=name):
+                    serial = prepare_run(self.work, f"{name}-{steps}-serial",
+                                         days=0, steps=steps)
+                    parallel = prepare_run(self.work, f"{name}-{steps}-mpi",
+                                           days=0, steps=steps)
+                    for run in (serial, parallel):
+                        (run / f"{module}_namelist").write_text(
+                            f"&{module}_nl\n {settings}\n/\n", encoding="ascii"
+                        )
+                    run_model(serial_exe, serial)
+                    run_model(mpi_exe, parallel, launcher=["mpiexec", "-n", "2"])
+                    expected = records(serial / "plasim_status")
+                    actual = records(parallel / "plasim_status")
+                    self.assertEqual(actual["nstep"], control_state["nstep"])
+                    # Verify that each input changes the serial solution, so an
+                    # ignored namelist setting cannot make the comparison pass.
+                    response = "dsoilt" if name == "soilcap" else "st"
+                    self.assertNotEqual(expected[response], control_state[response])
+                    serial_responses[name] = expected[response]
+                    for field in ("dt", "dq", "dalb", "dsalb1", "dsalb2", "dsoilt",
+                                  "ysst", "dicec", "diced", "sz", "sd", "st", "sq", "sp"):
+                        with self.subTest(field=field):
+                            self.assert_values_close(
+                                doubles(actual[field]), doubles(expected[field]),
+                                atol=atol, rtol=rtol, label=f"{name}: {field}",
+                            )
+            self.assertNotEqual(serial_responses["tidal-lock"],
+                                serial_responses["substellar-longitude"])
 
-    def compare_configuration(self, *, lsg: bool) -> None:
+    def compare_configuration(self, *, lsg: bool, spectral: bool = False) -> None:
         name = "lsg" if lsg else "mixed-layer"
+        if spectral:
+            name += "-spectral"
         prepare = prepare_coupled_run if lsg else prepare_run
         serial = prepare(self.work, f"{name}-serial", days=2)
         parallel = prepare(self.work, f"{name}-mpi", days=2)
+        if spectral:
+            for run in (serial, parallel):
+                (run / "radmod_namelist").write_text(
+                    "&radmod_nl\n nstartemp=1\n/\n", encoding="ascii"
+                )
         serial_exe = build_model(self.work / f"{name}-serial-build", lsg=lsg)
         mpi_exe = build_model(self.work / f"{name}-mpi-build", lsg=lsg, ranks=2)
         run_model(serial_exe, serial)
@@ -54,12 +174,23 @@ class MPITests(unittest.TestCase):
         expected = records(serial / "plasim_status")
         actual = records(parallel / "plasim_status")
         for field, value in (("nlat", 32), ("nlon", 64), ("nlev", 10),
-                             ("nstep", 11584)):
+                             ("nstep", 23040064)):
             self.assertEqual(struct.unpack("=i", actual[field])[0], value, field)
         self.assertEqual(actual["dls"], expected["dls"])
+        # These two replicated values must not be gathered as a grid field.
+        for label, state in (("serial", expected), ("MPI", actual)):
+            self.assertEqual(len(state["zsolars"]), 16, f"{label} zsolars size")
+        self.assert_values_close(
+            doubles(actual["zsolars"]), doubles(expected["zsolars"]),
+            atol=1e-14, rtol=1e-12, label="zsolars",
+        )
+        if spectral:
+            fractions = doubles(actual["zsolars"])
+            self.assertTrue(all(0.0 < value < 1.0 for value in fractions))
+            self.assertAlmostEqual(math.fsum(fractions), 1.0, delta=1e-12)
         # Parallel reductions can change roundoff; compare every value in both
         # gridpoint fields and global spectral fields rather than file bytes.
-        fields = ["dt", "dq", "dalb", "ysst", "dicec", "diced",
+        fields = ["dt", "dq", "dalb", "drunoff", "ysst", "dicec", "diced",
                   "sz", "sd", "st", "sq", "sp"]
         if lsg:
             fields.append("yfldo")  # Returned LSG heat flux after MPI scatter.
@@ -67,13 +198,14 @@ class MPITests(unittest.TestCase):
             with self.subTest(configuration=name, field=field):
                 self.assert_values_close(
                     doubles(actual[field]), doubles(expected[field]),
-                    atol=1e-10, rtol=1e-8, label=field,
+                    atol=1e-10, rtol=1e-8, label=field, field_norm=lsg,
+                    unit_fraction=lsg and field in ("dalb", "dicec"),
                 )
 
         if lsg:
             ocean = lsg_output_records(parallel / "lsg_output")
             reference = lsg_output_records(serial / "lsg_output")
-            self.assertEqual({key[2] for key in ocean}, {10101, 10102})
+            self.assertEqual({key[2] for key in ocean}, {20000101, 20000102})
             self.assertEqual(ocean.keys(), reference.keys())
             for key in ocean:
                 with self.subTest(ocean_record=key):
@@ -82,12 +214,30 @@ class MPITests(unittest.TestCase):
                         floats(ocean[key]), floats(reference[key]),
                         atol=1e-5, rtol=1e-6, label=str(key),
                     )
+        else:
+            split = prepare(self.work, f"{name}-mpi-split", days=1)
+            if spectral:
+                shutil.copy2(parallel / "radmod_namelist", split)
+            run_model(mpi_exe, split, launcher=["mpiexec", "-n", "2"])
+            (split / "plasim_status").replace(split / "plasim_restart")
+            run_model(mpi_exe, split, launcher=["mpiexec", "-n", "2"])
+            continued = records(split / "plasim_status")
+            self.assertEqual(continued.keys(), actual.keys())
+            for field in actual:
+                with self.subTest(configuration=name, restart_field=field):
+                    self.assertTrue(
+                        continued[field] == actual[field],
+                        f"{field} differs between continuous and restarted MPI runs",
+                    )
 
     def test_mpi_mixed_layer_matches_serial(self) -> None:
         self.compare_configuration(lsg=False)
 
     def test_mpi_lsg_matches_serial(self) -> None:
         self.compare_configuration(lsg=True)
+
+    def test_mpi_spectral_matches_serial(self) -> None:
+        self.compare_configuration(lsg=False, spectral=True)
 
 
 if __name__ == "__main__":

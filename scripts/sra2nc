@@ -78,8 +78,13 @@ do
   echo $chunk|fmt -1|tail -n +9 > tmp$$
   code=$(echo $chunk|fmt -1|head -n 1)
   date=$(echo $chunk|fmt -1|head -n 3|tail -1)
-  time=$(echo $chunk|fmt -1|head -n 4|tail -1|printf "%04d")
-  if [ "$time" = "-001" ]; then
+  raw_time=$(echo $chunk|fmt -1|head -n 4|tail -1)
+  if [ "$raw_time" = "-1" ] || [ "$raw_time" = "-001" ] || [ "$raw_time" -lt 0 ] 2>/dev/null; then
+     time="0000"
+  else
+     time=$(printf "%04d" "$raw_time" 2>/dev/null || echo "0000")
+  fi
+  if [ "$time" = "-001" ] || [ -z "$time" ]; then
      time="0000"
   fi
   cdo -s -f nc input,$gr out$$ < tmp$$
