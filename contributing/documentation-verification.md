@@ -24,6 +24,22 @@ one or ten days. The default T21/T42 selection, model sources, namelist
 interfaces, and restart formats are unchanged. Updated the benchmark guide,
 manual chapter, and optional resolution argument in the smoke example.
 
+Runtime validation used Homebrew GNU Fortran 15.2.0 and Open MPI 5.0.7,
+configured `-O3 -funroll-loops -ffpe-trap=invalid,zero,overflow
+-ffpe-summary=none -mcpu=native -fdefault-real-8` Fortran flags and `-O3`
+for C. The exact `benchmark-smoke.sh T31` example passed both serial cases
+for ten days (final atmospheric step 14800; one LSG step). Separate two-rank
+T31 runs passed both cases for twenty days with daily output (step 15200;
+two LSG steps). Checked finite atmospheric state, ocean temperature and
+salinity evolution, and finite nonzero exchanged stresses and heat fluxes
+(Service codes -52, -53, -18 and atmospheric `yfldo`). Summary commands
+accepted both reports. These short checks do not validate long-term climate
+statistics or scaling; higher rank counts and other resolutions were not
+newly benchmarked. All 31 benchmark-tool tests passed, including optional
+T31 selection, native boundary inputs, both coupling cadences, rank limits,
+and unchanged default selection. Strict HTML and inventory checks passed;
+external link checking encountered GitHub rate limits.
+
 ## Historical chapter coverage
 
 | Original material | Current Sphinx destination | Code comparison and resulting update |
