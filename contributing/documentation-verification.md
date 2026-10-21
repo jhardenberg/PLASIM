@@ -37,8 +37,10 @@ accepted both reports. These short checks do not validate long-term climate
 statistics or scaling; higher rank counts and other resolutions were not
 newly benchmarked. All 31 benchmark-tool tests passed, including optional
 T31 selection, native boundary inputs, both coupling cadences, rank limits,
-and unchanged default selection. Strict HTML and inventory checks passed;
-external link checking encountered GitHub rate limits.
+and unchanged default selection. All 53 model/tool regression tests passed
+when run outside the sandbox to permit MPI sockets and converter execution.
+Strict HTML and inventory checks passed; external link checking was stopped
+after repeated GitHub HTTP 429 rate limits.
 
 ## Historical chapter coverage
 
