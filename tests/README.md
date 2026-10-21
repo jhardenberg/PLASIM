@@ -13,8 +13,9 @@ label to start a run; later commits rerun the tests while the label remains.
 
 The tests need Python 3, `gfortran`, `cc`, and `make`. MPI tests additionally
 need `mpif90` and `mpiexec` from Open MPI or a compatible MPI installation;
-those tests are skipped locally if either tool is absent. CI installs and
-checks Open MPI. The suite builds headless serial and two-rank MPI T21/L10
+those tests are skipped locally if either tool is absent. Helper script tests
+additionally require `cdo` and are skipped locally if it is absent. CI installs
+and checks Open MPI and CDO. The suite builds headless serial and two-rank MPI T21/L10
 binaries with and without LSG in temporary directories using the repository's
 existing `make_plasim` build rules. No generated files are written into the
 checkout.
@@ -51,6 +52,11 @@ for byte within the same build. The tests also read the seven clear-sky
 flux diagnostics (Service codes 101–107) and require finite values and
 nonzero output for each code, so disabling diagnostic output cannot satisfy
 the state-invariance check.
+
+Conversion tests verify that `scripts/nc2sra` detects grid sizes and preserves
+header and array dimensions across T21 (F16), T31 (F24), and T42 (F32) resolutions,
+checks roundtrip array value and orientation preservation against `scripts/sra2nc`,
+and rejects unsupported grids with an explicit error when CDO is installed.
 
 The current numerical baselines come from source commit `d4802a1`, built
 with `gfortran -O0 -fdefault-real-8` and the new default date and orbit mode.
