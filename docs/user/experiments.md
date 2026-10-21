@@ -142,8 +142,10 @@ sequence of 1-year segments (`for ((YEAR=$YEAR1; YEAR<=$YEAR2; YEAR++))`):
   state to `plasim_status`.
 - **Handoff to segment `YEAR+1`:** `most_plasim_run` executes:
   ```bash
-  [ -e plasim_status ] && cp plasim_status plasim_restart
-  [ -e plasim_status ] && mv plasim_status restart/$RESTNAME
+  if [ -e plasim_status ]; then
+     cp plasim_status plasim_restart
+     mv plasim_status restart/$RESTNAME
+  fi
   ```
   When the model starts segment `YEAR+1`, it detects `plasim_restart` in the
   working directory, restores the saved state and model clock, and integrates
