@@ -66,15 +66,21 @@ if [ $MOST_F90 != "NO_F90" ] ; then
    elif [ $MOST_F90 = "nagfor" ] ; then
       MOST_F90_OPTS="-O -kind=byte"
       DEBUG_F90_OPTS="-g -C -fpe0 -traceback -kind=byte"
+      echo > most_precision_options "MOST_PREC=-r8"
    elif [ $MOST_F90 = "gfortran" ] ; then
       # get major and minor version number; since GCC 7, -dumpversion
       # may print only the major version, so prefer -dumpfullversion
-      GFFULL=`gfortran -dumpfullversion 2>/dev/null || gfortran -dumpversion`
+      GFFULL=`$F90_PATH -dumpfullversion 2>/dev/null`
+      if [ -z "$GFFULL" ] ; then
+         GFFULL=`$F90_PATH -dumpversion 2>/dev/null || echo "0.0"`
+      fi
+      [ -z "$GFFULL" ] && GFFULL="0.0"
       GFFULL=`echo "$GFFULL" | head -1 | sed -e 's/.*)//' -e 's/^ *//'`
       GFMAJ=`echo "$GFFULL" | awk 'BEGIN {FS="."}{print $1+0}'`
       GFMIN=`echo "$GFFULL" | awk 'BEGIN {FS="."}{print $2+0}'`
-      GFVER=`expr 100 '*' $GFMAJ + $GFMIN`
+      GFVER=$((100 * ${GFMAJ:-0} + ${GFMIN:-0}))
       echo "gfortran version " $GFMAJ.$GFMIN
+      echo > most_precision_options "MOST_PREC=-fdefault-real-8"
       # Production: no -finit-real=snan (initialization costs time on
       # every call; it stays in the debug options). Floating point traps
       # are kept because they are the only NaN guard during a run.
@@ -83,12 +89,10 @@ if [ $MOST_F90 != "NO_F90" ] ; then
       if [ "$GFVER" -ge "409" ] ; then
          MOST_F90_OPTS="-O3 -funroll-loops -ffpe-trap=invalid,zero,overflow -ffpe-summary=none"
          DEBUG_F90_OPTS="-g -O0 -ffpe-trap=invalid,zero,overflow -ffpe-summary=none -fcheck=all -finit-real=snan"
-         echo > most_precision_options "MOST_PREC=-fdefault-real-8"
       # flags for gfortran version 4.5 - 4.8
       elif [ "$GFVER" -ge "405" ] ; then
          MOST_F90_OPTS="-O3 -funroll-loops -ffpe-trap=invalid,zero,overflow"
          DEBUG_F90_OPTS="-g -O0 -ffpe-trap=invalid,zero,overflow -fcheck=all -finit-real=snan"
-         echo > most_precision_options "MOST_PREC=-fdefault-real-8"
       # flags for gfortran version 4.2, 4.3 and 4.4
       else
          MOST_F90_OPTS="-O3"
@@ -102,6 +106,7 @@ if [ $MOST_F90 != "NO_F90" ] ; then
    else
       MOST_F90_OPTS="-O"
       DEBUG_F90_OPTS="-g"
+      touch most_precision_options
    fi
    # host-specific options: user override, then check compiler support
    ARCH_OPTS="${MOST_ARCH_OPTS-$ARCH_OPTS}"
