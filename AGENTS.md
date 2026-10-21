@@ -67,6 +67,43 @@ For documentation-only changes, check links and `git diff --check`; model
 runs are unnecessary unless a documented command or behavior also changed.
 Report any checks that could not be completed and why.
 
+### Numerical regression design
+
+- Use deterministic, matched inputs, a fixed seed, and matching compiler
+  flags and precision for comparisons. Exercise nondefault parameters as
+  well as defaults. For parameter-effect tests, activate the relevant physics
+  and check the serial response, so silently ignoring an option cannot make
+  its test pass.
+- For initialization, namelist, and MPI distribution bugs, add strict
+  first-timestep comparisons before integration can amplify differences.
+  When practical, demonstrate that the regression fails without the fix.
+  Check every value in relevant fields, finiteness, dimensions, and restart
+  record sizes and contents; successful execution alone is insufficient.
+- Preserve existing byte-for-byte continuous-versus-restarted checks within
+  the same build, configuration, and rank count. Cross-compiler or
+  serial-versus-MPI comparisons need an appropriate numerical criterion.
+- Serial and MPI summations can use different orders and introduce roundoff
+  differences. Nonlinear dynamics and parameterization thresholds can
+  amplify them during integration. Inspect startup agreement and when
+  differences develop; small later differences alone do not prove chaos
+  or rule out a bug.
+- Separate strict startup checks from later trajectory comparisons. Choose
+  absolute and relative limits using the field's scale, physical units,
+  integration length, and observed behavior across available platforms.
+  Document the compiler/version, flags, precision, rank counts, resolution,
+  timestep, run length, measured errors, and physical meaning of the limits.
+  A justified integration limit must retain sensitivity to the original
+  defect; do not loosen a failing
+  check without this evidence. Preserve strict startup and existing default
+  limits unless a separate scientific justification supports changing them.
+- For output-only diagnostic switches, verify that enabling them preserves
+  physical state within the same build while producing the intended extra
+  diagnostics. Compare state separately from diagnostic output.
+- For tests of long climate simulations, use suitable statistics and
+  conservation checks, accounting for spin-up and natural variability.
+  Pointwise weather agreement becomes less informative as trajectories
+  diverge. Passing a short regression does not establish climate equivalence.
+
 ## Documentation and changelog
 
 - When migrating or writing documentation, compare each described interface,

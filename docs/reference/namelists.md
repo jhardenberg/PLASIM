@@ -81,7 +81,7 @@ is stated. They are not a replacement for the complete accepted-name inventory.
 | Group | Controls | Meaning and source defaults |
 | --- | --- | --- |
 | `fluxmod_nl` | `nevap`, `nshfl`, `nstress`, `nvdiff` | Surface evaporation, sensible heat, stress, vertical diffusion: all 1. |
-| `fluxmod_nl` | `ntsa`, `zumin`, `vdiff_lamm` | Near-surface temperature choice 2, wind-floor value 1 (see the detailed current-use expressions), mixing length 160 m. |
+| `fluxmod_nl` | `ntsa`, `zumin`, `vdiff_lamm` | Near-surface temperature choice 2, minimum wind speed 1 m/s, mixing length 160 m. |
 | `miscmod_nl` | `nfixer`, `nudge`, `tnudget` | Humidity correction 1; nudging 0; temperature-nudging timescale input 10 sidereal-day multiples, converted in `miscini`. |
 | `surfmod_nl` | `nspinit`, `nsurf`, `noromax` | Surface/spectral initialization controls; `noromax` starts at compiled `NTRU`. |
 | `landmod_nl` | `nlandt`, `nlandw` | Prognostic land temperature and soil water: both 1. |

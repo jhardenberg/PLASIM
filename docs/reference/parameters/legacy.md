@@ -33,7 +33,7 @@ be copied into those files.
 | `WW` in `PLANET` | Not accepted; derived as `2*pi/sidereal_day`. |
 | `SIDEREAL_YEAR`, `TROPICAL_YEAR` | Not accepted in current planet lists. The model calendar has its own year/month controls. |
 | `TNUDGE` | `TNUDGET` in `miscmod_nl`; converted using the configured sidereal day. |
-| `ZUMIN_D` in descriptive flux text | Accepted name is `ZUMIN`; see its detailed current-use expressions in {doc}`fluxmod`. |
+| `ZUMIN_D` in descriptive flux text | Accepted name is `ZUMIN`; see {doc}`fluxmod`. |
 | `GSOL0` in radiation group | In `planet_nl`, W/m². |
 | `KBETTA` in appendix C | Accepted spelling is `KBETA`, with modes 0, 1, and 2. |
 | `OROSCALE` in surface group | Not accepted by `surfmod_nl`; `NOROMAX` controls spectral orography truncation. |
