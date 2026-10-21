@@ -15,7 +15,10 @@ The tests need Python 3, `gfortran`, `cc`, and `make`. MPI tests additionally
 need `mpif90` and `mpiexec` from Open MPI or a compatible MPI installation;
 those tests are skipped locally if either tool is absent. Helper script tests
 additionally require `cdo` and are skipped locally if it is absent. CI installs
-and checks Open MPI and CDO. The suite builds headless serial and two-rank MPI T21/L10
+and checks Open MPI and CDO, and installs `libx11-dev` for the MoSt input-reader
+tests. Those tests link X11 without opening a display; on macOS they use XQuartz
+development files under `/opt/X11` and skip if those files are absent.
+The suite builds headless serial and two-rank MPI T21/L10
 binaries with and without LSG in temporary directories using the repository's
 existing `make_plasim` build rules. No generated files are written into the
 checkout.
@@ -254,4 +257,31 @@ To run only the calendar tests:
 
 ```sh
 python3 -m unittest discover -s tests -p test_model.py -k CalendarTests -v
+```
+
+## Defensive correctness and supporting tools
+
+[`test_defensive.py`](test_defensive.py) builds a driver against the actual
+coupling and restart sources with bounds/FPE checks and integer locals
+initialized to an invalid diagnostic unit. It exercises interpolation,
+extrapolation, conservation warnings, normal/empty-mask global means, and
+restart equality/mismatch messages. Unused LSG entry points are discarded by
+the linker; no alternative production stubs or optional modules are changed.
+
+A separate C driver includes MoSt's real input readers, without starting an
+X display. It checks empty settings, a final settings line without a newline,
+valid grids (including checked-in T21/T42 orography), and missing, malformed,
+or truncated grids. The MoSt GUI itself is not exercised by these tests.
+
+Script tests use controlled executable doubles to check `burn.sh` and
+`postmon.sh` orchestration: repository-relative defaults and environment
+overrides, paths containing spaces, nonzero exit statuses on command failure,
+and temporary-file cleanup. They require Bash and `mktemp`, but do not require
+CDO, NetCDF, or a compiled afterburner. These checks do not validate CDO/burn7
+numerics; the scripts retain the original conversion formulas.
+
+To run only these checks:
+
+```sh
+python3 -m unittest discover -s tests -p test_defensive.py -v
 ```

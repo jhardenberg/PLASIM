@@ -1309,8 +1309,13 @@
 !
       subroutine cinter(pfi,pslmi,pfo,pslmo,pgwi,pgwo,pxi1,pxi2,pxo1    &
      &                 ,pxo2,pyi1,pyi2,pyo1,pyo2,nxi,nxo,nyi,nyo,nc,npr)
+      use cplmod, only: nud
+      implicit none
+      integer, intent(in) :: nxi,nxo,nyi,nyo,nc,npr
+      integer :: kmiss,ii,ji,io,jo
+      real :: pi,zgw,zf,xol,xor,xil,xir,zweight
 !
-      parameter(zerr=-9.E09)
+      real, parameter :: zerr=-9.E09
 !
       real :: fi(nxi,nyi)      ! input field
       real :: slmi(nxi,nyi)    ! input mask (0/1)
@@ -1325,20 +1330,20 @@
       real :: yo1(nxo,nyo)     ! southern y's for output
       real :: yo2(nxo,nyo)     ! northern y's for output
 !
-      real :: pfi(nxi,nyi)
-      real :: pslmi(nxi,nyi)
-      real :: pfo(nxo,nyo)
-      real :: pslmo(nxo,nyo)
-      real :: pxi1(nxi,nyi)
-      real :: pxi2(nxi,nyi)
-      real :: pxo1(nxo,nyo)
-      real :: pxo2(nxo,nyo)
-      real :: pyi1(nxi,nyi)
-      real :: pyi2(nxi,nyi)
-      real :: pyo1(nxo,nyo)
-      real :: pyo2(nxo,nyo)
-      real :: pgwi(nxi,nyi)
-      real :: pgwo(nxo,nyo)
+      real, intent(in) :: pfi(nxi,nyi)
+      real, intent(in) :: pslmi(nxi,nyi)
+      real, intent(out) :: pfo(nxo,nyo)
+      real, intent(in) :: pslmo(nxo,nyo)
+      real, intent(in) :: pxi1(nxi,nyi)
+      real, intent(in) :: pxi2(nxi,nyi)
+      real, intent(in) :: pxo1(nxo,nyo)
+      real, intent(in) :: pxo2(nxo,nyo)
+      real, intent(in) :: pyi1(nxi,nyi)
+      real, intent(in) :: pyi2(nxi,nyi)
+      real, intent(in) :: pyo1(nxo,nyo)
+      real, intent(in) :: pyo2(nxo,nyo)
+      real, intent(in) :: pgwi(nxi,nyi)
+      real, intent(in) :: pgwo(nxo,nyo)
 !
       pi=2.*asin(1.)
 !
@@ -1454,8 +1459,14 @@
 !
       subroutine cinter2(pfi,pslmi,pfo,pslmo,pgwi,pgwo,pxi,pxo          &
      &                  ,pyi,pyo,nxi,nxo,nyi,nyo,nc,npr)
+      use cplmod, only: nud
+      implicit none
+      integer, intent(in) :: nxi,nxo,nyi,nyo,nc,npr
+      integer :: kmiss,ii,ji,io,jo
+      real :: pi,zxo,zyo,zxi,zxil,zgwx1,zgwx2,zgwx
+      real :: zf1,zf2,zgwy1,zgwy2,zgwy
 !
-      parameter(zerr=-9.E09)
+      real, parameter :: zerr=-9.E09
 !
       real :: fi(0:nxi,0:nyi+1)    ! input field
       real :: zzfi(nxi,nyi)
@@ -1469,16 +1480,16 @@
       real :: yo(nxo,nyo)          ! y's for output
       real :: gwi(0:nxi,0:nyi+1)   ! input weights
 !
-      real :: pfi(nxi,nyi)
-      real :: pslmi(nxi,nyi)
-      real :: pfo(nxo,nyo)
-      real :: pslmo(nxo,nyo)
-      real :: pxi(nxi,nyi)
-      real :: pxo(nxo,nyo)
-      real :: pyi(nxi,nyi)
-      real :: pyo(nxo,nyo)
-      real :: pgwi(nxi,nyi)
-      real :: pgwo(nxo,nyo)
+      real, intent(in) :: pfi(nxi,nyi)
+      real, intent(in) :: pslmi(nxi,nyi)
+      real, intent(out) :: pfo(nxo,nyo)
+      real, intent(in) :: pslmo(nxo,nyo)
+      real, intent(in) :: pxi(nxi,nyi)
+      real, intent(in) :: pxo(nxo,nyo)
+      real, intent(in) :: pyi(nxi,nyi)
+      real, intent(in) :: pyo(nxo,nyo)
+      real, intent(in) :: pgwi(nxi,nyi)
+      real, intent(in) :: pgwo(nxo,nyo)
 !
       pi=2.*asin(1.)
 !
@@ -1509,14 +1520,11 @@
       xi(:,nyi+1)=xi(:,nyi)
       yo(:,:)=pyo(:,:)
       xo(:,:)=pxo(:,:)
-      xo(:,:)=pxo(:,:)
       slmo(:,:)=pslmo(:,:)
 !
       kmiss=0
       do jo=1,nyo
       do io=1,nxo
-       zgw=0.
-       zf=0.
        zxo=xo(io,jo)
        zyo=yo(io,jo)
        fo(io,jo)=zerr
@@ -1621,10 +1629,16 @@
 !     ================
 !
       subroutine cfill(pf,pm,nx,ny,perr,npr)
+      use cplmod, only: nud
+      implicit none
+      integer, intent(in) :: nx,ny,npr
+      integer :: i,j,kmiss
+      real, intent(in) :: perr,pm(nx,ny)
+      real, intent(inout) :: pf(nx,ny)
+      real :: zf,zgw
 !
 !     complete the field by a simple extrapolation
 !
-      real :: pf(nx,ny),pm(nx,ny)
       real :: ppf(0:nx+1,0:ny+1),ppm(0:nx+1,0:ny+1)
 !
       ppf(1:nx,1:ny)=pf(:,:)
@@ -1690,6 +1704,11 @@
 !
       subroutine conserve(pfi,pfo,pmi,pmo,pgwi,pgwo                     &
      &                   ,nxi,nxo,nyi,nyo,nc,npr)
+      use cplmod, only: nud
+      implicit none
+      integer, intent(in) :: nxi,nxo,nyi,nyo,nc,npr
+      integer :: i,j
+      real :: zgwi,zgwo,zfi,zfo,zgw,zfac1,zfac2,zadd1,zadd2
 !
 !     correct global mean (multiplicative or additive depending on nc)
 !
@@ -1698,12 +1717,12 @@
 !     nc=3 : add a to give sum(fi*gwi)=sum(fon*gwo) with fon=fo+a
 !     nc=4 : add a to give sum(fi*gwi)/sum(gwi)=sum(fon*gwo)/sum(gwo)
 !
-      real :: pfi(nxi,nyi)
-      real :: pfo(nxo,nyo)
-      real :: pmi(nxi,nyi)
-      real :: pmo(nxo,nyo)
-      real :: pgwi(nxi,nyi)
-      real :: pgwo(nxo,nyo)
+      real, intent(in) :: pfi(nxi,nyi)
+      real, intent(inout) :: pfo(nxo,nyo)
+      real, intent(in) :: pmi(nxi,nyi)
+      real, intent(in) :: pmo(nxo,nyo)
+      real, intent(in) :: pgwi(nxi,nyi)
+      real, intent(in) :: pgwo(nxo,nyo)
 !
       zgwi=0.
       zfi=0.
@@ -1757,12 +1776,17 @@
 !     ===============
 !
       subroutine cglm(pf,pm,pgs,pgm,pgw,pgwi,nx,ny)
+      use cplmod, only: nud
+      implicit none
+      integer, intent(in) :: nx,ny
+      integer :: i,j
+      real, intent(out) :: pgs,pgm,pgw
 !
 !     compute global means
 !
-      real :: pf(nx,ny)
-      real :: pm(nx,ny)
-      real :: pgwi(nx,ny)
+      real, intent(in) :: pf(nx,ny)
+      real, intent(in) :: pm(nx,ny)
+      real, intent(in) :: pgwi(nx,ny)
 !
       real :: zgwd,zgsd,zgw
 !      
@@ -1778,7 +1802,9 @@
       if(zgwd > 0.) then
        pgm=zgsd/zgwd
       else
-       write(nud,*)'!WARNING! no sea points found in cglm2'
+!      No weighted mean exists; return zero with a diagnostic.
+       pgm=0.
+       write(nud,*)'!WARNING! no sea points found in CGLM; mean set to zero'
       endif
       pgs=zgsd
       pgw=zgwd

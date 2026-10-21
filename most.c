@@ -19,6 +19,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include <ctype.h>
+#include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -779,7 +781,12 @@ int ReadSettings(char *fn)
       return 0;
    }
 
-   fgets(tb,sizeof(tb),fp);
+   if (!fgets(tb,sizeof(tb),fp))
+   {
+      fprintf(stderr,"Cannot read configuration header from %s\n",fn);
+      fclose(fp);
+      return 0;
+   }
    if (strncmp(tb,"[MoSt",5))
    {
       printf("\nFileheader is: %s\n",tb);
@@ -789,7 +796,7 @@ int ReadSettings(char *fn)
       return 0;
    }
 
-   while (!feof(fp))
+   while (fgets(tb,sizeof(tb),fp))
    {
       eq = strchr(tb,'=');
       if (eq)
@@ -824,7 +831,6 @@ int ReadSettings(char *fn)
                ChangePlanet(pl);
          }
       }
-      fgets(tb,sizeof(tb),fp);
    }
    fclose(fp);
    
@@ -2418,50 +2424,72 @@ int CheckPlasimNamelist(void)
 
 double *ReadGrid(const char *fn, int klat, double Sc)
 {
-   int i,j,k,jlev,iteml,gridsize;
-   FILE *ifp;
+   int i,j,k,iteml,columns;
+   size_t gridsize,length;
+   FILE *ifp = NULL;
    int head[8];
-   double *gp;
+   double *gp = NULL;
    char Line[256];
    char Elem[16];
+   char *end;
+   long value;
 
+   if (klat < 2 || klat > INT_MAX/2) goto invalid_grid;
    nlat = klat;
    nlon = nlat + nlat;
+   if ((size_t)nlat > SIZE_MAX / ((size_t)nlon+1) / sizeof(double))
+      goto invalid_grid;
    VGAX = (double)sfbox_w / nlon;
    VGAY = (double)sfbox_h / (nlat-1);
-   gridsize = (nlon+1) * nlat * sizeof(double);
+   gridsize = ((size_t)nlon+1) * nlat * sizeof(double);
 
-   gp = malloc(gridsize);
    ifp = fopen(fn,"r");
-   if (!ifp) return NULL;
-   fgets(Line,sizeof(Line),ifp);
+   if (!ifp || !fgets(Line,sizeof(Line),ifp)) goto invalid_grid;
+   if (strcspn(Line,"\r\n") != 80) goto invalid_grid;
    for (i = 0 ; i < 8 ; ++i)
    {
-      strncpy(Elem,Line+i*10,10);
+      memcpy(Elem,Line+i*10,10);
       Elem[10] = 0;
-      head[i] = atoi(Elem);
+      value = strtol(Elem,&end,10);
+      if (end == Elem || value < INT_MIN || value > INT_MAX) goto invalid_grid;
+      while (isspace((unsigned char)*end)) ++end;
+      if (*end) goto invalid_grid;
+      head[i] = (int)value;
    }
-   if (head[4] == nlon && head[5] == nlat)
+   if (head[4] != nlon || head[5] != nlat) goto invalid_grid;
+   gp = malloc(gridsize);
+   if (!gp) goto invalid_grid;
+   for (j = 0 ; j < nlat ; ++j)
    {
-      for (j = 0 ; j < nlat ; ++j)
+      for (i = 0 ; i < nlon ; i+=8)
       {
-         for (i = 0 ; i < nlon ; i+=8)
+         if (!fgets(Line,sizeof(Line),ifp)) goto invalid_grid;
+         columns = MIN(8,nlon-i);
+         length = strcspn(Line,"\r\n");
+         if (!length || length % columns) goto invalid_grid;
+         iteml = length / columns;
+         if (iteml >= sizeof(Elem)) goto invalid_grid;
+         for (k = 0 ; k < columns ; ++k)
          {
-            fgets(Line,sizeof(Line),ifp);
-            iteml = strlen(Line) / 8;
-            for (k=0 ; k < 8 ; ++k)
-            {
-               strncpy(Elem,Line+k*iteml,iteml);
-               Elem[iteml] = 0;
-               gp[k+i+j*(nlon+1)] = atof(Elem) * Sc;
-            }
+            memcpy(Elem,Line+k*iteml,iteml);
+            Elem[iteml] = 0;
+            gp[k+i+(size_t)j*(nlon+1)] = strtod(Elem,&end) * Sc;
+            if (end == Elem || !isfinite(gp[k+i+(size_t)j*(nlon+1)]))
+               goto invalid_grid;
+            while (isspace((unsigned char)*end)) ++end;
+            if (*end) goto invalid_grid;
          }
-         gp[nlon+j*(nlon+1)] = gp[j*(nlon+1)];
       }
+      gp[nlon+(size_t)j*(nlon+1)] = gp[(size_t)j*(nlon+1)];
    }
-   else printf("head[4] = %d   head[5] = %d\n",head[4],head[5]);
    fclose(ifp);
    return gp;
+
+invalid_grid:
+   fprintf(stderr,"Cannot read grid %s: missing, invalid or truncated input\n",fn);
+   if (ifp) fclose(ifp);
+   free(gp);
+   return NULL;
 }
 
 
@@ -3359,6 +3387,12 @@ void PreProcess(void)
       else
          sprintf(oro_name,"puma/run/N%d_surf_0129.sra",Latitudes);
       OroPrep = ReadGrid(oro_name,Latitudes,RevGra);
+      if (!OroPrep)
+      {
+         Preprocessed = 0;
+         RedMessage("Cannot read preprocessed orography");
+         return;
+      }
       OpmPrep = IsoPixmap(OroPrep,2*Latitudes,Latitudes,OroStrip);
       free(OroPrep);
       OroClear = 0;
@@ -3821,6 +3855,12 @@ void InitFrames(void)
 
    OroEarth = ReadGrid("plasim/dat/T42/N064_surf_0129.sra",nlat,RevGra);
    OroMars  = ReadGrid("plasim/dat/T42_mars/N064_surf_0129.sra",nlat,1.0/3.74);
+   if (!OroEarth || !OroMars)
+   {
+      free(OroEarth);
+      free(OroMars);
+      exit(EXIT_FAILURE);
+   }
    OpmEarth = IsoPixmap(OroEarth,nlon,nlat,OroStrip);
    OpmPrep  = IsoPixmap(OroEarth,nlon,nlat,OroStrip);
    OpmMars  = IsoPixmap(OroMars ,nlon,nlat,OroMarsStrip);

@@ -4,10 +4,11 @@
 ## (2018) by Jost von Hardenberg <j.vonhardenberg AT isac.cnr.it>
 VERSION=v1.0
 
-#set -ex
-BURNER=/work/users/jost/plasim/postprocessor/burn7.x
-BURNER=/home/jost/work/plasim/planets/postprocessor/burn7.x
-PLEVS="20,30,50,70,100,150,200,250,300,400,500,600,700,850,925,1000"
+set -e
+set -o pipefail
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+BURNER=${BURNER:-"$script_dir/../postprocessor/burn7.x"}
+PLEVS=${PLEVS:-"20,30,50,70,100,150,200,250,300,400,500,600,700,850,925,1000"}
 VARS3D="wap wa zeta stf psi d zg hur ta ua va hus clw cl spd psl"
 GACC=9.80665
 HUM_A=6.116441
@@ -139,9 +140,9 @@ function fixvar {
    local infile=$1
 
    if [ "$expr" != "none" ] && [ $after != 1 ]; then 
-	  cdo setattribute,$outvar@standard_name="$standard_name" -setattribute,$outvar@long_name="$long_name" -setattribute,$outvar@units="$units" -expr,"$expr" $infile $2
+	  cdo setattribute,$outvar@standard_name="$standard_name" -setattribute,$outvar@long_name="$long_name" -setattribute,$outvar@units="$units" -expr,"$expr" "$infile" "$2"
     else
-	  cp $infile $2
+	  cp "$infile" "$2"
    fi
 }
 
@@ -150,29 +151,27 @@ function getvar {
   local outfile=$2
   local code=$3
   local lev1=1
-  rm -f burn.log
   if [ "$no3d" == "true" ]; then
 	 lev1=10
   fi 
   if [[ " $VARS3D " =~ .*\ $code\ .* ]] && [ "$no3d" != "true" ]; then
 	if [ $sigma == 0 ]; then
-	   cat > burn$$.nl <<EOF
+	   cat > "$work_dir/burn.nl" <<EOF
 	   code=$code,vtype=p,htype=g,mean=0,netcdf=1
 	   hpa=$PLEVS
 EOF
         else
-	   cat > burn$$.nl <<EOF
+	   cat > "$work_dir/burn.nl" <<EOF
 	   code=$code,vtype=s,htype=g,mean=0,netcdf=1
 EOF
         fi
   else
-	cat > burn$$.nl <<EOF2
+	cat > "$work_dir/burn.nl" <<EOF2
 	code=$code,vtype=s,htype=g,mean=0,netcdf=1
 	modlev=$lev1
 EOF2
   fi
-  $BURNER $infile $outfile < ./burn$$.nl >> burn.log
-  rm ./burn$$.nl
+  "$BURNER" "$infile" "$outfile" < "$work_dir/burn.nl" >> burn.log 2>&1
 }
 
 ##################
@@ -183,7 +182,8 @@ sigma=0
 after=0
 while getopts "h?sap:" opt; do
    case "$opt" in
-        h|\?) help ;;
+        h) help; exit 0 ;;
+        \?) help >&2; exit 2 ;;
         s)  sigma=1 ;;
         a)  after=1 ;;
         p)  PLEVS=$OPTARG;;
@@ -191,23 +191,35 @@ while getopts "h?sap:" opt; do
 done
 shift $((OPTIND-1))
 
-if [ $# -lt 3 ] ; then
-help
-exit
+if [ $# -ne 3 ] ; then
+    help >&2
+    exit 2
 fi
 
-infile=$1 
+infile=$1
 outfile=$2
 outvar=$3
 
-makevar $outvar
-
-rm -f temp$$.*.nc
-for var in $invar
-do
-	getvar $infile temp$$.$var.nc $var
+if [ ! -r "$infile" ]; then
+    echo "Cannot read input file: $infile" >&2
+    exit 1
+fi
+for program in "$BURNER" cdo; do
+    if ! command -v "$program" >/dev/null 2>&1; then
+        echo "Required command not found: $program (set BURNER for burn7.x)" >&2
+        exit 127
+    fi
 done
-cdo merge temp$$.*.nc temp$$.all.nc 2>> burn.log 
 
-fixvar temp$$.all.nc $outfile $outvar 2>> burn.log
-rm -f temp$$.*.nc
+work_dir=$(mktemp -d "${TMPDIR:-/tmp}/plasim-burn.XXXXXX")
+trap 'rm -rf -- "$work_dir"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+: > burn.log
+
+makevar "$outvar"
+for var in $invar; do
+    getvar "$infile" "$work_dir/$var.nc" "$var"
+done
+cdo merge "$work_dir/"*.nc "$work_dir/all.nc" 2>> burn.log
+fixvar "$work_dir/all.nc" "$outfile" 2>> burn.log
