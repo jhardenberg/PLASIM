@@ -2902,7 +2902,7 @@
             character (len=128) :: header
             integer, intent(in) :: ndim
             integer, intent(in) :: nitems
-            real, intent(out) :: kdata(nitems,ndim)
+            real*8, intent(out) :: kdata(nitems,ndim)
       
       
             open(87,file=filename,form='formatted')
