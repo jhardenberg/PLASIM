@@ -338,7 +338,6 @@ class DeriveLsgSraTests(unittest.TestCase):
                     "-i", str(input_sra),
                     "-t", str(topogr),
                     "-o", str(out_sra),
-                    "-s", "B",
                 ])
                 self.assertEqual(proc.returncode, 0, f"derive_lsg_sra failed for {res}: {proc.stderr}")
                 self.assertIn("Missing atm ocean points (kmiss_a): 0", proc.stdout)

@@ -263,7 +263,7 @@ systems:
 1. The **atmospheric Gaussian grid** (`nlon` × `nlat`, e.g., 64 × 32 at T21, 96 × 48 at T31, 128 × 64 at T42), where surface points are partitioned into land and ocean by the land–sea mask (`dls`, code `0172`).
 2. The **LSG ocean Arakawa E-grid** (72 × 72 interior, 72 × 76 total), defined by bathymetry depths in `lsg/dat/topogr`. On the E-grid, ocean scalar points (`zslmoa`, where depth $H > 0$) carry tracer properties (temperature, salinity), while ocean velocity vector points (`oslmv = 1`) carry horizontal currents on a shifted subgrid.
 
-### Grid mismatch and uncoupled cells (Issue #20)
+### Grid mismatch and uncoupled cells
 
 During initialization in `cpl.f90` (`cplini`), the coupler computes area-overlap weights (`zomao` and `zomaov`) between atmospheric grid cells and ocean cells. The coupler tracks two diagnostic counters:
 - **`kmiss_a` (Uncoupled atmospheric ocean points):** Atmospheric ocean cells ($dls < 0.5$) that have zero ocean depth underneath ($H = 0$) on the LSG grid. Because no ocean column exists to receive atmospheric fluxes at these locations, heat and freshwater exchanges cannot be balanced, violating physical coupling consistency.
@@ -273,9 +273,9 @@ Historically, `lsg/dat` provided a hand-tuned land–sea mask only for T21 resol
 - **T31 default mask:** 58 uncoupled atmospheric ocean cells (`kmiss_a = 58`), 2 starved vector cells (`kmiss_v = 2`).
 - **T42 default mask:** 137 uncoupled atmospheric ocean cells (`kmiss_a = 137`), 2 starved vector cells (`kmiss_v = 2`).
 
-### Automated mask derivation (Strategy B)
+### Automated mask derivation
 
-To guarantee topological consistency between the atmosphere and the fixed LSG bathymetry across all resolutions without modifying the underlying ocean model or matrices, the script `scripts/derive_lsg_sra.py` implements an automated derivation algorithm (**Strategy B**):
+To guarantee topological consistency between the atmosphere and the fixed LSG bathymetry across all resolutions without modifying the underlying ocean model or matrices, the script `scripts/derive_lsg_sra.py` implements an automated derivation algorithm:
 
 1. **Eliminate uncoupled atmospheric cells:** Any atmospheric grid cell with zero underlying LSG ocean depth (`zslmoa < 1e-9`) is converted to land (`dls = 1.0`). This guarantees `kmiss_a = 0`.
 2. **Preserve continental barriers:** The narrow Isthmus of Panama ($7^\circ\text{--}11^\circ\text{ N}, 276^\circ\text{--}283^\circ\text{ E}$), which is open water in raw uncoupled Gaussian interpolations, is closed to land to prevent unphysical Pacific–Atlantic atmospheric exchange.
@@ -292,11 +292,11 @@ The resulting land–sea masks achieve `kmiss_a = 0` and `kmiss_v = 0` across T2
 
 ### Visual comparison of T42 masks
 
-The figures below show the difference between the default uncoupled PlaSim T42 land–sea mask and the LSG-adapted Strategy B mask:
+The figures below show the difference between the default uncoupled PlaSim T42 land–sea mask and the LSG-adapted mask:
 
 ![Global comparison of default and LSG-adapted T42 land–sea masks](../images/t42_sra_comparison_global.png)
 
-*Figure 1: Global distribution of the default uncoupled PlaSim T42 land–sea mask (left), the LSG-adapted Strategy B mask (center), and their point-by-point difference (right). Red cells represent areas closed to land to prevent uncoupled atmospheric ocean cells (`kmiss_a = 0`); blue cells represent narrow passages opened to ocean to support LSG vector stencils (`kmiss_v = 0`).*
+*Figure 1: Global distribution of the default uncoupled PlaSim T42 land–sea mask (left), the LSG-adapted mask (center), and their point-by-point difference (right). Red cells represent areas closed to land to prevent uncoupled atmospheric ocean cells (`kmiss_a = 0`); blue cells represent narrow passages opened to ocean to support LSG vector stencils (`kmiss_v = 0`).*
 
 ![Regional zooms around critical straits](../images/t42_sra_comparison_zooms.png)
 
@@ -312,8 +312,7 @@ To regenerate or inspect masks offline using `scripts/derive_lsg_sra.py`:
 python3 scripts/derive_lsg_sra.py \
     -i plasim/dat/T42/N064_surf_0172.sra \
     -t lsg/dat/topogr \
-    -o lsg/dat/N064_surf_0172.sra \
-    -s B
+    -o lsg/dat/N064_surf_0172.sra
 ```
 
 The script runs with pure Python 3 standard library modules, verifies the overlap geometry against the LSG bathymetry, and prints coupling diagnostic statistics.

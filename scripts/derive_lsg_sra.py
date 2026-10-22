@@ -5,7 +5,7 @@ Adapts PlaSim's default fractional/binarized surface land-sea mask
 (Nnnn_surf_0172.sra) to ensure topological and numerical consistency with the
 LSG ocean model bathymetry (topogr) and grid when running coupled simulations.
 
-Strategy B (default):
+Automated derivation (default):
   1. Binarizes the atmospheric mask at 0.5.
   2. Closes uncoupled atmospheric ocean cells (kmiss_a -> 0): cells where LSG
      has zero ocean depth (e.g. Baltic Sea, Red Sea, Caspian Sea, Hudson Bay,
@@ -17,11 +17,6 @@ Strategy B (default):
      directly forces ocean circulation without requiring artificial extrapolation.
   5. Leaves remaining coastal ocean scalar points to standard coupler
      extrapolation (cfill), preserving natural atmospheric continental outlines.
-
-Strategy A:
-  Extrapolation-free variant: opens all atmospheric cells where LSG has dominant
-  ocean coverage (LSG ocean fraction > 0.9), eliminating all missing points
-  (kmiss_a = 0, kmiss_v = 0, kmiss_s = 0).
 
 Requires Python 3 standard library only (no external dependencies).
 """

@@ -66,11 +66,11 @@ active ocean currents.
 Historically, `lsg/dat` supplied an adapted mask only for T21 (`N032_surf_0172.sra`).
 At T31 and T42, falling back to default PlaSim masks produced 58 and 137
 uncoupled cells and 2 starved vectors.
-The automated Strategy B derivation implemented in `scripts/derive_lsg_sra.py`
+The automated derivation implemented in `scripts/derive_lsg_sra.py`
 closes atmospheric points with zero ocean depth (`zslmoa < 1e-9`), preserves the
 Panama barrier, and selectively opens atmospheric cells overlapping starved ocean
 vectors (clearing Gibraltar and North Greenland). Across T21, T31, and T42,
-Strategy B achieves `kmiss_a = 0` and `kmiss_v = 0` with 19 coastal scalar
+this automated algorithm achieves `kmiss_a = 0` and `kmiss_v = 0` with 19 coastal scalar
 extrapolations (`kmiss_s`). The ocean grid, bathymetry, and matrices remain
 unaltered. Verified `derive_lsg_sra.py` across all three resolutions and added
 T31 support to `scripts/sra2nc`.
