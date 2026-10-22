@@ -14,10 +14,10 @@ a C++ compiler. A simulation GUI additionally needs a working display.
 MPI wrappers are optional for serial operation. See {doc}`most` for the
 distinction between headless operation and build dependencies.
 
-Platform/package names differ. The root README retains historical macOS
-and Windows notes for context; their old compiler versions and paths are
-not a currently tested installation recipe. The headless regression build
-is exercised on Linux CI, with additional local macOS validation.
+Platform and package names differ across operating systems and distributions.
+The headless regression build is exercised on Linux CI, with additional local
+macOS validation. Windows users typically build and run inside WSL2 or a Linux
+virtual machine.
 
 ## Save & Run cannot find a command
 

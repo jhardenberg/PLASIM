@@ -143,11 +143,27 @@ The retained {download}`script guide <../../scripts/README_burn.txt>`
 provides its historical field categories. Current script configuration and
 open supporting-tool issues are tracked separately from this manual.
 
+## Monthly extraction with postmon.sh
+
+`scripts/postmon.sh` processes raw Service output files (`MOST.NNN`) for an
+inclusive range of model years and generates fixed fields and monthly means:
+
+```sh
+INDIR=/path/to/run POSTDIR=/path/to/post scripts/postmon.sh experiment 1 10
+```
+
+It uses `scripts/burn.sh` (or the script configured via `BURNSH`), CDO, and
+`mktemp`. `PLEVS` can override the default pressure levels. If `INDIR` and
+`POSTDIR` are omitted, historical defaults use `$WORK/plasim/plasim/exps/<exp>`
+and `$SCRATCH/plasim/exps/<exp>/post`. Fixed fields (such as orography `orog`
+and land-sea mask `lsm`) are extracted to `$POSTDIR/fx/`, while monthly means
+are written under `$POSTDIR/`.
+
 ## Sources checked
 
 User's Guide chapter 5 and script/postprocessor notes compared with
-{repo}`scripts/srv2nc`, {repo}`scripts/burn.sh`, current Makefiles,
-`Usage`, `parini`, `InitAll`, `ServiceGrid`, and the option parser in
-{repo}`postprocessor/burn7.cpp`. Runtime checks cover srv2nc on real model
-output; burn7 was reviewed from source because its legacy C++ dependency
+{repo}`scripts/srv2nc`, {repo}`scripts/burn.sh`, {repo}`scripts/postmon.sh`,
+current Makefiles, `Usage`, `parini`, `InitAll`, `ServiceGrid`, and the option
+parser in {repo}`postprocessor/burn7.cpp`. Runtime checks cover srv2nc on real
+model output; burn7 was reviewed from source because its legacy C++ dependency
 was not available in the validation environment.
