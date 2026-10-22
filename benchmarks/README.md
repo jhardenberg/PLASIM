@@ -17,7 +17,12 @@ The default matrix includes **all four serial T21/L10 and T42/L10 cases**:
 | `mixed` | Classic broadband | Mixed layer, without LSG |
 | `lsg` | Classic broadband | Real coupled LSG |
 
-Each selected rank count runs these four configurations with classic broadband
+T31/L10 (96 × 48 grid points) is also available through `--resolutions T31`.
+Select any combination with `--resolutions T21 T31 T42`; omitting the option
+keeps the T21/T42 default matrix. T31 supports power-of-two rank counts up
+to 16 because each rank count must divide its 48 latitudes.
+
+Each selected rank count runs the selected configurations with classic broadband
 radiation (`nstartemp=0`). Only `mixed` and `lsg` are accepted by `--cases`.
 Existing JSON files containing spectral results can still be summarized and
 compared. Use a new output directory for the reduced matrix: continuation
@@ -25,24 +30,25 @@ requires the original case selection and runtime settings to match. The
 comparison tool retains its checks of runner versions when combining old
 and new result files.
 
-Both resolutions use their checked-in atmospheric boundary data. Coupled runs
-also use the real `lsg/src/lsgmod.f90`, `plasim/src/cpl.f90`, and `lsg/dat`
+All three resolutions use their checked-in atmospheric boundary data. Coupled
+runs also use the real `lsg/src/lsgmod.f90`, `plasim/src/cpl.f90`, and `lsg/dat`
 inputs. T21 therefore uses the LSG-supplied T21 land mask, as MoSt does;
-T42 uses its native T42 land mask because no T42 replacement exists in
-`lsg/dat`. The LSG ocean grid remains 72 × 76 with 22 levels. These are
-performance workloads, not a claim that a T42 coupled climate is scientifically
-validated or that different resolutions/ocean configurations have identical
+T31 and T42 use their native atmospheric land masks because no replacement
+exists for them in `lsg/dat`. The LSG ocean grid remains 72 × 76 with 22 levels. These are
+performance workloads, not a claim that a T31 or T42 coupled climate is
+scientifically validated or that different resolutions/ocean configurations have identical
 initial states.
 
 The protocol fixes Earth, ten atmosphere levels, a 360-day year, start date
 1-Jan-0001, `seed=1`, `kick=0`, and disabled cloud-forcing diagnostics. T21 has
-32 atmosphere steps/day; T42 has 72 (45 and 20 minutes, matching MoSt).
-The runner writes `NTSPD` explicitly so comparisons of source revisions keep
-the same timestep even when older automatic defaults differ. Other physics
-settings retain source defaults. The LSG case uses `nlsg=1`, `nocean=1`, `nhdiff=0`, and `kiterm=8`.
+32 atmosphere steps/day; T31 has 48; T42 has 72 (45/30/20 minutes). Other physics settings retain
+source defaults. The runner writes `NTSPD` explicitly to retain the MoSt
+timesteps across source revisions, including older automatic defaults.
+Historical runs at 40 T31 or 48 T42 steps/day represent different workloads;
+start a new results directory. The LSG case uses `nlsg=1`, `nocean=1`, `nhdiff=0`, and `kiterm=8`.
 Each selected MPI rank count gets its own build; `1` selects serial stubs,
 while `2`, `4`, etc. select the real MPI module. Rank counts must be powers
-of two dividing both selected latitude counts.
+of two dividing every selected latitude count.
 
 ### Compilers and optimization flags
 
@@ -97,7 +103,13 @@ from summary statistics. Warmups may condition filesystem/CPU caches; they
 do not supply restart state to measured samples. To continue a result directory
 created with warmups, explicitly pass its original `--warmups N` setting.
 
-For a short functional check of the complete matrix:
+To benchmark T31 with both ocean configurations:
+
+```sh
+python3 benchmarks/run.py --output benchmarks/results/t31 --resolutions T31
+```
+
+For a short functional check of the default matrix:
 
 ```sh
 python3 benchmarks/run.py --output benchmarks/results/smoke \

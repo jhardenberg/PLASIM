@@ -116,6 +116,10 @@ Report any checks that could not be completed and why.
   reproduction details when needed. Do not fix them or turn their workarounds
   into manual instructions in the documentation PR; handle fixes separately
   unless the user explicitly requests otherwise.
+- Do not mention specific GitHub issue or pull request numbers in the published
+  Sphinx documentation (`docs/`); explain behaviors, interfaces, and algorithms
+  directly on their own merits without referencing discussion threads or temporary
+  design labels. Record issue numbers in `CHANGELOG.md` and commit messages instead.
 - Update the affected Sphinx documentation in `docs` in the same PR
   as user-visible developments: features, commands, dependencies, namelist
   parameters/defaults/units, calendars, output, restart compatibility, and

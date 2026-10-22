@@ -36,7 +36,7 @@ troubleshooting. Each chapter retains its existing URL.
 - [Tests and scientific validation](../docs/development/testing.md): existing regression coverage, provenance, and
   the limits of short numerical checks.
 - [Performance benchmarking](../docs/development/benchmarking.md): classic-radiation workloads, current
-  defaults, timing scope, revision/MPI
+  defaults and optional T31 selection, timing scope, revision/MPI
   comparisons, concurrent scheduling, continuation, and result interpretation.
 - [Alternative direct-Make build and CI example](../docs/development/direct-build.md): optional direct-Make/CI example, runtime
   parameter table, and operational timestep equations. MoSt remains the

@@ -20,7 +20,9 @@ or extra Python packages are required.
 
 The default matrix has four serial cases: each configuration below runs
 at both T21/L10 and T42/L10. Each additional MPI rank count runs the same
-four configurations.
+four configurations. T31/L10 (96 × 48 grid points) can also be selected with
+`--resolutions T31`, or combined with the others using
+`--resolutions T21 T31 T42`. The default remains T21/T42.
 
 | Case | Radiation | Ocean |
 | --- | --- | --- |
@@ -33,23 +35,20 @@ capability remains available for ordinary experiments.
 
 The benchmark protocol prescribes Earth, ten atmospheric levels, a 360-day
 year starting on 1 January of year 1, `seed=1`, `kick=0`, and disabled
-cloud-forcing diagnostics. T21 uses 32 atmospheric steps/day and T42 uses
-72 (45 and 20 minutes, matching MoSt and the model defaults). The runner
-writes `NTSPD` explicitly to retain those timings across source revisions.
-Other physics settings inherit source defaults. Default compilation
-uses `-O3 -fdefault-real-8` for Fortran and `-O3` for C, without adding
+cloud-forcing diagnostics. T21 uses 32 atmospheric steps/day, T31 uses 48,
+and T42 uses 72 (45/30/20 minutes, matching MoSt and the model defaults). The runner writes `NTSPD`
+explicitly to keep these timings across source revisions. Historical
+40-step T31 and 48-step T42 results are different workloads; use a new
+results directory and retain source/input compatibility checks. Other physics settings inherit source defaults. Default
+compilation uses `-O3 -fdefault-real-8` for Fortran and `-O3` for C, without adding
 fast-math or native-architecture flags.
 
 Each resolution uses its checked-in atmospheric boundary data. Coupled
 cases use the real LSG implementation and coupling inputs. T21 takes the
-LSG-supplied land mask; T42 retains its native atmospheric mask because no
-T42 replacement is supplied in `lsg/dat`. The LSG grid stays at 72 × 76
-points with 22 levels. These workloads do not establish a scientifically
-validated coupled climate at either resolution.
-
-The aligned defaults change T42 benchmarks from 48 to 72 steps/day. Start
-a new results directory; historical T42 timings represent a different
-workload and the source/input compatibility checks remain applicable.
+LSG-supplied land mask; T31 and T42 retain their native atmospheric masks
+because no replacement for them is supplied in `lsg/dat`. The LSG grid stays
+at 72 × 76 points with 22 levels. These workloads do not establish a scientifically
+validated coupled climate at any resolution.
 
 ## Start with a small run
 
@@ -64,6 +63,12 @@ bash docs/examples/benchmark-smoke.sh
 
 ```{literalinclude} ../examples/benchmark-smoke.sh
 :language: bash
+```
+
+To run the same smoke check at T31, including both ocean configurations:
+
+```sh
+bash docs/examples/benchmark-smoke.sh T31
 ```
 
 This checks that the workflow executes, including one LSG step at the
@@ -87,9 +92,9 @@ Select a smaller matrix when investigating a particular component.
 
 | Option | Default | Effect |
 | --- | --- | --- |
-| `--resolutions` | `T21 T42` | Select one or both atmospheric resolutions. |
+| `--resolutions` | `T21 T42` | Select any combination of T21, T31, and T42. |
 | `--cases` | `mixed lsg` | Select one or both ocean configurations; radiation is classic broadband. |
-| `--ranks` | `1` | Serial for 1; real MPI for larger counts. Each count must be a power of two dividing every selected latitude count (32 for T21, 64 for T42). |
+| `--ranks` | `1` | Serial for 1; real MPI for larger counts. Each count must be a power of two dividing every selected latitude count (32 for T21, 48 for T31, 64 for T42); T31 allows at most 16 ranks. |
 | `--days` | `120` | Positive simulated days; LSG runs require an integer number of coupling intervals. |
 | `--repeats`, `--warmups` | `5`, `0` | Positive measured count and nonnegative excluded count. |
 | `--coupling-days` | `10` | LSG exchange interval; choices are 1 or 10 days. |

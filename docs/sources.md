@@ -21,7 +21,7 @@ paths rather than copied unchanged.
 | {download}`Ice-output sheet <../plasim/doc/codes_in_ice_output.pdf>` | Code families compared with current `iceout`/`icestep`; added fields and diagnostic scope reflected in the output reference. |
 | {download}`Variable list <../plasim/doc/variable_list.txt>` | Historical names/dimensions/units compared with actual writers and converters; current inventories keep those sources distinct. |
 | {download}`Test guide <../tests/README.md>` and source tests | Actual temporary builds, fixtures, restart/MPI/LSG checks, and validation limits. |
-| {download}`Benchmark guide <../benchmarks/README.md>` and benchmark scripts | Workloads, defaults, timing boundaries, revision/scaling comparisons, concurrent scheduling, continuation, and result interpretation checked against `run.py` and `compare.py`. |
+| {download}`Benchmark guide <../benchmarks/README.md>` and benchmark scripts | Workloads, defaults, optional T31 selection, timing boundaries, revision/scaling comparisons, concurrent scheduling, continuation, and result interpretation checked against `run.py` and `compare.py`. |
 | {download}`burn.sh guide <../scripts/README_burn.txt>` | Historical extraction categories compared with current script expressions. |
 | {download}`Postprocessor notes <../postprocessor/README_POSTPROCESSOR>` and {download}`burn7 quick reference <../postprocessor/burn7qr.pdf>` | Compared with today's `burn7.cpp` options, parser, metadata, and Makefiles. |
 
