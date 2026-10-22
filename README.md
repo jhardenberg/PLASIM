@@ -5,7 +5,7 @@
 # PlaSim-LSG TNG (The Next Generation)
 
 PlaSim-LSG TNG (The Next Generation) is an intermediate-complexity atmosphere–ocean general circulation model (AOGCM) designed for climate research, paleoclimate studies, climate dynamics, and educational use. 
-This repository was originally a streamlined fork of [Hartmut Borth's PLASIM repository](https://github.com/HartmutBorth/PLASIM) developed at University of Hamburg and is now maintained independently.
+This repository was originally a streamlined fork of [the original PLASIM repository](https://github.com/HartmutBorth/PLASIM) developed at University of Hamburg and is now maintained independently.
 
 The model couples:
 - **Planet Simulator (PlaSim):** A 3D spectral primitive-equation atmospheric model with parameterizations for radiation, clouds, moist and dry convection, large-scale condensation, boundary-layer fluxes, and land-surface processes.
