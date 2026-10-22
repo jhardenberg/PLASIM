@@ -88,7 +88,8 @@ explicit MoSt timestep presets and `NAOMOD=0`. Explicit atmospheric timing
 overrides retain ten-day default coupling, while inconsistent ocean clocks
 and invalid explicit coupling intervals fail before LSG initialization.
 The MoSt C harness checks the real preset-selection and namelist-writing
-paths without an X display, including its new automatic `NAOMOD` control.
+paths without an X display, including the 15-minute T63 preset and its
+new automatic `NAOMOD` control.
 T31/T42 ten-day restarts reproduce continuous twenty-day runs byte for byte
 for both components and the final ocean output. The existing explicit
 daily-coupling restart and numerical baseline tests remain unchanged. These checks do not establish long-term climate validity.

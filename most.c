@@ -75,7 +75,7 @@ int PlasimSteps[RESOLUTIONS] =
    45,  // T21
    30,  // T31
    20,  // T42
-   10   // T63
+   15   // T63
 };
 
 int PumaSteps[RESOLUTIONS] =

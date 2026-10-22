@@ -18,7 +18,9 @@ Checked MoSt `PlasimSteps`, `CheckPlasimNamelist`, `InitNamelist`, and
 `WriteNamelistFile`; model `readnl` in `plasim.f90` and `oceanini` in
 `oceanmod.f90`; and the `clsgini`/`clsgstep` to LSG `inipar` timing path.
 Standard automatic T21/T31/T42 timesteps now match MoSt (45/30/20 minutes),
-with MoSt's T15/T63 table entries also matched in the model. Other grid
+with T15/T63 presets of 60/15 minutes in both MoSt and the model. T63's
+15-minute timestep gives 96 steps/Earth day and 960 steps per ten-day
+exchange; prior master used 20 minutes automatically and 10 in MoSt. Other grid
 fallback formulas outside those presets are retained. Zero or omitted `NAOMOD` resolves to ten times the
 actual atmospheric steps/day before the namelist echo and MPI broadcast.
 Valid positive explicit intervals retain precedence; fractional-day,

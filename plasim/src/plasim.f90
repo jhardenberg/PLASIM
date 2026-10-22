@@ -1091,7 +1091,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
          else if (nlat == 64) then  ! T42
             mpstep = 20
          else if (nlat == 96) then  ! T63
-            mpstep = 10
+            mpstep = 15
          else                       ! other resolutions
             mpstep = (30 * 64) / nlat
          endif

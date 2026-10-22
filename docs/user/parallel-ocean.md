@@ -72,6 +72,7 @@ MoSt and the model use the same automatic atmospheric presets:
 | T21 | 45 | 32 | 320 |
 | T31 | 30 | 48 | 480 |
 | T42 | 20 | 72 | 720 |
+| T63 preset | 15 | 96 | 960 |
 
 MoSt writes `NAOMOD=0`; the model resolves zero or an omitted value to
 `10*atmospheric_ntspd` after reading the namelist. This also follows explicit
@@ -89,7 +90,9 @@ still requires 360 days/year.
 ### Migration of existing experiments
 
 The previous direct-model automatic timesteps were 36 minutes at T31 and
-30 minutes at T42; MoSt already used 30 and 20 minutes. The former fixed
+30 minutes at T42; MoSt already used 30 and 20 minutes. The T63 preset
+now uses 15 minutes in both paths; previously the direct model selected
+20 minutes and the MoSt table specified 10 minutes. The former fixed
 `NAOMOD=320` meant ten days only at T21. Explicit old values remain explicit:
 for example, `NAOMOD=320` at the new T31/T42 timesteps is now rejected because
 it is not a whole number of days. Use `NAOMOD=0` for the new ten-day default,

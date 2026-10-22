@@ -73,7 +73,7 @@ class MostInputTests(unittest.TestCase):
 
     def test_timing_namelists(self):
         (self.work / "plasim/run").mkdir(parents=True)
-        for resolution, minutes in ((1, 45), (2, 30), (3, 20), (4, 10)):
+        for resolution, minutes in ((1, 45), (2, 30), (3, 20), (4, 15)):
             with self.subTest(resolution=resolution):
                 result = self.run_reader("timing", str(resolution))
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

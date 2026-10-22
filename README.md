@@ -228,8 +228,8 @@ are unchanged.
 ## Atmospheric timestep and LSG timing defaults
 
 MoSt and the model select 45/30/20-minute atmospheric timesteps for
-T21/T31/T42. With LSG enabled, omitted or zero `NAOMOD` selects ten
-atmospheric days: 320/480/720 steps at those Earth defaults. Positive
+T21/T31/T42, with a 15-minute T63 preset. With LSG enabled, omitted or zero `NAOMOD` selects ten
+atmospheric days: 320/480/720 steps at those Earth defaults, or 960 at T63. Positive
 explicit intervals must span whole days. Earlier direct T31/T42 defaults
 were 36/30 minutes, and a fixed 320-step coupling interval did not preserve
 ten days at higher resolutions. These timing changes affect existing
