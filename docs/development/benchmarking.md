@@ -35,8 +35,11 @@ capability remains available for ordinary experiments.
 
 The benchmark protocol prescribes Earth, ten atmospheric levels, a 360-day
 year starting on 1 January of year 1, `seed=1`, `kick=0`, and disabled
-cloud-forcing diagnostics. T21 uses 32 atmospheric steps/day, T31 uses 40,
-and T42 uses 48. Other physics settings inherit source defaults. Default
+cloud-forcing diagnostics. T21 uses 32 atmospheric steps/day, T31 uses 48,
+and T42 uses 72 (45/30/20 minutes, matching MoSt). The runner writes `NTSPD`
+explicitly to keep these timings across source revisions. Historical
+40-step T31 and 48-step T42 results are different workloads; use a new
+results directory. Other physics settings inherit source defaults. Default
 compilation uses `-O3 -fdefault-real-8` for Fortran and `-O3` for C, without adding
 fast-math or native-architecture flags.
 

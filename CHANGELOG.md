@@ -13,7 +13,7 @@ Changes on `master` since the `v1.0.1` tag.
 
 ### Detailed changes
 
-- **T31 benchmarks:** Added optional T31/L10 workloads for both mixed-layer and real LSG oceans via `--resolutions T31`, including serial and compatible MPI rank counts. Uses checked-in 96 × 48 boundary data and the model's 40 steps/day; the default T21/T42 matrix and model/restart interfaces are unchanged. Added selection, input/coupling-cadence, and rank-validation checks and updated the benchmark documentation and smoke example ([#71](https://github.com/jhardenberg/PLASIM-LSG/pull/71)).
+- **T31 benchmarks:** Added optional T31/L10 workloads for both mixed-layer and real LSG oceans via `--resolutions T31`, including serial and compatible MPI rank counts. Uses checked-in 96 × 48 boundary data and 48 steps/day, matching MoSt's 30-minute T31 preset; the default T21/T42 selection and model/restart interfaces are unchanged. Write atmospheric step counts explicitly using MoSt presets (T21/T31/T42: 32/48/72 steps/day), keeping revision comparisons consistent as model defaults are aligned in issue #72; older T31/T42 timings represent different workloads. Added selection, input/coupling-cadence, and rank-validation checks and updated the benchmark documentation and smoke example ([#71](https://github.com/jhardenberg/PLASIM-LSG/pull/71)).
 
 The `devel_planets` branch was merged on 2026-10-15 ([#13](https://github.com/jhardenberg/PLASIM/pull/13), [`bac0eb7`](https://github.com/jhardenberg/PLASIM/commit/bac0eb7)). Its changes relative to the preceding `master` include:
 

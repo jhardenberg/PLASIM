@@ -30,6 +30,8 @@ class BenchmarkMatrixTests(unittest.TestCase):
                     with self.subTest(resolution=resolution, case=case):
                         configs = run.prepare(args, directory / f'{resolution}-{case}', resolution, case)
                         self.assertRegex(configs['radmod_namelist'], r'\bnstartemp=0\b')
+                        self.assertRegex(configs['plasim_namelist'],
+                                         r'\bntspd=' + str({'T21': 32, 'T31': 48, 'T42': 72}[resolution]) + r'\b')
                         self.assertRegex(configs['oceanmod_namelist'],
                                          r'\bnlsg=' + ('1' if case == 'lsg' else '0') + r'\b')
 
@@ -51,7 +53,7 @@ class BenchmarkMatrixTests(unittest.TestCase):
                         self.assertRegex(configs['radmod_namelist'], r'\bnstartemp=0\b')
                         if case == 'lsg':
                             self.assertRegex(configs['oceanmod_namelist'],
-                                             rf'\bnaomod={40 * coupling_days}\b')
+                                             rf'\bnaomod={48 * coupling_days}\b')
                         else:
                             self.assertRegex(configs['oceanmod_namelist'], r'\bnlsg=0\b')
 

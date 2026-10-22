@@ -25,7 +25,7 @@ import threading
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-RESOLUTIONS = {"T21": (32, 32), "T31": (48, 40), "T42": (64, 48)}  # latitudes, steps per Earth day
+RESOLUTIONS = {"T21": (32, 32), "T31": (48, 48), "T42": (64, 72)}  # latitudes, steps per Earth day
 CASES = ("mixed", "lsg")
 NAMELISTS = ("fluxmod", "icemod", "landmod", "miscmod", "oceanmod", "planet",
              "radmod", "rainmod", "seamod", "surfmod", "vegmod")
@@ -350,6 +350,7 @@ def prepare(args, directory: Path, resolution: str, case: str) -> dict:
     configs["plasim_namelist"] = (
         "&plasim_nl\n n_run_years=0, n_run_months=0, "
         f"n_run_days={args.days}, n_run_steps=0, n_days_per_year=360, "
+        f"ntspd={RESOLUTIONS[resolution][1]}, "
         "n_start_year=1, n_start_month=1, "
         f"kick=0, ngui=0, seed=1, noutput={int(args.io == 'daily')}, "
         f"nwpd=1, ndiagcf=0, ntime={int(not args.no_timers)}\n/\n")

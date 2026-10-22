@@ -12,35 +12,28 @@ updates check the merged developments identified below, including mainline
 change model sources. Source checks and runtime checks below are deliberately
 distinguished.
 
-## T31 benchmark extension
+## T31 benchmark extension and timing alignment
 
 Checked `benchmarks/run.py` (`RESOLUTIONS`, `arguments`, `build`, `prepare`,
-`state_summary`) against atmospheric timestep selection in `readnl` in
-`plasim/src/plasim.f90`: T31 has 48 latitudes, 96 longitudes, and a
-36-minute timestep (40 steps per Earth day). Checked `plasim/dat/T31` and
-`lsg/dat`: coupled T31 retains its native N048 land mask; the only LSG
-replacement is N032. Coupling cadence is 40 or 400 atmospheric steps for
-one or ten days. The default T21/T42 selection, model sources, namelist
-interfaces, and restart formats are unchanged. Updated the benchmark guide,
-manual chapter, and optional resolution argument in the smoke example.
+`state_summary`) against MoSt `PlasimSteps`: T21/T31/T42 use 45/30/20-minute
+Earth timesteps (32/48/72 steps/day). The runner writes `NTSPD` explicitly
+so older source revisions with different automatic defaults use the same
+benchmark timestep. This anticipates the model-default alignment requested
+in issue #72. Coupled T31 uses its native N048 land mask because `lsg/dat`
+only supplies an N032 replacement. Its one/ten-day exchange intervals are
+48/480 atmospheric steps. T21/T42 remain the default selected resolutions.
 
-Runtime validation used Homebrew GNU Fortran 15.2.0 and Open MPI 5.0.7,
-configured `-O3 -funroll-loops -ffpe-trap=invalid,zero,overflow
--ffpe-summary=none -mcpu=native -fdefault-real-8` Fortran flags and `-O3`
-for C. The exact `benchmark-smoke.sh T31` example passed both serial cases
-for ten days (final atmospheric step 14800; one LSG step). Separate two-rank
-T31 runs passed both cases for twenty days with daily output (step 15200;
-two LSG steps). Checked finite atmospheric state, ocean temperature and
-salinity evolution, and finite nonzero exchanged stresses and heat fluxes
-(Service codes -52, -53, -18 and atmospheric `yfldo`). Summary commands
-accepted both reports. These short checks do not validate long-term climate
-statistics or scaling; higher rank counts and other resolutions were not
-newly benchmarked. All 31 benchmark-tool tests passed, including optional
-T31 selection, native boundary inputs, both coupling cadences, rank limits,
-and unchanged default selection. All 53 model/tool regression tests passed
-when run outside the sandbox to permit MPI sockets and converter execution.
-Strict HTML and inventory checks passed; external link checking was stopped
-after repeated GitHub HTTP 429 rate limits.
+Earlier validation of PR #71 used 40-step/day T31 and 48-step/day T42;
+those historical smoke results do not validate the revised workload or
+provide matching performance baselines. Updated validation is recorded
+below after rerunning the benchmark with the explicit MoSt timings.
+
+All 31 benchmark-tool tests passed after alignment. The exact
+`benchmark-smoke.sh T31` example passed both serial cases at 48 steps/day
+for ten days (final atmospheric step 17760; one LSG step and finite
+nonzero returned heat flux). Strict Sphinx HTML and reference-inventory
+checks passed. These are execution checks, not climate/scaling validation.
+Previous MPI smoke results retain their historical timing scope above.
 
 ## Historical chapter coverage
 

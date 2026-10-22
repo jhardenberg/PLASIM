@@ -41,8 +41,11 @@ initial states.
 
 The protocol fixes Earth, ten atmosphere levels, a 360-day year, start date
 1-Jan-0001, `seed=1`, `kick=0`, and disabled cloud-forcing diagnostics. T21 has
-32 atmosphere steps/day; T31 has 40; T42 has 48. Other physics settings retain
-source defaults. The LSG case uses `nlsg=1`, `nocean=1`, `nhdiff=0`, and `kiterm=8`.
+32 atmosphere steps/day; T31 has 48; T42 has 72 (45/30/20 minutes). Other physics settings retain
+source defaults. The runner writes `NTSPD` explicitly to retain the MoSt
+timesteps across source revisions, including older automatic defaults.
+Historical runs at 40 T31 or 48 T42 steps/day represent different workloads;
+start a new results directory. The LSG case uses `nlsg=1`, `nocean=1`, `nhdiff=0`, and `kiterm=8`.
 Each selected MPI rank count gets its own build; `1` selects serial stubs,
 while `2`, `4`, etc. select the real MPI module. Rank counts must be powers
 of two dividing every selected latitude count.
