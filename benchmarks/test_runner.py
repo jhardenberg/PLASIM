@@ -31,9 +31,43 @@ class BenchmarkMatrixTests(unittest.TestCase):
                         configs = run.prepare(args, directory / f'{resolution}-{case}', resolution, case)
                         self.assertRegex(configs['radmod_namelist'], r'\bnstartemp=0\b')
                         self.assertRegex(configs['plasim_namelist'],
-                                         r'\bntspd=' + ('32' if resolution == 'T21' else '72') + r'\b')
+                                         r'\bntspd=' + str({'T21': 32, 'T31': 48, 'T42': 72}[resolution]) + r'\b')
                         self.assertRegex(configs['oceanmod_namelist'],
                                          r'\bnlsg=' + ('1' if case == 'lsg' else '0') + r'\b')
+
+    def test_t31_selection_inputs_and_coupling_cadence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            for coupling_days in (1, 10):
+                args = run.arguments(['--output', str(directory / 'out'),
+                                      '--resolutions', 'T31', '--no-configure',
+                                      '--coupling-days', str(coupling_days)])
+                self.assertEqual(args.resolutions, ['T31'])
+                for case in args.cases:
+                    with self.subTest(coupling_days=coupling_days, case=case):
+                        target = directory / f'{case}-{coupling_days}'
+                        configs = run.prepare(args, target, 'T31', case)
+                        mask = 'N048_surf_0172.sra'
+                        self.assertEqual((target / mask).read_bytes(),
+                                         (run.ROOT / 'plasim/dat/T31' / mask).read_bytes())
+                        self.assertRegex(configs['radmod_namelist'], r'\bnstartemp=0\b')
+                        if case == 'lsg':
+                            self.assertRegex(configs['oceanmod_namelist'],
+                                             rf'\bnaomod={48 * coupling_days}\b')
+                        else:
+                            self.assertRegex(configs['oceanmod_namelist'], r'\bnlsg=0\b')
+
+    def test_t31_mpi_rank_selection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            argv = ['--output', str(Path(directory) / 'out'), '--resolutions', 'T31',
+                    '--max-cores', '32', '--no-configure']
+            args = run.arguments(argv + ['--ranks', '1', '2', '4', '8', '16'])
+            self.assertEqual(args.ranks, [1, 2, 4, 8, 16])
+            with contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as caught:
+                    run.arguments(argv + ['--ranks', '32'])
+            self.assertEqual(caught.exception.code, 2)
+            self.assertFalse((Path(directory) / 'out').exists())
 
     def test_spectral_cases_are_rejected_before_output_creation(self):
         with tempfile.TemporaryDirectory() as directory:

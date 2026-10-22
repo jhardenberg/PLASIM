@@ -25,7 +25,7 @@ import threading
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-RESOLUTIONS = {"T21": (32, 32), "T42": (64, 72)}  # latitudes, steps per Earth day
+RESOLUTIONS = {"T21": (32, 32), "T31": (48, 48), "T42": (64, 72)}  # latitudes, steps per Earth day
 CASES = ("mixed", "lsg")
 NAMELISTS = ("fluxmod", "icemod", "landmod", "miscmod", "oceanmod", "planet",
              "radmod", "rainmod", "seamod", "surfmod", "vegmod")
@@ -449,7 +449,8 @@ def arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--source", type=Path, default=ROOT, help="Checkout to build (default: this repo)")
     parser.add_argument("--output", type=Path, required=True,
                         help="Directory for results and logs (continues if results.json exists)")
-    parser.add_argument("--resolutions", nargs="+", choices=RESOLUTIONS, default=list(RESOLUTIONS))
+    parser.add_argument("--resolutions", nargs="+", choices=RESOLUTIONS, default=["T21", "T42"],
+                        help="Atmospheric resolutions (default: T21 T42; T31 is optional)")
     parser.add_argument("--cases", nargs="+", choices=CASES, default=list(CASES))
     parser.add_argument("--ranks", nargs="+", type=int, default=[1], help="MPI sizes; 1 uses a serial build")
     parser.add_argument("--parallel", action="store_true",

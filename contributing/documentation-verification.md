@@ -12,6 +12,29 @@ updates check the merged developments identified below, including mainline
 change model sources. Source checks and runtime checks below are deliberately
 distinguished.
 
+## T31 benchmark extension and timing alignment
+
+Checked `benchmarks/run.py` (`RESOLUTIONS`, `arguments`, `build`, `prepare`,
+`state_summary`) against MoSt `PlasimSteps`: T21/T31/T42 use 45/30/20-minute
+Earth timesteps (32/48/72 steps/day). The runner writes `NTSPD` explicitly
+so older source revisions with different automatic defaults use the same
+benchmark timestep. This anticipates the model-default alignment requested
+in issue #72. Coupled T31 uses its native N048 land mask because `lsg/dat`
+only supplies an N032 replacement. Its one/ten-day exchange intervals are
+48/480 atmospheric steps. T21/T42 remain the default selected resolutions.
+
+Earlier validation of PR #71 used 40-step/day T31 and 48-step/day T42;
+those historical smoke results do not validate the revised workload or
+provide matching performance baselines. Updated validation is recorded
+below after rerunning the benchmark with the explicit MoSt timings.
+
+All 31 benchmark-tool tests passed after alignment. The exact
+`benchmark-smoke.sh T31` example passed both serial cases at 48 steps/day
+for ten days (final atmospheric step 17760; one LSG step and finite
+nonzero returned heat flux). Strict Sphinx HTML and reference-inventory
+checks passed. These are execution checks, not climate/scaling validation.
+Previous MPI smoke results retain their historical timing scope above.
+
 ## Issue #72: aligned atmospheric and coupling defaults
 
 Checked MoSt `PlasimSteps`, `CheckPlasimNamelist`, `InitNamelist`, and
@@ -55,6 +78,26 @@ stopped after repeated GitHub rate limits. These short checks do not establish
 long-term climate validity or MPI scaling. Timing migrations are functional
 changes, not numerical equivalence claims for old T31/T42 climates.
 
+## Issue #20: coupled LSG surface masks and grid consistency
+
+Checked `cplini` in `cpl.f90`, `topogr` in `lsg/dat/`, `most.c`, and
+`scripts/derive_lsg_sra.py`. In PlaSim–LSG coupling, `cplini` maps atmospheric
+cells (`nlon` × `nlat`) to the LSG ocean E-grid (72 × 76). Uncoupled atmospheric
+ocean points (`kmiss_a > 0`) produce uncompensated fluxes over land bathymetry,
+while starved ocean vector points (`kmiss_v > 0`) zero out wind stresses on
+active ocean currents.
+Historically, `lsg/dat` supplied an adapted mask only for T21 (`N032_surf_0172.sra`).
+At T31 and T42, falling back to default PlaSim masks produced 58 and 137
+uncoupled cells and 2 starved vectors.
+The automated derivation implemented in `scripts/derive_lsg_sra.py`
+closes atmospheric points with zero ocean depth (`zslmoa < 1e-9`), preserves the
+Panama barrier, and selectively opens atmospheric cells overlapping starved ocean
+vectors (clearing Gibraltar and North Greenland). Across T21, T31, and T42,
+this automated algorithm achieves `kmiss_a = 0` and `kmiss_v = 0` with 19 coastal scalar
+extrapolations (`kmiss_s`). The ocean grid, bathymetry, and matrices remain
+unaltered. Verified `derive_lsg_sra.py` across all three resolutions and added
+T31 support to `scripts/sra2nc`.
+
 ## Historical chapter coverage
 
 | Original material | Current Sphinx destination | Code comparison and resulting update |
@@ -63,7 +106,7 @@ changes, not numerical equivalence claims for old T31/T42 climates.
 | Chapter 2: module overview | User: components; developer: architecture | Actual default `make_plasim` variants and lifecycle calls replace obsolete PUMA/module/group references; SIMBA has `vegmod_nl`; sea exchange declaration default is one step. |
 | Chapter 3: parallel execution | User: parallel/LSG; developer: architecture/testing | `resmod`, shared dimensions, `mpimod`, and MoSt core checks: compiled rank count, latitude divisibility, padded spectral layout; no manual `use mpi` editing recipe. |
 | Chapter 4: GUI | User: GUI | `pumax.c:ReadConfig`, plot/palette registries, `guimod`, and sent arrays: file precedence, actual names/scaling, and separate X11 dependencies; old PUMA editors are not promoted as PlaSim workflows. |
-| Chapter 5: postprocessor | User: postprocessing; reference: output | `burn7.cpp:Usage`, `parini`, option parser, `InitAll`, writers; `srv2nc` branches: direct CDO conversion now exists, current horizontal/vertical defaults are G/P, `-g` is GrADS, wind codes are 131/132. |
+| Chapter 5: postprocessor | User: postprocessing; reference: output | `burn7.cpp:Usage`, `parini`, option parser, `InitAll`, writers; `srv2nc`, `burn.sh`, and `postmon.sh`: direct CDO conversion now exists, current horizontal/vertical defaults are G/P, `-g` is GrADS, wind codes are 131/132; `postmon.sh` monthly extraction and fixed-field handling documented against source. |
 | Chapter 6: graphics | User: visualization | Retained CDO inspection and replaced the GrADS/Vis5D recipes with an xarray/Matplotlib map. Checked `srv2nc` code 167, kelvin units, and Gaussian `lon`/`lat` coordinates; the literal-included Python script uses the first output sample without further averaging or conversion. |
 | Chapter 7: columns/soundings | Excluded from manual | Obsolete `COLUMN`/`YMODE` macro and single-column experiment recipe omitted from the manual as unsupported in PlaSim-LSG TNG. |
 | Appendix A: symbols/constants | Reference: units; user: planets | Shared dimension formulas and current planet presets replace rounded old constants. Derivation-only notation stays with the excluded scientific Reference Manual. |
