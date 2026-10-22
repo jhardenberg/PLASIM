@@ -74,7 +74,7 @@ def doubles(data: bytes) -> tuple[float, ...]:
 
 def build_model(
     build: Path, *, lsg: bool = False, ranks: int = 1, precision: str = "-fdefault-real-8",
-    latitudes: int = 32, fflags: str = "-O0",
+    latitudes: int = 32, fflags: str = "-O0", rainmod: str = "rainmod", fftmod: str = "fftmod",
 ) -> Path:
     """Build L10 at the selected latitude count with optional MPI and real LSG."""
     compiler = "mpif90" if ranks > 1 else "gfortran"
@@ -103,6 +103,8 @@ def build_model(
         "GUIMOD": "guimod_stub", "PUMAX": "pumax_stub",
         "GUILIB": "", "OCEAN": "lsgmod" if lsg else "lsgmod_stub",
         "OCEANCOUP": "cpl" if lsg else "cpl_stub",
+        "RAINMOD": rainmod,
+        "FFTMOD": fftmod,
     })
     command(["make", "-e", "-j1", "plasim.x"], cwd=build, env=env)
     return build / "plasim.x"
@@ -741,6 +743,53 @@ class ConfigurePrecisionTests(unittest.TestCase):
         prec_file = work / "most_precision_options"
         self.assertTrue(prec_file.is_file(), f"most_precision_options was not created for nagfor:\n{result.stdout}")
         self.assertIn("MOST_PREC=-r8", prec_file.read_text())
+
+
+class AlternativeComponentTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.temp = tempfile.TemporaryDirectory(prefix="plasim-components-")
+        cls.addClassCleanup(cls.temp.cleanup)
+        cls.work = Path(cls.temp.name)
+
+    def test_alternative_rain_schemes(self) -> None:
+        """Verify Betts-Miller, MCA, and historical Kuo rain modules compile and run."""
+        for scheme in ("rainmod_bm", "rainmod_mca", "rainmod_kuo_old"):
+            with self.subTest(scheme=scheme):
+                executable = build_model(self.work / f"build-{scheme}", rainmod=scheme)
+                run = prepare_run(self.work, f"run-{scheme}", days=1)
+                run_model(executable, run)
+                state = records(run / "plasim_status")
+                for field in ("dt", "dq", "dls"):
+                    vals = doubles(state[field])
+                    self.assertTrue(all(map(math.isfinite, vals)), f"{scheme} {field}")
+                diag = (run / "plasim_diag").read_text()
+                self.assertIn("one day", diag)
+
+    def test_fft991mod_build_and_run(self) -> None:
+        """Verify fft991mod compiles, runs, and integrates one day."""
+        executable = build_model(self.work / "build-fft991", fftmod="fft991mod")
+        run = prepare_run(self.work, "run-fft991", days=1)
+        run_model(executable, run)
+        state = records(run / "plasim_status")
+        vals = doubles(state["dt"])
+        self.assertTrue(all(map(math.isfinite, vals)))
+        self.assertIn("one day", (run / "plasim_diag").read_text())
+
+    def test_tracer_transport_activation(self) -> None:
+        """Verify semi-Lagrangian tracer transport activates when nsela=1."""
+        executable = build_model(self.work / "build-tracer")
+        run = prepare_run(self.work, "run-tracer", days=1)
+        (run / "plasim_namelist").write_text(
+            "&plasim_nl\n n_run_years=0, n_run_months=0, n_run_days=1, n_run_steps=0, "
+            "kick=0, ngui=0, seed=1, nsela=1\n/\n", encoding="ascii"
+        )
+        run_model(executable, run)
+        diag = (run / "plasim_diag").read_text()
+        self.assertIn("one day", diag)
+        state = records(run / "plasim_status")
+        vals = doubles(state["dt"])
+        self.assertTrue(all(map(math.isfinite, vals)))
 
 
 if __name__ == "__main__":
