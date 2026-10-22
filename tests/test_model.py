@@ -75,6 +75,7 @@ def doubles(data: bytes) -> tuple[float, ...]:
 def build_model(
     build: Path, *, lsg: bool = False, ranks: int = 1, precision: str = "-fdefault-real-8",
     latitudes: int = 32, fflags: str = "-O0", rainmod: str = "rainmod", fftmod: str = "fftmod",
+    jobs: int | None = None,
 ) -> Path:
     """Build L10 at the selected latitude count with optional MPI and real LSG."""
     compiler = "mpif90" if ranks > 1 else "gfortran"
@@ -106,7 +107,13 @@ def build_model(
         "RAINMOD": rainmod,
         "FFTMOD": fftmod,
     })
-    command(["make", "-e", "-j1", "plasim.x"], cwd=build, env=env)
+    if jobs is None:
+        jobs_env = os.environ.get("PLASIM_BUILD_JOBS")
+        if jobs_env and jobs_env.isdigit():
+            jobs = max(1, int(jobs_env))
+        else:
+            jobs = max(1, min(4, os.cpu_count() or 1))
+    command(["make", "-e", f"-j{jobs}", "plasim.x"], cwd=build, env=env)
     return build / "plasim.x"
 
 
@@ -468,6 +475,39 @@ class PlaSimTests(unittest.TestCase):
                 values = doubles(state[field])
                 self.assertTrue(all(map(math.isfinite, values)))
 
+    def test_unified_convection_schemes(self) -> None:
+        """Verify unified convection schemes run 1 day and produce finite states."""
+        for scheme_id, scheme_name in (
+            (0, "kuo_default"),
+            (1, "betts_miller"),
+            (2, "mca"),
+            (3, "kuo_old"),
+        ):
+            with self.subTest(scheme=scheme_name, nconvection=scheme_id):
+                run = self.prepare_run(f"convection-{scheme_name}", days=1)
+                (run / "rainmod_namelist").write_text(
+                    f"&rainmod_nl\n nconvection={scheme_id}\n/\n",
+                    encoding="ascii",
+                )
+                self.run_model(run)
+                status = records(run / "plasim_status")
+                for field in ("dt", "dq", "dalb", "dls", "sz", "sd", "st", "sq", "sp"):
+                    values = doubles(status[field])
+                    self.assertTrue(all(map(math.isfinite, values)), f"Non-finite in {field} for {scheme_name}")
+                diag = (run / "plasim_diag").read_text()
+                self.assertIn("Namelist RAINMOD_NL", diag)
+
+    def test_legacy_kbetta_alias(self) -> None:
+        """Verify legacy KBETTA namelist parameter aliases to kbeta."""
+        run = self.prepare_run("legacy-kbetta", days=0, steps=1)
+        (run / "rainmod_namelist").write_text(
+            "&rainmod_nl\n kbetta=0\n/\n",
+            encoding="ascii",
+        )
+        self.run_model(run)
+        diag = (run / "plasim_diag").read_text()
+        self.assertIn("KBETA=0", diag.upper().replace(" ", ""))
+
 
 class CalendarTests(unittest.TestCase):
     @classmethod
@@ -751,20 +791,6 @@ class AlternativeComponentTests(unittest.TestCase):
         cls.temp = tempfile.TemporaryDirectory(prefix="plasim-components-")
         cls.addClassCleanup(cls.temp.cleanup)
         cls.work = Path(cls.temp.name)
-
-    def test_alternative_rain_schemes(self) -> None:
-        """Verify Betts-Miller, MCA, and historical Kuo rain modules compile and run."""
-        for scheme in ("rainmod_bm", "rainmod_mca", "rainmod_kuo_old"):
-            with self.subTest(scheme=scheme):
-                executable = build_model(self.work / f"build-{scheme}", rainmod=scheme)
-                run = prepare_run(self.work, f"run-{scheme}", days=1)
-                run_model(executable, run)
-                state = records(run / "plasim_status")
-                for field in ("dt", "dq", "dls"):
-                    vals = doubles(state[field])
-                    self.assertTrue(all(map(math.isfinite, vals)), f"{scheme} {field}")
-                diag = (run / "plasim_diag").read_text()
-                self.assertIn("one day", diag)
 
     def test_fft991mod_build_and_run(self) -> None:
         """Verify fft991mod compiles, runs, and integrates one day."""

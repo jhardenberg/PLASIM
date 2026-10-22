@@ -44,7 +44,7 @@ ${MPIMOD}.o:	${MPIMOD}.f90 plasimmod.o
 ${GUIMOD}.o:	${GUIMOD}.f90 plasimmod.o radmod.o ${OCEANCOUP}.o
 ${RAINMOD}.o:	${RAINMOD}.f90 plasimmod.o
 ${VEGMOD}.o:	${VEGMOD}.f90 ${LANDMOD}.o
-${LANDMOD}.o:	${LANDMOD}.f90 plasimmod.o
+${LANDMOD}.o:	${LANDMOD}.f90 plasimmod.o radmod.o
 ${PLAMOD}.o:	${PLAMOD}.f90 radmod.o
 calmod.o:	calmod.f90 plasimmod.o
 gaussmod.o:	gaussmod.f90
