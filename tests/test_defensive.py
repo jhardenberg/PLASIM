@@ -71,6 +71,18 @@ class MostInputTests(unittest.TestCase):
         return subprocess.run([str(self.executable), mode, str(path)], cwd=self.work,
                               capture_output=True, text=True, timeout=10)
 
+    def test_timing_namelists(self):
+        (self.work / "plasim/run").mkdir(parents=True)
+        for resolution, minutes in ((1, 45), (2, 30), (3, 20), (4, 10)):
+            with self.subTest(resolution=resolution):
+                result = self.run_reader("timing", str(resolution))
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                atmosphere = (self.work / "plasim/run/plasim_namelist").read_text()
+                ocean = (self.work / "plasim/run/oceanmod_namelist").read_text()
+                self.assertRegex(atmosphere, rf"MPSTEP\s*=\s*{minutes}\b")
+                self.assertRegex(ocean, r"NAOMOD\s*=\s*0\b")
+                self.assertRegex(ocean, r"NLSG\s*=\s*1\b")
+
     def test_settings_empty_and_final_line(self):
         settings = self.work / "settings.cfg"
         settings.write_text("")

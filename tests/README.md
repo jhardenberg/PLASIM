@@ -72,6 +72,27 @@ They are intentionally tolerant of small compiler and platform differences.
 A passing test supports short-run regression checking, not scientific
 validation of a long climate simulation.
 
+## Atmospheric and LSG timing defaults
+
+`test_timing.py` checks T21/T31/T42 automatic timesteps (45/30/20 minutes)
+and default ten-day LSG coupling (320/480/720 atmospheric steps). Real
+serial runs last twenty days and advance the ocean twice; two-rank MPI
+runs last ten days and advance it once when MPI is available. These longer
+resolution tests use `-O2 -fdefault-real-8` and a 300-second limit per
+integration; the existing short reference tests retain `-O0` and their
+original time limits and numerical tolerances. Checks cover
+atmospheric dimensions and step counts, LSG timestep/advance diagnostics,
+ocean temperature/salinity evolution, and finite nonzero exchanged stress
+and heat fluxes. Strict first-step comparisons match automatic inputs to
+explicit MoSt timestep presets and `NAOMOD=0`. Explicit atmospheric timing
+overrides retain ten-day default coupling, while inconsistent ocean clocks
+and invalid explicit coupling intervals fail before LSG initialization.
+The MoSt C harness checks the real preset-selection and namelist-writing
+paths without an X display, including its new automatic `NAOMOD` control.
+T31/T42 ten-day restarts reproduce continuous twenty-day runs byte for byte
+for both components and the final ocean output. The existing explicit
+daily-coupling restart and numerical baseline tests remain unchanged. These checks do not establish long-term climate validity.
+
 ## Earth reference data
 
 [`earth_t21_l10_day1_2000_fixed.restart.gz`](fixtures/earth_t21_l10_day1_2000_fixed.restart.gz)

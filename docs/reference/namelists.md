@@ -94,7 +94,7 @@ is stated. They are not a replacement for the complete accepted-name inventory.
 | `seamod_nl` | `albsea`, `dz0sea`, `dz0ice` | Sea albedo 0.069; roughness lengths 1.5e-5 and 0.001 m. Spectral behavior also uses band arrays. |
 | `icemod_nl` | `nice`, `nfluko`, `ncpl_ice_ocean` | Ice selection, flux correction, and ice–ocean coupling interval; keep these distinct from atmospheric/LSG intervals. |
 | `oceanmod_nl` | `dlayer`, `vdiffkl`, `hdiffk` | Declared mixed-layer depth 50 m, vertical diffusivity 1e-4 m²/s, horizontal diffusivity 1e5 m²/s. Activation switches and layer count matter. |
-| `oceanmod_nl` | `nlsg`, `naomod` | LSG mode 0; exchange interval 320 atmospheric steps. Requires the real coupled build when enabled. |
+| `oceanmod_nl` | `nlsg`, `naomod` | LSG mode 0; exchange interval 0 selects ten atmospheric days, resolved using the actual timestep. Requires the real coupled build when enabled. |
 
 ## Migrating old inputs
 

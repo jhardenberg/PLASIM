@@ -41,7 +41,7 @@
       integer :: nhdiff           = 0   ! switch for horizontal heat diffusion
       integer :: nentropy         = 0   ! switch for entropy diagnostics
       integer :: nlsg             = 0   ! coupling flag to lsg   
-      integer :: naomod           = 320 ! atmos/ocean(lsg) ration    
+      integer :: naomod           = 0   ! 0: ten atmospheric days
       integer :: nshdiff          = 0   ! flag to use separate hdiffk north and south 
 
 !
@@ -198,6 +198,7 @@
       if (mypid == NROOT) then
          open(12,file=oceanmod_namelist)
          read(12,oceanmod_nl)
+         if (naomod == 0) naomod = 10 * ktspd
          write(nud,'(/,"*************************************************")')
          write(nud,'("* OCEANMOD ",a36," *")') trim(version)
          write(nud,'("*************************************************")')
@@ -228,6 +229,30 @@
       call mpbcrn(hdiffk,NLEV_OCE)
       call mpbcrn(hdiffk2,NLEV_OCE)
       call mpbcrn(dlayer,NLEV_OCE)
+!
+!     LSG advances once per exchange, using a whole number of days.
+!     Validate on every rank after distribution, before LSG initialization.
+!
+      if (nlsg > 0) then
+       if (ntspd /= ktspd) then
+        if (mypid == NROOT) write(nud,*) &
+     &   'ERROR: LSG ocean NTSPD must match atmospheric NTSPD'
+        stop 1
+       endif
+       if (naomod < ktspd) then
+        if (mypid == NROOT) write(nud,*) &
+     &   'ERROR: LSG NAOMOD must be at least one atmospheric day'
+        stop 1
+       endif
+       if (mod(naomod,ktspd) /= 0) then
+        if (mypid == NROOT) write(nud,*) &
+     &   'ERROR: LSG NAOMOD must be a whole number of atmospheric days'
+        stop 1
+       endif
+       if (mypid == NROOT) write(nud,*) &
+     &  'LSG coupling interval:',naomod,' atmospheric steps =', &
+     &   naomod/ktspd,' days'
+      endif
 !
       do jlev=1,NLEV_OCE
          ymld(:,jlev) = dlayer(jlev)

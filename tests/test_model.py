@@ -25,10 +25,11 @@ NAMELISTS = (
 )
 
 
-def command(args: list[str], *, cwd: Path, env: dict[str, str] | None = None) -> None:
+def command(args: list[str], *, cwd: Path, env: dict[str, str] | None = None,
+            timeout: int = 120) -> None:
     result = subprocess.run(
         args, cwd=cwd, env=env, text=True, stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT, timeout=120, check=False,
+        stderr=subprocess.STDOUT, timeout=timeout, check=False,
     )
     if result.returncode:
         raise AssertionError(
@@ -73,8 +74,9 @@ def doubles(data: bytes) -> tuple[float, ...]:
 
 def build_model(
     build: Path, *, lsg: bool = False, ranks: int = 1, precision: str = "-fdefault-real-8",
+    latitudes: int = 32, fflags: str = "-O0",
 ) -> Path:
-    """Build T21/L10 with serial or MPI communication and optional real LSG."""
+    """Build L10 at the selected latitude count with optional MPI and real LSG."""
     compiler = "mpif90" if ranks > 1 else "gfortran"
     for program in (compiler, "make", "cc"):
         if shutil.which(program) is None:
@@ -88,14 +90,14 @@ def build_model(
     (build / "resmod.f90").write_text(
         (build / "resmod_def.f90").read_text().replace(
             "NPRO_ATM = 1", f"NPRO_ATM = {ranks}"
-        ), encoding="ascii",
+        ).replace("NLAT_ATM = 32", f"NLAT_ATM = {latitudes}"), encoding="ascii",
     )
     shutil.copy2(build / "make_plasim", build / "makefile")
 
     env = os.environ.copy()
     env.update({
         "MOST_CC": "cc", "MOST_CC_OPTS": "-O0",
-        "MOST_F90": compiler, "MOST_F90_OPTS": "-O0",
+        "MOST_F90": compiler, "MOST_F90_OPTS": fflags,
         "MOST_PREC": precision,
         "MPIMOD": "mpimod" if ranks > 1 else "mpimod_stub",
         "GUIMOD": "guimod_stub", "PUMAX": "pumax_stub",
@@ -106,10 +108,11 @@ def build_model(
     return build / "plasim.x"
 
 
-def prepare_run(work: Path, name: str, *, days: int, steps: int = 0) -> Path:
+def prepare_run(work: Path, name: str, *, days: int, steps: int = 0,
+                resolution: str = "T21") -> Path:
     run = work / name
     run.mkdir()
-    for source in BOUNDARY_DATA.iterdir():
+    for source in (ROOT / "plasim/dat" / resolution).iterdir():
         shutil.copy2(source, run / source.name)
     for module in NAMELISTS:
         (run / f"{module}_namelist").write_text(
@@ -123,8 +126,9 @@ def prepare_run(work: Path, name: str, *, days: int, steps: int = 0) -> Path:
     return run
 
 
-def run_model(executable: Path, run: Path, *, launcher: list[str] | None = None) -> None:
-    command([*(launcher or []), str(executable)], cwd=run)
+def run_model(executable: Path, run: Path, *, launcher: list[str] | None = None,
+              timeout: int = 120) -> None:
+    command([*(launcher or []), str(executable)], cwd=run, timeout=timeout)
     if (run / "Abort_Message").exists():
         raise AssertionError((run / "Abort_Message").read_text())
     for output in ("plasim_diag", "plasim_output", "plasim_status"):

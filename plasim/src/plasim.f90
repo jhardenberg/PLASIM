@@ -1082,11 +1082,17 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 !     mpstep <= 0 and ntspd <= 0 triggers automatic
 
       if (mpstep <= 0 .and. ntspd <= 0) then
-         if (nlat <= 32) then       ! T21
+         if (nlat == 24) then       ! T15, match MoSt presets
+            mpstep = 60
+         else if (nlat <= 32) then  ! T21 and smaller grids
             mpstep = 45
          else if (nlat <= 48) then  ! T31
-            mpstep = 36
-         else                       ! T42 and more
+            mpstep = 30
+         else if (nlat == 64) then  ! T42
+            mpstep = 20
+         else if (nlat == 96) then  ! T63
+            mpstep = 10
+         else                       ! other resolutions
             mpstep = (30 * 64) / nlat
          endif
       endif

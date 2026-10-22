@@ -36,8 +36,10 @@ initial states.
 
 The protocol fixes Earth, ten atmosphere levels, a 360-day year, start date
 1-Jan-0001, `seed=1`, `kick=0`, and disabled cloud-forcing diagnostics. T21 has
-32 atmosphere steps/day; T42 has 48. Other physics settings retain source
-defaults. The LSG case uses `nlsg=1`, `nocean=1`, `nhdiff=0`, and `kiterm=8`.
+32 atmosphere steps/day; T42 has 72 (45 and 20 minutes, matching MoSt).
+The runner writes `NTSPD` explicitly so comparisons of source revisions keep
+the same timestep even when older automatic defaults differ. Other physics
+settings retain source defaults. The LSG case uses `nlsg=1`, `nocean=1`, `nhdiff=0`, and `kiterm=8`.
 Each selected MPI rank count gets its own build; `1` selects serial stubs,
 while `2`, `4`, etc. select the real MPI module. Rank counts must be powers
 of two dividing both selected latitude counts.
@@ -70,6 +72,11 @@ Compiler executables and optimization flags can also be overridden explicitly:
 
 `benchmarks/run.py` verifies that the serial Fortran compiler and MPI Fortran wrapper belong to the same compiler family (e.g. both Intel or both GNU) when parallel ranks are executed, stopping with an error if an inconsistent toolchain is detected. All compiler settings and flags are recorded in `results.json` and verified for
 compatibility during comparison.
+
+The aligned defaults change the T42 workload from 48 to 72 atmospheric
+steps/day. Use a new results directory after updating; continuation and
+comparison must retain their source/input compatibility checks. Historical
+T42 results used a different timestep and are not matching workloads.
 
 ## Run a benchmark
 

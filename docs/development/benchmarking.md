@@ -34,7 +34,9 @@ capability remains available for ordinary experiments.
 The benchmark protocol prescribes Earth, ten atmospheric levels, a 360-day
 year starting on 1 January of year 1, `seed=1`, `kick=0`, and disabled
 cloud-forcing diagnostics. T21 uses 32 atmospheric steps/day and T42 uses
-48. Other physics settings inherit source defaults. Default compilation
+72 (45 and 20 minutes, matching MoSt and the model defaults). The runner
+writes `NTSPD` explicitly to retain those timings across source revisions.
+Other physics settings inherit source defaults. Default compilation
 uses `-O3 -fdefault-real-8` for Fortran and `-O3` for C, without adding
 fast-math or native-architecture flags.
 
@@ -44,6 +46,10 @@ LSG-supplied land mask; T42 retains its native atmospheric mask because no
 T42 replacement is supplied in `lsg/dat`. The LSG grid stays at 72 × 76
 points with 22 levels. These workloads do not establish a scientifically
 validated coupled climate at either resolution.
+
+The aligned defaults change T42 benchmarks from 48 to 72 steps/day. Start
+a new results directory; historical T42 timings represent a different
+workload and the source/input compatibility checks remain applicable.
 
 ## Start with a small run
 

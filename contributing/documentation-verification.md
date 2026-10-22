@@ -12,6 +12,22 @@ updates check the merged developments identified below, including mainline
 change model sources. Source checks and runtime checks below are deliberately
 distinguished.
 
+## Issue #72: aligned atmospheric and coupling defaults
+
+Checked MoSt `PlasimSteps`, `CheckPlasimNamelist`, `InitNamelist`, and
+`WriteNamelistFile`; model `readnl` in `plasim.f90` and `oceanini` in
+`oceanmod.f90`; and the `clsgini`/`clsgstep` to LSG `inipar` timing path.
+Standard automatic T21/T31/T42 timesteps now match MoSt (45/30/20 minutes),
+with MoSt's T15/T63 table entries also matched in the model. Other grid
+fallback formulas outside those presets are retained. Zero or omitted `NAOMOD` resolves to ten times the
+actual atmospheric steps/day before the namelist echo and MPI broadcast.
+Valid positive explicit intervals retain precedence; fractional-day,
+subdaily, negative, and mismatched ocean-clock inputs stop before LSG.
+The timestep and coupling parameter rows, migration, restart cautions, and
+benchmark T42 workload metadata reflect these functional changes. Restart
+record layouts and the T21 numerical reference are unchanged; old T31/T42
+continuations must retain their original atmospheric timing explicitly.
+
 ## Historical chapter coverage
 
 | Original material | Current Sphinx destination | Code comparison and resulting update |

@@ -225,6 +225,17 @@ are unchanged.
 
 [`scripts/srv2nc`](scripts/srv2nc) converts PlaSim and LSG Service output to NetCDF4 with CDO. [`scripts/nc2sra`](scripts/nc2sra) and [`scripts/sra2nc`](scripts/sra2nc) convert between NetCDF and Service-format boundary data. The [`scripts` directory](scripts) also contains monthly postprocessing and boundary-data helpers.
 
+## Atmospheric timestep and LSG timing defaults
+
+MoSt and the model select 45/30/20-minute atmospheric timesteps for
+T21/T31/T42. With LSG enabled, omitted or zero `NAOMOD` selects ten
+atmospheric days: 320/480/720 steps at those Earth defaults. Positive
+explicit intervals must span whole days. Earlier direct T31/T42 defaults
+were 36/30 minutes, and a fixed 320-step coupling interval did not preserve
+ten days at higher resolutions. These timing changes affect existing
+experiments; preserve original valid timing settings explicitly for
+continuation. See [coupling defaults and migration](docs/user/parallel-ocean.md).
+
 ## Performance benchmarks
 
 A separate [benchmark suite](benchmarks/README.md) measures repeated optimized
