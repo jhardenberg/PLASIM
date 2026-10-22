@@ -3,10 +3,25 @@
 Run from the repository root:
 
 ```sh
+python3 tests/run_tests.py -v
+```
+
+By default, `tests/run_tests.py` (also callable as `python3 -m tests`) runs
+test suites in parallel across up to 4 worker processes (`-j 4`) or the
+available CPU cores, and builds model binaries using parallel Make (`make -j`).
+To set the test worker count explicitly:
+
+```sh
+python3 tests/run_tests.py -j 4 -v
+```
+
+The standard single-process discovery command also remains supported:
+
+```sh
 python3 -m unittest discover -s tests -v
 ```
 
-GitHub Actions runs this command on pushes to `master` or `main`. It can also
+GitHub Actions runs the parallel test command on pushes to `master` or `main`. It can also
 be started manually from the Actions tab once the workflow is on the default
 branch. On pull requests targeting either branch, add the exact `run tests`
 label to start a run; later commits rerun the tests while the label remains.

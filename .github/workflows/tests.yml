@@ -30,4 +30,4 @@ jobs:
           mpif90 --version
           mpiexec --version
       - name: Run tests
-        run: python3 -m unittest discover -s tests -v
+        run: python3 tests/run_tests.py -v -j 4

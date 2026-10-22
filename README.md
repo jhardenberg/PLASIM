@@ -92,6 +92,12 @@ See the [benchmarking guide](benchmarks/README.md) and the manual's [benchmarkin
 Run the automated regression test suite from the repository root:
 
 ```sh
+python3 tests/run_tests.py -v
+```
+
+or with the standard single-process discovery command:
+
+```sh
 python3 -m unittest discover -s tests -v
 ```
 
