@@ -79,6 +79,11 @@ Compiler executables and optimization flags can also be overridden explicitly:
 `benchmarks/run.py` verifies that the serial Fortran compiler and MPI Fortran wrapper belong to the same compiler family (e.g. both Intel or both GNU) when parallel ranks are executed, stopping with an error if an inconsistent toolchain is detected. All compiler settings and flags are recorded in `results.json` and verified for
 compatibility during comparison.
 
+The aligned defaults change the T42 workload from 48 to 72 atmospheric
+steps/day. Use a new results directory after updating; continuation and
+comparison must retain their source/input compatibility checks. Historical
+T42 results used a different timestep and are not matching workloads.
+
 ## Run a benchmark
 
 From the repository root:

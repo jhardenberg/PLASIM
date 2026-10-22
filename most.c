@@ -75,7 +75,7 @@ int PlasimSteps[RESOLUTIONS] =
    45,  // T21
    30,  // T31
    20,  // T42
-   10   // T63
+   15   // T63
 };
 
 int PumaSteps[RESOLUTIONS] =
@@ -1014,6 +1014,7 @@ void InitNamelist(void)
    NL_r(PLASIM,"radmod" ,"CO2"     ,360.0);
    NL_i(PLASIM,"plasim" ,"KICK"    ,  1);
    NL_i(PLASIM,"plasim" ,"MPSTEP"  ,  0);
+   NL_i(PLASIM,"oceanmod","NAOMOD" ,  0); // Automatic ten-day LSG coupling
    NL_i(PLASIM,"plasim" ,"NAQUA"   ,  0);
    NL_i(PLASIM,"plasim" ,"NDIAG"   ,  0);
    NL_i(PLASIM,"plasim" ,"NGUIDBG" ,  0);

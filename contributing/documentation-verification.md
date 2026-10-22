@@ -35,6 +35,49 @@ nonzero returned heat flux). Strict Sphinx HTML and reference-inventory
 checks passed. These are execution checks, not climate/scaling validation.
 Previous MPI smoke results retain their historical timing scope above.
 
+## Issue #72: aligned atmospheric and coupling defaults
+
+Checked MoSt `PlasimSteps`, `CheckPlasimNamelist`, `InitNamelist`, and
+`WriteNamelistFile`; model `readnl` in `plasim.f90` and `oceanini` in
+`oceanmod.f90`; and the `clsgini`/`clsgstep` to LSG `inipar` timing path.
+Standard automatic T21/T31/T42 timesteps now match MoSt (45/30/20 minutes),
+with T15/T63 presets of 60/15 minutes in both MoSt and the model. T63's
+15-minute timestep gives 96 steps/Earth day and 960 steps per ten-day
+exchange; prior master used 20 minutes automatically and 10 in MoSt. Other grid
+fallback formulas outside those presets are retained. Zero or omitted `NAOMOD` resolves to ten times the
+actual atmospheric steps/day before the namelist echo and MPI broadcast.
+Valid positive explicit intervals retain precedence; fractional-day,
+subdaily, negative, and mismatched ocean-clock inputs stop before LSG.
+The timestep and coupling parameter rows, migration, restart cautions, and
+benchmark T42 workload metadata reflect these functional changes. Restart
+record layouts and the T21 numerical reference are unchanged; old T31/T42
+continuations must retain their original atmospheric timing explicitly.
+
+Validation for PR #73: all 59 regression tests passed with Homebrew GNU
+Fortran 15.2.0 and Open MPI 5.0.7. The new real coupled resolution checks
+use `-O2 -fdefault-real-8` (C `-O0`), with serial twenty-day and two-rank
+ten-day runs at T21/T31/T42. They confirm 45/30/20-minute steps,
+320/480/720-step exchanges, 864000-second LSG timesteps, the expected
+atmospheric/ocean advance counts, finite evolving ocean temperature and
+salinity, and nonzero exchanged stresses/heat fluxes. Automatic and explicit
+MoSt presets produce byte-identical first-step atmospheric state. T31/T42
+continuous twenty-day runs match ten-plus-ten-day continuations byte for
+byte for both restart files and final ocean output. Explicit atmospheric
+minute/step-count overrides retain ten-day coupling; invalid intervals and
+mismatched clocks fail before LSG in serial and MPI. The C harness checks
+MoSt's actual preset/writer path, including `NAOMOD=0`. T15/T63 model presets
+were checked from source only; no new Earth boundary-data runs exist for them.
+Existing numerical references, tolerances, and debug-build flags are retained.
+
+All 29 benchmark-tool tests passed. A ten-day T42 benchmark smoke run passed
+both ocean configurations at 72 steps/day (final atmospheric step 26640;
+one LSG step); the runner's explicit `NTSPD` keeps revision workloads aligned.
+Strict HTML and inventory/parameter checks passed. Browser review confirmed
+the timing table, navigation, and migration text. External link checking was
+stopped after repeated GitHub rate limits. These short checks do not establish
+long-term climate validity or MPI scaling. Timing migrations are functional
+changes, not numerical equivalence claims for old T31/T42 climates.
+
 ## Historical chapter coverage
 
 | Original material | Current Sphinx destination | Code comparison and resulting update |
@@ -43,7 +86,7 @@ Previous MPI smoke results retain their historical timing scope above.
 | Chapter 2: module overview | User: components; developer: architecture | Actual default `make_plasim` variants and lifecycle calls replace obsolete PUMA/module/group references; SIMBA has `vegmod_nl`; sea exchange declaration default is one step. |
 | Chapter 3: parallel execution | User: parallel/LSG; developer: architecture/testing | `resmod`, shared dimensions, `mpimod`, and MoSt core checks: compiled rank count, latitude divisibility, padded spectral layout; no manual `use mpi` editing recipe. |
 | Chapter 4: GUI | User: GUI | `pumax.c:ReadConfig`, plot/palette registries, `guimod`, and sent arrays: file precedence, actual names/scaling, and separate X11 dependencies; old PUMA editors are not promoted as PlaSim workflows. |
-| Chapter 5: postprocessor | User: postprocessing; reference: output | `burn7.cpp:Usage`, `parini`, option parser, `InitAll`, writers; `srv2nc` branches: direct CDO conversion now exists, current horizontal/vertical defaults are G/P, `-g` is GrADS, wind codes are 131/132. |
+| Chapter 5: postprocessor | User: postprocessing; reference: output | `burn7.cpp:Usage`, `parini`, option parser, `InitAll`, writers; `srv2nc`, `burn.sh`, and `postmon.sh`: direct CDO conversion now exists, current horizontal/vertical defaults are G/P, `-g` is GrADS, wind codes are 131/132; `postmon.sh` monthly extraction and fixed-field handling documented against source. |
 | Chapter 6: graphics | User: visualization | Retained CDO inspection and replaced the GrADS/Vis5D recipes with an xarray/Matplotlib map. Checked `srv2nc` code 167, kelvin units, and Gaussian `lon`/`lat` coordinates; the literal-included Python script uses the first output sample without further averaging or conversion. |
 | Chapter 7: columns/soundings | Excluded from manual | Obsolete `COLUMN`/`YMODE` macro and single-column experiment recipe omitted from the manual as unsupported in PlaSim-LSG TNG. |
 | Appendix A: symbols/constants | Reference: units; user: planets | Shared dimension formulas and current planet presets replace rounded old constants. Derivation-only notation stays with the excluded scientific Reference Manual. |

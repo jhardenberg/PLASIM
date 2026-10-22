@@ -63,6 +63,10 @@ be copied into those files.
 - Land `RLUE`/`CO2CONV` use current SIMBA coefficients, not the old appendix
   values. Field capacity starts from the planet, then can be spatially
   overridden. Snow depth is water equivalent; soil thermal depths are metres.
+- Automatic atmospheric timesteps now match MoSt: T21/T31/T42 use 45/30/20
+  minutes, with a 15-minute T63 preset. `NAOMOD=0` or omission selects ten atmospheric days rather than
+  a fixed 320-step interval. Explicit LSG intervals must span whole days;
+  see {doc}`../../user/parallel-ocean` for input/restart migration.
 - Atmosphere–ice exchange defaults to one step, not 32. Ice/ocean `NOUT`
   defaults are derived from the caller before reading their local inputs;
   their `TAUNC` values use fixed Earth days.
