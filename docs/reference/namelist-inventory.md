@@ -113,12 +113,12 @@ minwavel
 
 ## `rainmod_nl` — `rainmod.f90`
 
-Source: {repo}`plasim/src/rainmod.f90` (20 names).
+Source: {repo}`plasim/src/rainmod.f90` (24 names).
 
 ```text
-kbeta, nprl, nprc, ndca, ncsurf, nmoment, nshallow, nstorain, rcrit,
+kbeta, kbetta, nprl, nprc, ndca, ncsurf, nmoment, nshallow, nstorain, rcrit,
 clwcrit1, clwcrit2, pdeep, rkshallow, gamma, nclouds, pdeepth, nevapprec,
-nbeta, rhbeta, rbeta
+nbeta, rhbeta, rbeta, nconvection, rsoft, tadjust
 ```
 
 ## `seamod_nl` — `seamod.f90`

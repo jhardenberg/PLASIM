@@ -466,6 +466,39 @@ class PlaSimTests(unittest.TestCase):
                 values = doubles(state[field])
                 self.assertTrue(all(map(math.isfinite, values)))
 
+    def test_unified_convection_schemes(self) -> None:
+        """Verify unified convection schemes run 1 day and produce finite states."""
+        for scheme_id, scheme_name in (
+            (0, "kuo_default"),
+            (1, "betts_miller"),
+            (2, "mca"),
+            (3, "kuo_old"),
+        ):
+            with self.subTest(scheme=scheme_name, nconvection=scheme_id):
+                run = self.prepare_run(f"convection-{scheme_name}", days=1)
+                (run / "rainmod_namelist").write_text(
+                    f"&rainmod_nl\n nconvection={scheme_id}\n/\n",
+                    encoding="ascii",
+                )
+                self.run_model(run)
+                status = records(run / "plasim_status")
+                for field in ("dt", "dq", "dalb", "dls", "sz", "sd", "st", "sq", "sp"):
+                    values = doubles(status[field])
+                    self.assertTrue(all(map(math.isfinite, values)), f"Non-finite in {field} for {scheme_name}")
+                diag = (run / "plasim_diag").read_text()
+                self.assertIn("Namelist RAINMOD_NL", diag)
+
+    def test_legacy_kbetta_alias(self) -> None:
+        """Verify legacy KBETTA namelist parameter aliases to kbeta."""
+        run = self.prepare_run("legacy-kbetta", days=0, steps=1)
+        (run / "rainmod_namelist").write_text(
+            "&rainmod_nl\n kbetta=0\n/\n",
+            encoding="ascii",
+        )
+        self.run_model(run)
+        diag = (run / "plasim_diag").read_text()
+        self.assertIn("KBETA=0", diag.upper().replace(" ", ""))
+
 
 class CalendarTests(unittest.TestCase):
     @classmethod
