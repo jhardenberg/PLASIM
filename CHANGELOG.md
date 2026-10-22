@@ -2,7 +2,7 @@
 
 Notable changes in the `master` branch are summarized here in a format inspired by [Keep a Changelog](https://keepachangelog.com/). This history starts with the [2014 source import](https://github.com/jhardenberg/PLASIM/commit/71bfcbf), covers the releases tagged [`1.0`](https://github.com/jhardenberg/PLASIM/releases/tag/1.0) and [`v1.0.1`](https://github.com/jhardenberg/PLASIM/releases/tag/v1.0.1), and describes the planetary developments as the planned v1.1 release. The bullets highlight changes relevant to users; the comparison links provide the full commit history.
 
-## [v1.1](https://github.com/jhardenberg/PLASIM/compare/v1.0.1...master) — planned
+## [v1.1](https://github.com/jhardenberg/PLASIM/compare/v1.0.1...master)
 
 Changes on `master` since the `v1.0.1` tag.
 
