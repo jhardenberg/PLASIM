@@ -9,6 +9,12 @@
 !
 
       integer :: kbeta    = 1 ! switch for beta in kuo (1/0=yes/no, 2=expl.)
+      integer :: kbetta   = -1! legacy alias for kbeta
+      integer :: nconvection = 0 ! switch for convection scheme:
+                                 ! 0: Kuo (default)
+                                 ! 1: Betts-Miller (mkbm)
+                                 ! 2: Moist Convective Adjustment (mca)
+                                 ! 3: Historical Kuo (kuo_old)
       integer :: nprl     = 1 ! switch for large scale precip (1/0=yes/no)
       integer :: nprc     = 1 ! switch for large convective precip (1/0=yes/no)
       integer :: nclouds  = 1 ! switch for cloud generation (1/0=yes/no)
@@ -29,6 +35,8 @@
       real :: pdeepth = 70000.! pressure threshold for shallow con. 
       real :: rkshallow = 10. ! diffusivity for shallow convection (m*m/s)
       real :: gamma   = 0.01  ! tuning parameter for evaporation of precip.
+      real :: rsoft   = 1.0   ! rel. humidity value for 'soft' convection (mca)
+      real :: tadjust = 1.0   ! adjustment time scale (in timesteps; >= 1.0!) (mca)
 
       real :: rcrit(NLEV)    ! critical relative hum. for non conv. clouds
 
@@ -66,9 +74,10 @@
       subroutine rainini
       use rainmod
 !
-      namelist/rainmod_nl/kbeta,nprl,nprc,ndca,ncsurf,nmoment,nshallow  &
-     &       ,nstorain,rcrit,clwcrit1,clwcrit2,pdeep,rkshallow,gamma    &
-     &       ,nclouds,pdeepth,nevapprec,nbeta,rhbeta,rbeta      
+      namelist/rainmod_nl/kbeta,kbetta,nprl,nprc,ndca,ncsurf,nmoment    &
+     &       ,nshallow,nstorain,rcrit,clwcrit1,clwcrit2,pdeep,rkshallow &
+     &       ,gamma,nclouds,pdeepth,nevapprec,nbeta,rhbeta,rbeta        &
+     &       ,nconvection,rsoft,tadjust
 !
 !     reset defaults (according to general setup... tuning)
 !
@@ -85,6 +94,11 @@
          open(11,file=rainmod_namelist)
          read(11,rainmod_nl)
          close(11)
+         if (kbetta >= 0) kbeta = kbetta
+         if (nconvection < 0 .or. nconvection > 3) then
+            write(nud,*) 'Invalid nconvection=', nconvection, ' resetting to 0 (Kuo)'
+            nconvection = 0
+         endif
          write(nud,'(/," ***********************************************")')
          write(nud,'(" * RAINMOD ",a35," *")') trim(version)
          write(nud,'(" ***********************************************")')
@@ -106,6 +120,7 @@
       call mpbci(nstorain)
       call mpbci(nevapprec)
       call mpbci(nbeta)
+      call mpbci(nconvection)
       call mpbcr(rbeta)
       call mpbcr(rhbeta)
       call mpbcr(clwcrit1)
@@ -114,7 +129,8 @@
       call mpbcr(pdeepth)
       call mpbcr(rkshallow)
       call mpbcr(gamma)
-      call mpbcrn(rcrit,NLEV)
+      call mpbcr(rsoft)
+      call mpbcr(tadjust)
       call mpbcrn(rcrit,NLEV)
 !
 !     smoothing factor for cloud suppression
@@ -148,36 +164,55 @@
       dprl(:)=0.
       dprc(:)=0.
       dprs(:)=0.
+      dprcl(:,:)=0.
+      dprll(:,:)=0.
+      dprscl(:,:)=0.
+      dprsll(:,:)=0.
 
 !
 !**   1) transfer adiabatic q-tendencies to grid point space
-!        (needed for kuo scheme)
+!        (needed for kuo schemes)
 !
 
-      if(nprc == 1) call mkdqtgp
+      if(nprc == 1 .and. (nconvection == 0 .or. nconvection == 3)) call mkdqtgp
 
 !
-!**   2) kuo convection
+!**   2) convection / moist convective adjustment
 !
+      if (nconvection == 1 .or. nconvection == 2) then
+         if(ntime == 1) call mksecond(zsec1,0.)
+         if(ndca == 1) call mkdca
+         if(ntime == 1) then
+            call mksecond(zsec1,zsec1)
+            time4dca=time4dca+zsec1
+         endif
 
-      if(ntime ==1) call mksecond(zsec1,0.)
+         if(ntime == 1) call mksecond(zsec1,0.)
+         if(nprc == 1) then
+            if(nconvection == 1) call mkbm
+            if(nconvection == 2) call mca
+         endif
+         if(ntime == 1) then
+            call mksecond(zsec1,zsec1)
+            time4prc=time4prc+zsec1
+         endif
+      else
+         if(ntime == 1) call mksecond(zsec1,0.)
+         if(nprc == 1) then
+            if(nconvection == 0) call kuo
+            if(nconvection == 3) call kuo_old
+         endif
+         if(ntime == 1) then
+            call mksecond(zsec1,zsec1)
+            time4prc=time4prc+zsec1
+         endif
 
-      if(nprc == 1) call kuo
-     
-      if(ntime ==1) then
-       call mksecond(zsec1,zsec1)
-       time4prc=time4prc+zsec1
-      endif
-
-!
-!**   3) dry convective adjustment
-!
-
-      if(ntime ==1) call mksecond(zsec1,0.)
-      if(ndca == 1) call mkdca
-      if(ntime ==1) then
-       call mksecond(zsec1,zsec1)
-       time4dca=time4dca+zsec1
+         if(ntime == 1) call mksecond(zsec1,0.)
+         if(ndca == 1) call mkdca
+         if(ntime == 1) then
+            call mksecond(zsec1,zsec1)
+            time4dca=time4dca+zsec1
+         endif
       endif
 
 !
@@ -2283,3 +2318,1949 @@
 
       return
       end subroutine mkrain
+
+
+subroutine mkbm
+      use rainmod
+      parameter(zpdeep=70000.)   ! deep convection threshold
+      parameter(zstab=0.85)      ! fraction of moist static stability
+      parameter(zdpbase=-2500.)  ! saturation point difference at cloud base
+      parameter(zdpfreez=-4000.) ! saturation point difference at freezing l.
+      parameter(zdptop=-2000.)   ! saturation point difference at cloud top
+      parameter(zdpsh=-5000.)    ! saturation point difference for shallow c.
+      parameter(ztaud=7200.)     ! adjustment time scale for deep c.
+      parameter(ztaus=14400.)    ! adjustment time scale for shallow c.
+      parameter(zbeta=1.0)       ! beta
+
+!
+!     local arrays
+!
+
+      integer ilift(NHOR)    ! lifting level (= cloud base)
+      integer ifreez(NHOR)   ! freezing level
+      integer itop(NHOR)     ! cloud top level
+      integer ideep(NHOR)    ! flag for deep convection
+      integer ishallow(NHOR) ! flag for shallow convection
+      integer icf(NHOR,NLEV) ! flag for convective layers
+      real zqe(NHOR,NLEV)    ! moisture of environmental air
+      real zte(NHOR,NLEV)    ! temperatur of environmental air
+      real zdqrdt(NHOR,NLEV) ! dqref/dTref
+      real zdqdt(NHOR,NLEV)  ! q-tendency
+      real zdtdt(NHOR,NLEV)  ! t-tendency
+      real zl(NHOR,NLEV)     ! latent heat of vapourisation/sublimation
+      real zcp(NHOR,NLEV)    ! specific heat
+      real zqp(NHOR,NLEV)    ! humidity of lifted parcel
+      real ztp(NHOR,NLEV)    ! temperature of lifted parcel
+      real ztref(NHOR,NLEV)  ! reference humidity profile
+      real zqref(NHOR,NLEV)  ! reference temperature profile
+      real zdpres(NHOR,NLEV) ! saturation pressure difference
+      real zptop(NHOR)       ! cloud top pressure
+      real zpfreez(NHOR)     ! freezing level pressure
+      real zplift(NHOR)      ! lifting level pressure
+      real zdtfreez(NHOR)    ! Tref-Tp at freezing level
+      real zener(NHOR)       ! sum(cp (Tr-T) + L (qr-q))
+      real zsumt(NHOR)       ! sum(tr-t)
+      real zsumq(NHOR)       ! sum(qr-q)
+      real zdsig(NHOR)       ! sum(dsigma)
+      real zprc(NHOR)        ! precipitation
+      real zspb(NHOR)        ! saturation pressure at cloud base
+      real zslope(NHOR)      ! mixing line slope
+
+
+!!
+!     array for momentum mixing
+!
+      real zue(NHOR,NLEV)    ! u of environmental air
+      real zve(NHOR,NLEV)    ! v of environmental air
+      real zdudt(NHOR,NLEV)  ! u-momentum difference (cloud-environment)
+      real zdvdt(NHOR,NLEV)  ! v-momentum difference (cloud-environment)
+      real zup(NHOR)         ! reference (cloud) u
+      real zvp(NHOR)         ! reference (cloud) v
+      real zsums(NHOR)       ! sum(dsigma) for mixed levels
+!!
+
+!
+!*    dbug arrays
+!
+
+      integer :: kmaxl(1), kminl(1)
+
+!
+!*    allocatable arrays for dbug diagnostic
+!
+
+      real, allocatable :: zprf1(:,:)
+      real, allocatable :: zprf2(:,:)
+      real, allocatable :: zprf3(:)
+      real, allocatable :: zprf4(:)
+      real, allocatable :: zprf5(:)
+      real, allocatable :: zprf6(:)
+      real, allocatable :: zprf7(:)
+      real, allocatable :: zprf8(:)
+      real, allocatable :: zprf9(:)
+      real, allocatable :: zprf10(:)
+      real, allocatable :: zprf11(:)
+      real, allocatable :: zprf12(:)
+
+      zeps=0.01              ! a small number
+
+!
+!*    0) initialize some fields
+!
+
+      ilift(:)=-1
+      itop(:)=-1
+      ifreez(:)=-1
+      ideep(:)=0
+      ishallow(:)=0
+      icctot(:)=0
+!
+      zptop(:)=1.E10
+      zpfreez(:)=1.E10
+      zplift(:)=1.E10
+      zprc(:)=0.
+!
+      zdtdt(:,:)=0.
+      zdqdt(:,:)=0.
+      dprcl(:,:)=0.
+      dprscl(:,:)=0.
+      icclev(:,:)=0
+
+!
+!*    1) update q and t
+!
+
+      zqe(:,:)=dq(:,1:NLEV)+dqdt(:,1:NLEV)*deltsec2
+      zte(:,:)=dt(:,1:NLEV)+dtdt(:,1:NLEV)*deltsec2
+
+!
+!     set L & CP depending on t
+!
+
+      zcp(:,:)=ACPD*(1.+ADV*zqe(:,:))
+      where(zte(:,:) < TMELT)
+       zl(:,:)=ALS
+      elsewhere
+       zl(:,:)=ALV
+      endwhere
+
+!
+!*    2) search for lifting level
+!
+
+      do jlev=NLEM,2,-1
+       jlep=jlev+1
+       zfac=(sigma(jlev)/sigma(jlep))**akap
+       do jhor=1,NHOR
+        if(ilift(jhor) == -1) then
+
+!
+!     adiabatic uplift of parcel from below
+!
+
+         ztnew=zte(jhor,jlep)*zfac
+         zqnew=zqe(jhor,jlep)
+
+!
+!     saturation humidity:
+!
+
+         zqsnl=RDBRV*RA1*exp(RA2*(ztnew-TMELT)/(ztnew-RA4))             &
+     &        /(dp(jhor)*sigma(jlev))
+         zcor=1./(1.-(1./RDBRV-1.)*zqsnl)
+         zqsnl=zqsnl*zcor
+
+!
+!     condensation if supersaturated
+!
+
+         if(zqsnl < zqnew) then
+
+!
+!     update constants (ice/water phase)
+!
+
+          if(ztnew < TMELT) then
+           zlcp=ALS/(ACPD*(1.+ADV*zqnew))
+          else
+           zlcp=ALV/(ACPD*(1.+ADV*zqnew))
+          endif
+
+!
+!     temperature correction term
+!
+
+          zdqsdt=RA2*(TMELT-RA4)*zqsnl*zcor/((ztnew-RA4)*(ztnew-RA4))
+
+
+!
+!     update t and q
+!
+
+          zrain=(zqnew-zqsnl)/(1.+zlcp*zdqsdt)
+          ztnew=ztnew+zlcp*zrain
+          zqnew=zqnew-zrain
+
+!
+!     second iteration:
+!
+
+          zqsnl=RDBRV*RA1*exp(RA2*(ztnew-TMELT)/(ztnew-RA4))            &
+     &         /(dp(jhor)*sigma(jlev))
+          zcor=1./(1.-(1./RDBRV-1.)*zqsnl)
+          zqsnl=zqsnl*zcor
+          zdqsdt=RA2*(TMELT-RA4)*zqsnl*zcor/((ztnew-RA4)*(ztnew-RA4))
+          zrain=(zqnew-zqsnl)/(1.+zlcp*zdqsdt)
+          ztnew=ztnew+zlcp*zrain
+          zqnew=zqnew-zrain
+
+!
+!     check for buyoncy
+!
+
+          if(ztnew > zte(jhor,jlev)) then
+
+!
+!     if convection: set lifting level and parcel q,t (zpq,ztp)
+!
+
+           ilift(jhor)=jlep
+           itop(jhor)=jlev
+           zplift(jhor)=dp(jhor)*sigma(jlep)
+           zptop(jhor)=dp(jhor)*sigma(jlev)
+           ztp(jhor,jlev)=ztnew
+           zqp(jhor,jlev)=zqnew
+          endif
+         endif
+        endif
+       enddo
+      enddo
+
+!
+!*    3) search for top level
+!
+
+      do jlev=NLEM,1,-1
+       jlep=jlev+1
+       zfac=(sigma(jlev)/sigma(jlep))**akap
+       do jhor=1,NHOR
+        if(jlep == itop(jhor)) then
+
+!
+!     3a) parcel uplift
+!
+
+         ztnew=ztp(jhor,jlep)*zfac
+         zqnew=zqp(jhor,jlep)
+
+!
+!     saturation humidity
+!
+
+         zqsnl=RDBRV*RA1*exp(RA2*(ztnew-TMELT)/(ztnew-RA4))             &
+     &        /(dp(jhor)*sigma(jlev))
+         zcor=1./(1.-(1./RDBRV-1.)*zqsnl)
+         zqsnl=zqsnl*zcor
+
+!
+!     3b) more condensation
+!
+
+         if(zqsnl < zqnew) then
+
+!
+!     update constants (ice/water phase)
+!
+
+          if(ztnew < TMELT) then
+           zlcp=ALS/(ACPD*(1.+ADV*zqnew))
+          else
+           zlcp=ALV/(ACPD*(1.+ADV*zqnew))
+          endif
+
+!
+!     temperature correction term
+!
+
+          zdqsdt=RA2*(TMELT-RA4)*zqsnl*zcor/((ztnew-RA4)*(ztnew-RA4))
+
+!
+!     update t,q
+!
+
+          zrain=(zqnew-zqsnl)/(1.+zlcp*zdqsdt)
+          ztnew=ztnew+zlcp*zrain
+          zqnew=zqnew-zrain
+
+!
+!     second iteration:
+!
+
+          zqsnl=RDBRV*RA1*exp(RA2*(ztnew-TMELT)/(ztnew-RA4))            &
+     &         /(dp(jhor)*sigma(jlev))
+          zcor=1./(1.-(1./RDBRV-1.)*zqsnl)
+          zqsnl=zqsnl*zcor
+          zdqsdt=RA2*(TMELT-RA4)*zqsnl*zcor/((ztnew-RA4)*(ztnew-RA4))
+          zrain=(zqnew-zqsnl)/(1.+zlcp*zdqsdt)
+          ztnew=ztnew+zlcp*zrain
+          zqnew=zqnew-zrain
+
+!
+!     3c) check for buyoncy
+!
+
+          if(ztnew > zte(jhor,jlev)) then
+
+!
+!     3d) if further convection: update parcel q,t (zpq,ztp)
+!
+
+           itop(jhor)=jlev
+           zptop(jhor)=dp(jhor)*sigma(jlev)
+           ztp(jhor,jlev)=ztnew
+           zqp(jhor,jlev)=zqnew
+
+          endif
+         endif
+        endif
+       enddo
+      enddo
+
+!
+!     set flags for convetion types
+!
+
+      where(ilift(:) > 0 .and. zptop(:) <= zpdeep) ideep(:)=1
+      where(ilift(:) > 0 .and. zptop(:) > zpdeep)  ishallow(:)=1
+
+!
+!*    4) deep convection
+!
+!
+!     construct reference profiles
+!
+!     4a) temperature
+!
+
+      do jlev=NLEV,2,-1
+       jlep=jlev+1
+       jlem=jlev-1
+       do jhor=1,NHOR
+        if(ideep(jhor) == 1) then
+         if(ilift(jhor) == jlev) then
+
+!
+!     set reference temperature at cloud base
+!
+
+          ztref(jhor,jlev)=zte(jhor,jlev)
+          ztp(jhor,jlev)=zte(jhor,jlev)
+
+         elseif(ilift(jhor) > jlev .and. jlev >= itop(jhor)) then
+
+!
+!     make 1st guess reference temperature profile
+!
+
+          if(jlev > ifreez(jhor)) then
+           zfac=(sigma(jlev)/sigma(jlep))**akap
+           ztref(jhor,jlev)=ztref(jhor,jlep)*zfac                       &
+     &                     +zstab*(ztp(jhor,jlev)-ztp(jhor,jlep)*zfac)
+           if(ztref(jhor,jlev) <= TMELT .or. jlev <= itop(jhor)) then
+            ifreez(jhor)=jlev
+            zpfreez(jhor)=dp(jhor)*sigma(jlev)+zeps
+            zdtfreez(jhor)=ztref(jhor,jlev)-ztp(jhor,jlev)
+           endif
+          else
+           zpres=dp(jhor)*sigma(jlev)
+           zy=(zpfreez(jhor)-zpres)/(zpfreez(jhor)-zptop(jhor))
+           ztref(jhor,jlev)=ztp(jhor,jlev)                              &
+     &                     +zdtfreez(jhor)*(1.-zy*zy)
+          endif
+         endif
+        endif
+       enddo
+      enddo
+
+!
+!     4b) moisture
+!
+
+      do jlev=NLEV,2,-1
+       do jhor=1,NHOR
+        if(ideep(jhor) == 1) then
+         if(ilift(jhor) >= jlev .and. jlev >= itop(jhor)) then
+          zpres=dp(jhor)*sigma(jlev)
+          if(jlev > ifreez(jhor)) then
+           zdpres(jhor,jlev)=((zplift(jhor)-zpres)*zdpfreez             &
+     &                       +(zpres-zpfreez(jhor))*zdpbase)            &
+     &                      /(zplift(jhor)-zpfreez(jhor))
+          else
+           zdpres(jhor,jlev)=((zpfreez(jhor)-zpres)*zdptop              &
+     &                       +(zpres-zptop(jhor))*zdpfreez)             &
+     &                      /(zpfreez(jhor)-zptop(jhor))
+          endif
+          zfac=(1.+zdpres(jhor,jlev)/zpres)**akap
+          ztrp=ztref(jhor,jlev)*zfac
+          zqref(jhor,jlev)=RDBRV*RA1*exp(RA2*(ztrp-TMELT)/(ztrp-RA4))   &
+     &                    /(zpres+zdpres(jhor,jlev))
+          zcor=1./(1.-(1./RDBRV-1.)*zqref(jhor,jlev))
+          zqref(jhor,jlev)=zqref(jhor,jlev)*zcor
+          zdqrdt(jhor,jlev)=zfac*RA2*(TMELT-RA4)*zqref(jhor,jlev)*zcor                       &
+     &                     /((ztrp-RA4)*(ztrp-RA4))
+         endif
+        endif
+       enddo
+      enddo
+
+!
+!     4c) energy conservation
+!
+
+      do jiter=1,2
+       zener(:)=0.
+       zdsig(:)=0.
+       do jlev=NLEV,2,-1
+        do jhor=1,NHOR
+         if(ideep(jhor) == 1) then
+          if(ilift(jhor) >= jlev .and. jlev >= itop(jhor)) then
+           zener(jhor)=zener(jhor)+dsigma(jlev)                         &
+     &                *(zcp(jhor,jlev)*(ztref(jhor,jlev)-zte(jhor,jlev))&
+     &                 +zl(jhor,jlev)*(zqref(jhor,jlev)-zqe(jhor,jlev)))
+           zdsig(jhor)=zdsig(jhor)+dsigma(jlev)
+          endif
+         endif
+        enddo
+       enddo
+       where(ideep(:)==1) zener(:)=zener(:)/zdsig(:)
+       do jlev=NLEV,2,-1
+        do jhor=1,NHOR
+         if(ideep(jhor) == 1) then
+          if(ilift(jhor) >= jlev .and. jlev >= itop(jhor)) then
+           zpres=dp(jhor)*sigma(jlev)
+           zfac=(1.+zdpres(jhor,jlev)/zpres)**akap
+           zdener=zcp(jhor,jlev)+zl(jhor,jlev)*zdqrdt(jhor,jlev)
+           ztref(jhor,jlev)=ztref(jhor,jlev)-zener(jhor)/zdener
+           ztrp=ztref(jhor,jlev)*zfac
+           zqref(jhor,jlev)=RDBRV*RA1*exp(RA2*(ztrp-TMELT)/(ztrp-RA4))  &
+     &                     /(zpres+zdpres(jhor,jlev))
+           zcor=1./(1.-(1./RDBRV-1.)*zqref(jhor,jlev))
+           zqref(jhor,jlev)=zqref(jhor,jlev)*zcor
+           zdqrdt(jhor,jlev)=zfac*RA2*(TMELT-RA4)*zqref(jhor,jlev)*zcor &
+     &                      /((ztrp-RA4)*(ztrp-RA4))
+          endif
+         endif
+        enddo
+       enddo
+      enddo
+
+!
+!     4d) make tendencies and precip.
+!
+
+      icf(:,:)=0.
+      do jlev=NLEV,2,-1
+       do jhor=1,NHOR
+        if((ideep(jhor) == 1) .and.                                     &
+     &  (ilift(jhor) >= jlev .and. jlev >= itop(jhor))) then
+         zdtdt(jhor,jlev)=(ztref(jhor,jlev)-zte(jhor,jlev))/ztaud
+         zdqdt(jhor,jlev)=(zqref(jhor,jlev)-zqe(jhor,jlev))/ztaud
+         zprc(jhor)=zprc(jhor)-zdqdt(jhor,jlev)*dsigma(jlev)
+         dprcl(jhor,jlev)=-zdqdt(jhor,jlev)*dsigma(jlev)
+         if(jlev == ilift(jhor)) then
+          icf(jhor,jlev)=0
+         else
+          icf(jhor,jlev)=1
+         endif
+        endif
+       enddo
+      enddo
+
+!
+!     4e) switch points with negative precip to shallow convecton
+!
+
+      do jhor=1,NHOR
+       if(ideep(jhor) > 0 .and. zprc(jhor) < 0.) then
+        ishallow(jhor)=1
+        ideep(jhor)=2
+        zdtdt(jhor,:)=0.
+        zdqdt(jhor,:)=0.
+        dprcl(jhor,:)=0.
+        ztref(jhor,:)=0.
+        zqref(jhor,:)=0.
+        icf(jhor,:)=0
+       endif
+      enddo
+
+!
+!     set new top level for switched points
+!
+
+      do jlev=NLEM,3,-1
+       where(ideep(:) == 2 .and. sigma(jlev)*dp(:) > zpdeep)
+        itop(:)=jlev
+        zptop(:)=sigma(jlev)*dp(:)
+       endwhere
+      enddo
+      where(ideep(:) == 2 .and. zptop(:) < zpdeep) ishallow(:)=2
+
+!
+!*    5) shallow convection
+!
+
+      if(nshallow == 1) then
+       do jhor=1,NHOR
+        if(ishallow(jhor) == 1) then
+         jtop=itop(jhor)-2
+         jbase=ilift(jhor)
+         zzptop=dp(jhor)*sigma(jtop)
+         zttop=zte(jhor,jtop)
+         zqtop=zqe(jhor,jtop)
+         zpbase=dp(jhor)*sigma(jbase)
+         ztbase=zte(jhor,jbase)
+         zqbase=zqe(jhor,jbase)
+
+!
+!        mean th, q and t for mixing line
+!
+
+         zqm=0.5*(zqtop+zqbase)
+         zthm=0.5*(zttop*(100000./zzptop)**AKAP                         &
+     &            +ztbase*(100000./zpbase)**AKAP)
+         ztmix=zthm*(zzptop/100000.)**AKAP
+
+!
+!     saturation points
+!
+!     a) at profile base
+!
+
+         ze=zqbase*zpbase/(RDBRV+(1.-RDBRV)*zqbase)
+         ztsp=55.+2840./(3.5*ALOG(ztbase)-ALOG(ze)-0.2)
+         zpsbase=zpbase*(ztbase/ztsp)**AKAP
+!
+!     b) at profile top
+!
+
+         ze=zqtop*zzptop/(RDBRV+(1.-RDBRV)*zqtop)
+         ztsp=55.+2840./(3.5*ALOG(ztmix)-ALOG(ze)-0.2)
+         zpstop=zzptop*(ztmix/ztsp)**AKAP
+
+!
+!     slope of mixing line
+!
+
+         zdp=zpstop-zpsbase
+         zslope(jhor)=(zthm-ztbase*(100000./zpbase)**AKAP)/zdp
+        endif
+       enddo
+!
+!     reference profile
+!
+       do jlev=NLEV,1,-1
+        do jhor=1,NHOR
+         if(ishallow(jhor) == 1) then
+          if(jlev == ilift(jhor)) then
+           zp=dp(jhor)*sigma(jlev)
+           ztref(jhor,jlev)=zte(jhor,jlev)
+           zspb(jhor)=zp+zdpsh
+           zts=ztref(jhor,jlev)*(zspb(jhor)/zp)**AKAP
+           zqref(jhor,jlev)=RDBRV*RA1*exp(RA2*(zts-TMELT)/(zts-RA4))    &
+     &                     /zspb(jhor)
+           zcor=1./(1.-(1./RDBRV-1.)*zqref(jhor,jlev))
+           zqref(jhor,jlev)=zqref(jhor,jlev)*zcor
+          endif
+          if(jlev < ilift(jhor) .and. jlev >= itop(jhor)-1) then
+           zp=dp(jhor)*sigma(jlev)
+           zpl=dp(jhor)*sigma(jlev+1)
+           ztref(jhor,jlev)=(ztref(jhor,jlev+1)*(100000./zpl)**akap     &
+     &                      +zstab*zbeta*zslope(jhor)/(zp-zpl))         &
+     &                     *(zp/100000.)**AKAP
+
+
+           zsp=zspb(jhor)+zbeta*(zp-zspb(jhor)-zdpsh)
+           zts=ztref(jhor,jlev)*(zsp/zp)**AKAP
+           zqref(jhor,jlev)=RDBRV*RA1*exp(RA2*(zts-TMELT)/(zts-RA4))    &
+     &                     /zsp
+           zcor=1./(1.-(1./RDBRV-1.)*zqref(jhor,jlev))
+           zqref(jhor,jlev)=zqref(jhor,jlev)*zcor
+          endif
+         endif
+        enddo
+       enddo
+
+!
+!     energy conservation
+!
+
+       zsumt(:)=0.
+       zsumq(:)=0.
+       zdsig(:)=0.
+       do jlev=NLEV,1,-1
+        do jhor=1,NHOR
+         if(ishallow(jhor) == 1) then
+          if(jlev <= ilift(jhor) .and. jlev >= itop(jhor)-1) then
+           zsumt(jhor)=zsumt(jhor)                                      &
+     &                +(ztref(jhor,jlev)-zte(jhor,jlev))*dsigma(jlev)
+           zsumq(jhor)=zsumq(jhor)                                      &
+     &                +(zqref(jhor,jlev)-zqe(jhor,jlev))*dsigma(jlev)
+           zdsig(jhor)=zdsig(jhor)+dsigma(jlev)
+          endif
+         endif
+        enddo
+       enddo
+       do jlev=NLEV,1,-1
+        do jhor=1,NHOR
+         if(ishallow(jhor) == 1) then
+          if(jlev <= ilift(jhor) .and. jlev >= itop(jhor)-1) then
+           ztref(jhor,jlev)=ztref(jhor,jlev)-zsumt(jhor)/zdsig(jhor)
+           zqref(jhor,jlev)=zqref(jhor,jlev)-zsumq(jhor)/zdsig(jhor)
+           if(zqref(jhor,jlev) < 0.) ishallow(jhor)=3
+          endif
+         endif
+        enddo
+       enddo
+
+!
+!      add tendencies
+!
+
+       do jlev=1,NLEV
+        do jhor=1,NHOR
+         if(ishallow(jhor) == 1) then
+          if(jlev <= ilift(jhor) .and. jlev >= itop(jhor)-1) then
+           zdtdt(jhor,jlev)=(ztref(jhor,jlev)-zte(jhor,jlev))/ztaus
+           zdqdt(jhor,jlev)=(zqref(jhor,jlev)-zqe(jhor,jlev))/ztaus
+           if(jlev == ilift(jhor)) then
+            icf(jhor,jlev)=0
+           else
+            icf(jhor,jlev)=1
+           endif
+          endif
+         endif
+        enddo
+       enddo
+
+      endif
+
+!
+!*    6) make final dqdt, dtdt and precip.
+!
+
+!
+!     dqdt and dtdt
+!
+
+      dqdt(:,1:NLEV)=zdqdt(:,:)+dqdt(:,1:NLEV)
+      dtdt(:,1:NLEV)=zdtdt(:,:)+dtdt(:,1:NLEV)
+
+!
+!     precip. in m/s and snow fall
+!
+
+      dprc(:)=AMAX1(zprc(:),0.)*dp(:)/GA/1000.
+      where(dt(:,NLEV) <= TMELT) dprs(:)=dprs(:)+dprc(:)
+
+!
+!     flag and counter for clouds:
+!
+
+      do jlev=1,NLEV
+       where(icf(:,jlev) > 0)
+        icclev(:,jlev)=1
+        icctot(:)=icctot(:)+1
+       endwhere
+       if(sigma(jlev) < 0.4) then
+        where(icclev(:,jlev) == 1 .and. itop(:) == jlev)
+         icclev(:,jlev)=2
+        endwhere
+       endif
+      enddo
+
+!!
+!
+!*    7) momentum mixing
+!
+
+      if(nmoment == 1) then
+
+!
+!     7a) update u and v
+!
+
+       zue(:,:)=du(:,1:NLEV)+dudt(:,1:NLEV)*deltsec2
+       zve(:,:)=dv(:,1:NLEV)+dvdt(:,1:NLEV)*deltsec2
+
+!
+!     7b) reference u and v
+!
+
+       zup(:)=0.
+       zvp(:)=0.
+       zsums(:)=0.
+       do jlev=1,NLEV
+        where(ilift(:) >= jlev .and. itop(:) <= jlev                    &
+     &       .and. ideep(:) == 1)
+         zup(:)=zup(:)+zue(:,jlev)*dsigma(jlev)
+         zvp(:)=zvp(:)+zve(:,jlev)*dsigma(jlev)
+         zsums(:)=zsums(:)+dsigma(jlev)
+        endwhere
+        if(nshallow==1) then
+         where(ilift(:) >= jlev .and. jlev >= itop(:)-1                 &
+     &        .and. ishallow(:) == 1)
+          zup(:)=zup(:)+zue(:,jlev)*dsigma(jlev)
+          zvp(:)=zvp(:)+zve(:,jlev)*dsigma(jlev)
+          zsums(:)=zsums(:)+dsigma(jlev)
+         endwhere
+        endif
+       enddo
+       where(zsums(:) > 0.)
+        zup(:)=zup(:)/zsums(:)
+        zvp(:)=zvp(:)/zsums(:)
+       endwhere
+
+!
+!     7c) make and add tendencies
+!
+
+       do jlev=1,NLEV
+        where(ilift(:) >= jlev .and. itop(:) <= jlev                    &
+     &       .and. ideep(:) == 1)
+         zdudt(:,jlev)=(zup(:)-zue(:,jlev))/ztaud
+         zdvdt(:,jlev)=(zvp(:)-zve(:,jlev))/ztaud
+         dudt(:,jlev)=dudt(:,jlev)+zdudt(:,jlev)
+         dvdt(:,jlev)=dvdt(:,jlev)+zdvdt(:,jlev)
+        endwhere
+        if(nshallow==1) then
+         where(ilift(:) >= jlev .and. itop(:) <= jlev                   &
+     &        .and. ishallow(:) == 1)
+          zdudt(:,jlev)=(zup(:)-zue(:,jlev))/ztaus
+          zdvdt(:,jlev)=(zvp(:)-zve(:,jlev))/ztaus
+          dudt(:,jlev)=dudt(:,jlev)+zdudt(:,jlev)
+          dvdt(:,jlev)=dvdt(:,jlev)+zdvdt(:,jlev)
+         endwhere
+        endif
+       enddo
+!!!
+!     test printout
+!
+!       allocate(zprf1(NLON*NLAT,NLEV))
+!!       allocate(zprf2(NLON*NLAT,NLEV))
+!       call mpgagp(zprf1,zdudt,NLEV)
+!       call mpgagp(zprf2,zdvdt,NLEV)
+!       if(mypid==NROOT) then
+!        write(nud,*)'In momentum:'
+!        write(nud,*)'MIN/MAX du= ',minval(zprf1),maxval(zprf1)
+!        write(nud,*)'MIN/MAX dv= ',minval(zprf2),maxval(zprf2)
+!       endif
+!       deallocate(zprf1)
+!       deallocate(zprf2)
+!!
+      endif
+!!
+
+!
+!*    dbug diagnostic for nprint > 0 (see pumamod)
+!
+
+      if(nprint==1) then
+       allocate(zprf6(NLON*NLAT))
+       call mpgagp(zprf6,dprc,1)
+       if(mypid==NROOT) then
+        zzmax=MAXVAL(zprf6)*0.5*deltsec2*ntspd*1000.
+        kmaxl=MAXLOC(zprf6)
+        zzmin=MINVAL(zprf6)*0.5*deltsec2*ntspd*1000.
+        kminl=MINLOC(zprf6)
+        write(nud,*)'In MKBM:'
+        write(nud,*)'MAX prc= ',zzmax,' NHOR= ',kmaxl
+        write(nud,*)'MIN prc= ',zzmin,' NHOR= ',kminl
+       endif
+       deallocate(zprf6)
+      elseif(nprint==2) then
+       allocate(zprf1(NLON*NLAT,NLEV))
+       allocate(zprf2(NLON*NLAT,NLEV))
+       allocate(zprf3(NLON*NLAT))
+       allocate(zprf4(NLON*NLAT))
+       allocate(zprf5(NLON*NLAT))
+       allocate(zprf6(NLON*NLAT))
+       allocate(zprf7(NHOR))
+       allocate(zprf8(NHOR))
+       allocate(zprf9(NHOR))
+       zprf7(:)=real(ideep(:))
+       zprf8(:)=real(ishallow(:))
+       call mpgagp(zprf3,zprf7,1)
+       call mpgagp(zprf4,zprf8,1)
+       if(mypid==NROOT) then
+        write(nud,*)'In MKBM:'
+        write(nud,*)'ideep= ',zprf3(nprhor),' ishallow= ',zprf4(nprhor)
+       endif
+       zprf7(:)=real(ilift(:))
+       zprf8(:)=real(itop(:))
+       call mpgagp(zprf3,zprf7,1)
+       call mpgagp(zprf4,zprf8,1)
+       call mpgagp(zprf1,zdqdt,NLEV)
+       call mpgagp(zprf2,zdtdt,NLEV)
+       call mpgagp(zprf6,dprc,1)
+       if(mypid==NROOT) then
+        write(nud,*)'ilift= ',zprf3(nprhor),' itop= ',zprf4(nprhor)
+        do jlev=1,NLEV
+          zzdt=zprf2(nprhor,jlev)/deltsec2
+          zzdq=zprf1(nprhor,jlev)/deltsec2
+          write(nud,*)'L= ',jlev,' dtdt= ',zzdt,' dqdt= ',zzdq
+        enddo
+        write(nud,*)'prc (mm/day)= ',zprf6(nprhor)*1000.*ntspd*deltsec2*0.5
+       endif
+       deallocate(zprf1)
+       deallocate(zprf2)
+       deallocate(zprf3)
+       deallocate(zprf4)
+       deallocate(zprf5)
+       deallocate(zprf6)
+       deallocate(zprf7)
+       deallocate(zprf8)
+       deallocate(zprf9)
+      endif
+
+!
+!     franks dbug
+!
+
+      if(ndiaggp==1) then
+       dgp3d(:,:,8)=zdtdt(:,:)/deltsec2
+       dgp3d(:,:,16)=zdqdt(:,:)/deltsec2
+      end if
+
+      return
+      end subroutine mkbm
+
+subroutine mca
+      use rainmod
+!
+      parameter(zeps=1.E-3)   ! max. moist static energy residuum
+      parameter(niter=10)     ! max. no iterations
+!
+!     local arrays
+!
+      integer ilift(NHOR)    ! lifting level ( = cloud base)
+      integer itop(NHOR)     ! cloud top level
+      integer icon(NLEV)     ! flag
+      integer icf(NHOR,NLEV) ! flag (1 = effected by convection)
+      integer iiter(NHOR)    ! counter
+      real zqe(NHOR,NLEV)    ! moisture of environmental air
+      real zte(NHOR,NLEV)    ! temperatur of environmental air
+      real ztnew(NHOR,NLEV)  ! new temperature
+      real zqnew(NHOR,NLEV)  ! new moisture
+      real zlcp(NHOR,NLEV)   ! help array for factors (L/cp)
+      real zl(NHOR,NLEV)     ! help array for L
+      real zdqdt(NHOR,NLEV)  ! moisture diff. (parcel-environment)
+      real zdtdt(NHOR,NLEV)  ! temperature diff. (parcel-environment)
+      real zqse(NHOR,NLEV)   ! sat. moisture of environmental air
+
+!!
+!     array for momentum mixing
+!
+      real zue(NHOR,NLEV)    ! u of environmental air
+      real zve(NHOR,NLEV)    ! v of environmental air
+      real zdudt(NHOR,NLEV)  ! u-momentum difference (cloud-environment)
+      real zdvdt(NHOR,NLEV)  ! v-momentum difference (cloud-environment)
+      real zup(NHOR)         ! reference (cloud) u
+      real zvp(NHOR)         ! reference (cloud) v
+      real zsums(NHOR)       ! sum(dsigma) for mixed levels
+!!
+
+!
+!     dbuq arrays
+!
+
+      integer :: kmaxl(1),kminl(1)
+
+!
+!     allocatable arrays for dbug diagnostic
+!
+
+      real, allocatable :: zprf1(:,:)
+      real, allocatable :: zprf2(:,:)
+      real, allocatable :: zprf3(:)
+      real, allocatable :: zprf4(:)
+      real, allocatable :: zprf5(:)
+      real, allocatable :: zprf6(:)
+      real, allocatable :: zprf7(:)
+      real, allocatable :: zprf8(:)
+      real, allocatable :: zprf9(:)
+
+!
+!*    0) initialize some fields
+!
+
+      iiter(:)=0
+      ilift(:)=-1
+      itop(:)=-1
+      icctot(:)=0
+      icclev(:,:)=0
+      icf(:,:)=0
+      zdtdt(:,:)=0.
+      zdqdt(:,:)=0.
+      dprcl(:,:)=0.
+      dprscl(:,:)=0.
+
+!
+!*    1) update q and t, compute qs
+!
+
+      zqe(:,:)=dq(:,1:NLEV)+dqdt(:,1:NLEV)*deltsec2
+      zte(:,:)=dt(:,1:NLEV)+dtdt(:,1:NLEV)*deltsec2
+
+      do jlev=1,NLEV
+      do jhor=1,NHOR
+       zes=RA1*exp(RA2*(zte(jhor,jlev)-TMELT)/(zte(jhor,jlev)-RA4))
+       zqs=RDBRV*zes/(dp(jhor)*sigma(jlev))
+       zcor=1./(1.-(1./RDBRV-1.)*zqs)
+       zqse(jhor,jlev)=zqs*zcor
+      enddo
+      enddo
+
+!
+!*    2) set L and L/CP depending on T
+!
+
+      where(zte(:,:) < TMELT)
+       zlcp(:,:)=ALS/(ACPD*(1.+ADV*zqe(:,:)))
+       zl(:,:)=ALS
+      elsewhere
+       zlcp(:,:)=ALV/(ACPD*(1.+ADV*zqe(:,:)))
+       zl(:,:)=ALV
+      endwhere
+
+!
+!*    3) make convection
+!
+
+      do jlev1=NLEV,1,-1
+       do jhor=1,NHOR
+        icon(:)=0
+        kiter=0
+!
+!     compute saturation humidity (or threshold humidity if rsoft < 1)
+!
+        zes=RA1*exp(RA2*(zte(jhor,jlev1)-TMELT)/(zte(jhor,jlev1)-RA4))
+        zqs=RDBRV*zes/(dp(jhor)*sigma(jlev1))
+        zcor=1./(1.-(1./RDBRV-1.)*zqs)
+        zqs=zqs*zcor*rsoft
+!
+!     test if moisture exceeds threshold
+!
+        if(zqs <= zqe(jhor,jlev1)) then
+         icon(jlev1)=1
+!
+!     compute moist adiabatic temperature gradient (exponent)
+!
+         zdefac=RA2*(TMELT-RA4)/(zte(jhor,jlev1)-RA4)**2
+         zesdt=zdefac*zes
+         zp=sigma(jlev1)*dp(jhor)
+         zexp=GASCON/ACPD*(zp+RDBRV*zl(jhor,jlev1)                      &
+     &                    *zes/GASCON/zte(jhor,jlev1))                  &
+     &                   /(zp+RDBRV*zesdt*zl(jhor,jlev1)/ACPD)
+!
+!     moist static energy and its derivative
+!
+         ztn=zte(jhor,jlev1)
+         ztnew(jhor,jlev1)=ztn
+         zqnew(jhor,jlev1)=zqs
+         zdqsdt=zdefac*zqs*zcor
+         zenergy1=(ztn-zte(jhor,jlev1))*dsigma(jlev1)
+         zenergy2=zlcp(jhor,jlev1)*(zqs-zqe(jhor,jlev1))*dsigma(jlev1)
+         zdenergy=(1.+zlcp(jhor,jlev1)*zdqsdt)*dsigma(jlev1)
+!
+!     search depth of the convective column
+!
+         do jlev2=jlev1-1,1,-1
+          zfac=(sigma(jlev2)/sigma(jlev1))**zexp
+          ztn=zte(jhor,jlev1)*zfac
+          if(ztn > zte(jhor,jlev2) .and. icon(jlev2+1) == 1             &
+     &      .and. zqse(jhor,jlev2)*rsoft <= zqe(jhor,jlev2)) then
+           icon(jlev2)=1
+           zqs=RDBRV*RA1*exp(RA2*(ztn-TMELT)/(ztn-RA4))                 &
+     &        /(dp(jhor)*sigma(jlev2))
+           zcor=1./(1.-(1./RDBRV-1.)*zqs)
+           zqs=zcor*zqs*rsoft
+           ztnew(jhor,jlev2)=ztn
+           zqnew(jhor,jlev2)=zqs
+           zdqsdt=RA2*(TMELT-RA4)*zqs*zcor/((ztn-RA4)*(ztn-RA4))
+           zenergy1=(ztn-zte(jhor,jlev2))*dsigma(jlev2)                 &
+     &             +zenergy1
+           zenergy2=zlcp(jhor,jlev2)*(zqs-zqe(jhor,jlev2))*dsigma(jlev2)&
+     &             +zenergy2
+           zdenergy=zdenergy                                            &
+     &             +(1.+zlcp(jhor,jlev2)*zdqsdt)*dsigma(jlev2)*zfac
+           itop(jhor)=jlev2
+          endif
+         enddo
+!
+!     if convection: compute new t(jlev1)
+!
+         if(SUM(icon(:)) > 1) then
+          ilift(jhor)=jlev1
+          zenergy=zenergy1+zenergy2
+          do while(zenergy > zeps .and. kiter < niter)
+           ztn=ztnew(jhor,jlev1)-zenergy/zdenergy
+           zqs=RDBRV*RA1*exp(RA2*(ztn-TMELT)/(ztn-RA4))                 &
+     &        /(dp(jhor)*sigma(jlev1))
+           zcor=1./(1.-(1./RDBRV-1.)*zqs)
+           zqs=zcor*zqs*rsoft
+           ztnew(jhor,jlev1)=ztn
+           zqnew(jhor,jlev1)=zqs
+           zdqsdt=RA2*(TMELT-RA4)*zqs*zcor/((ztn-RA4)*(ztn-RA4))
+           zenergy1=(ztn-zte(jhor,jlev1))*dsigma(jlev1)
+           zenergy2=zlcp(jhor,jlev1)*(zqs-zqe(jhor,jlev1))*dsigma(jlev1)
+           zdenergy=(1.+zlcp(jhor,jlev1)*zdqsdt)*dsigma(jlev1)
+           do jlev2=jlev1-1,1,-1
+            if(icon(jlev2) == 1) then
+             zfac=(sigma(jlev2)/sigma(jlev1))**zexp
+             ztn=ztnew(jhor,jlev1)*zfac
+             zqs=RDBRV*RA1*exp(RA2*(ztn-TMELT)/(ztn-RA4))               &
+     &          /(dp(jhor)*sigma(jlev2))
+             zcor=1./(1.-(1./RDBRV-1.)*zqs)
+             zqs=zcor*zqs*rsoft
+             ztnew(jhor,jlev2)=ztn
+             zqnew(jhor,jlev2)=zqs
+             zdqsdt=RA2*(TMELT-RA4)*zqs*zcor/((ztn-RA4)*(ztn-RA4))
+             zenergy1=(ztn-zte(jhor,jlev2))*dsigma(jlev2)               &
+     &               +zenergy1
+             zenergy2=zlcp(jhor,jlev2)                                  &
+     &               *(zqs-zqe(jhor,jlev2))*dsigma(jlev2)               &
+     &               +zenergy2
+             zdenergy=zdenergy                                          &
+     &       +(1.+zlcp(jhor,jlev2)*zdqsdt)*dsigma(jlev2)*zfac
+            endif
+           enddo
+           kiter=kiter+1
+           zenergy=zenergy1+zenergy2
+          enddo
+         else
+          icon(jlev1)=0
+         endif
+        endif
+        icf(jhor,:)=icf(jhor,:)+icon(:)
+        iiter(jhor)=iiter(jhor)+kiter
+        do jlev2=jlev1,1,-1
+         if(icon(jlev2)==1 .and. zenergy2 <= 0.) then
+          zdtdt(jhor,jlev2)=ztnew(jhor,jlev2)-zte(jhor,jlev2)           &
+     &                     +zdtdt(jhor,jlev2)
+          zdqdt(jhor,jlev2)=zqnew(jhor,jlev2)-zqe(jhor,jlev2)           &
+     &                     +zdqdt(jhor,jlev2)
+          icf(jhor,jlev2)=icf(jhor,jlev2)+icon(jlev2)
+          zte(jhor,jlev2)=ztnew(jhor,jlev2)
+          zqe(jhor,jlev2)=zqnew(jhor,jlev2)
+         endif
+        enddo
+       enddo
+      enddo
+
+!
+!*    4) update dqdt and dtdt, compute precip.
+!
+
+      do jlev=1,NLEV
+!
+!     update dqdt and dtdt
+!
+       where(icf(:,jlev) > 0)
+        dqdt(:,jlev)=zdqdt(:,jlev)/(tadjust*deltsec2)                   &
+     &              +dqdt(:,jlev)
+        dtdt(:,jlev)=zdtdt(:,jlev)/(tadjust*deltsec2)                   &
+     &              +dtdt(:,jlev)
+!
+!     calc. precipitation
+!
+        dprc(:)=dprc(:)-zdqdt(:,jlev)*dsigma(jlev)
+        dprcl(:,jlev)=-zdqdt(:,jlev)*dsigma(jlev)/(tadjust*deltsec2)
+
+       endwhere
+!
+!     flag and counter for clouds:
+!
+
+       where(icf(:,jlev) > 0)
+        icclev(:,jlev)=1
+        icctot(:)=icctot(:)+1
+       endwhere
+       if(sigma(jlev) < 0.4) then
+        where(icclev(:,jlev) == 1 .and. itop(:) == jlev)
+         icclev(:,jlev)=2
+        endwhere
+       endif
+!
+      enddo
+
+!
+!*    5) final precip. in m/s and snow fall
+!
+
+      dprc(:)=dprc(:)*dp(:)/GA/1000./(tadjust*deltsec2)
+      where(dt(:,NLEV) <= TMELT) dprs(:)=dprs(:)+dprc(:)
+
+!!
+!
+!*    6) momentum mixing
+!
+
+      if(nmoment == 1) then
+
+!
+!     6a) update u and v
+!
+
+       zue(:,:)=du(:,1:NLEV)+dudt(:,1:NLEV)*deltsec2
+       zve(:,:)=dv(:,1:NLEV)+dvdt(:,1:NLEV)*deltsec2
+
+!
+!     6b) reference u and v
+!
+
+       zup(:)=0.
+       zvp(:)=0.
+       zsums(:)=0.
+       do jlev=1,NLEV
+        where(icf(:,jlev) > 0)
+         zup(:)=zup(:)+zue(:,jlev)*dsigma(jlev)
+         zvp(:)=zvp(:)+zve(:,jlev)*dsigma(jlev)
+         zsums(:)=zsums(:)+dsigma(jlev)
+        endwhere
+       enddo
+       where(zsums(:) > 0.)
+        zup(:)=zup(:)/zsums(:)
+        zvp(:)=zvp(:)/zsums(:)
+       endwhere
+
+!
+!     6c) make and add tendencies
+!
+
+       do jlev=1,NLEV
+        where(icf(:,jlev) > 0)
+          zdudt(:,jlev)=zup(:)-zue(:,jlev)
+          zdvdt(:,jlev)=zvp(:)-zve(:,jlev)
+          dudt(:,jlev)=dudt(:,jlev)+zdudt(:,jlev)/(tadjust*deltsec2)
+          dvdt(:,jlev)=dvdt(:,jlev)+zdvdt(:,jlev)/(tadjust*deltsec2)
+        endwhere
+       enddo
+!!!
+!     test printout
+!
+!       allocate(zprf1(NLON*NLAT,NLEV))
+!       allocate(zprf2(NLON*NLAT,NLEV))
+!       call mpgagp(zprf1,zdudt,NLEV)
+!       call mpgagp(zprf2,zdvdt,NLEV)
+!       if(mypid==NROOT) then
+!        write(nud,*)'In Kuo momentum:'
+!        write(nud,*)'MIN/MAX du= ',minval(zprf1),maxval(zprf1)
+!        write(nud,*)'MIN/MAX dv= ',minval(zprf2),maxval(zprf2)
+!       endif
+!       deallocate(zprf1)
+!       deallocate(zprf2)
+!!
+      endif
+!!
+
+!
+!*    dbug diagnostic for nprint > 0 (see pumamod)
+!
+
+      if(nprint==1) then
+       allocate(zprf6(NLON*NLAT))
+       call mpgagp(zprf6,dprc,1)
+       if(mypid==NROOT) then
+        zzmax=MAXVAL(zprf6)*0.5*deltsec2*ntspd*1000.
+        kmaxl=MAXLOC(zprf6)
+        zzmin=MINVAL(zprf6)*0.5*deltsec2*ntspd*1000.
+        kminl=MINLOC(zprf6)
+        write(nud,*)'In MCA:'
+        write(nud,*)'MAX prc= ',zzmax,' NHOR= ',kmaxl
+        write(nud,*)'MIN prc= ',zzmin,' NHOR= ',kminl
+       endif
+       deallocate(zprf6)
+      elseif(nprint==2) then
+       allocate(zprf1(NLON*NLAT,NLEV))
+       allocate(zprf2(NLON*NLAT,NLEV))
+       allocate(zprf3(NLON*NLAT))
+       allocate(zprf4(NLON*NLAT))
+       allocate(zprf5(NLON*NLAT))
+       allocate(zprf6(NLON*NLAT))
+       allocate(zprf7(NHOR))
+       allocate(zprf8(NHOR))
+       allocate(zprf9(NHOR))
+       zprf7(:)=real(ilift(:))
+       zprf8(:)=real(itop(:))
+       zprf9(:)=real(iiter(:))
+       call mpgagp(zprf1,zdqdt,NLEV)
+       call mpgagp(zprf2,zdtdt,NLEV)
+       call mpgagp(zprf3,zprf7,1)
+       call mpgagp(zprf4,zprf8,1)
+       call mpgagp(zprf5,zprf9,1)
+       call mpgagp(zprf6,dprc,1)
+       if(mypid==NROOT) then
+        write(nud,*)'In MCA:'
+        write(nud,*)'ilift= ',zprf3(nprhor),' itop= ',zprf4(nprhor)
+        write(nud,*)'No iterations= ',zprf5(nprhor)
+        do jlev=1,NLEV
+         if(zprf3(nprhor) >= jlev .and. zprf4(nprhor) <= jlev) then
+          zzdt=zprf2(nprhor,jlev)/deltsec2
+          zzdq=zprf1(nprhor,jlev)/deltsec2
+          write(nud,*)'L= ',jlev,' dtdt= ',zzdt,' dqdt= ',zzdq
+         endif
+        enddo
+        write(nud,*)'prc (mm/day)= ',zprf6(nprhor)*1000.*ntspd*deltsec2*0.5
+       endif
+       deallocate(zprf1)
+       deallocate(zprf2)
+       deallocate(zprf3)
+       deallocate(zprf4)
+       deallocate(zprf5)
+       deallocate(zprf6)
+       deallocate(zprf7)
+       deallocate(zprf8)
+       deallocate(zprf9)
+      endif
+
+!
+!     franks dbug
+!
+
+      if(ndiaggp==1) then
+       dgp3d(:,:,8)=zdtdt(:,:)/deltsec2
+       dgp3d(:,:,16)=zdqdt(:,:)/deltsec2
+      end if
+!
+      return
+      end subroutine mca
+
+subroutine kuo_old
+      use rainmod
+
+!
+!     local arrays
+!
+
+      integer ilift(NHOR)    ! lifting level (= cloud base + 1)
+      integer itop(NHOR)     ! cloud top level
+      real zqe(NHOR,NLEV)    ! moisture of environmental air
+      real zte(NHOR,NLEV)    ! temperatur of environmental air
+      real zdqtot(NHOR,NLEV) ! total moisture accession in resp. layer
+      real zdqdt(NHOR,NLEV)  ! moisture diff. (parcel-environment)
+      real zdtdt(NHOR,NLEV)  ! temperature diff. (parcel-environment)
+      real zalcpe(NHOR,NLEV) ! help array for factors
+      real zqp(NHOR)         ! humidity of lifted parcel
+      real ztp(NHOR)         ! temperature of lifted parcel
+      real zi(NHOR)          ! moisture supply in the collumn
+      real zpt(NHOR)         ! energy surplus of the cloud (t-part)
+      real zpq(NHOR)         ! energy surplus of the cloud (q-part)
+      real zbetta(NHOR)      ! betta factor (new kuo scheme)
+      real zpbetta(NHOR)     ! p-scaling for betta factor
+      real zat(NHOR)         ! distribution factor (temperature)
+      real zaq(NHOR)         ! distribution factor (moisture)
+!
+!     array for momentum mixing
+!
+      real zue(NHOR,NLEV)    ! u of environmental air
+      real zve(NHOR,NLEV)    ! v of environmental air
+      real zdudt(NHOR,NLEV)  ! u-momentum difference (cloud-environment)
+      real zdvdt(NHOR,NLEV)  ! v-momentum difference (cloud-environment)
+      real zau(NHOR)         ! distribution factor (momentum)
+      real zup(NHOR)         ! reference (cloud) u
+      real zvp(NHOR)         ! reference (cloud) v
+      real zsums(NHOR)       ! sum(dsigma) for mixed levels
+
+!
+!     allocatable arrays for dbug diagnostic
+!
+
+      real, allocatable :: zprf1(:,:)
+      real, allocatable :: zprf2(:,:)
+      real, allocatable :: zprf3(:,:)
+      real, allocatable :: zprf4(:,:)
+      real, allocatable :: zprf5(:)
+      real, allocatable :: zprf6(:)
+      real, allocatable :: zprf7(:)
+      real, allocatable :: zprf8(:)
+      real, allocatable :: zprf9(:)
+      real, allocatable :: zprf10(:)
+      real, allocatable :: zprf11(:)
+      real, allocatable :: zprf12(:)
+
+!
+!*    0) initialize some fields
+!
+
+      ilift(:)=-1
+      itop(:)=-1
+      icctot(:)=0
+      zi(:)=0.
+      zpt(:)=0.
+      zpq(:)=0.
+      zat(:)=0.
+      zaq(:)=0.
+      zbetta(:)=0.
+      zpbetta(:)=0.
+      zdtdt(:,:)=0.
+      zdqdt(:,:)=0.
+      dprcl(:,:)=0.
+      dprscl(:,:)=0.
+      icclev(:,:)=0
+
+!
+!     moisture accession (level and column)
+!
+
+      zdqtot(:,:)=(dqt(:,1:NLEV)+dqdt(:,1:NLEV))*deltsec2
+
+!
+!     for original kuo (whole column) use the next loop
+!
+!     do jlev=1,NLEV
+!      zi(:)=zi(:)+zdqtot(:,jlev)*dsigma(jlev)
+!     enddo
+
+!
+!     franks dbug
+!
+
+      if(ndiaggp==1) then
+       dgp3d(:,1:NLEV,16)=-dqdt(:,1:NLEV)
+       dgp3d(:,1:NLEV,18)=dqt(:,1:NLEV)
+      end if
+
+!
+!*    1) update q and t
+!
+
+      zqe(:,:)=dq(:,1:NLEV)+dqdt(:,1:NLEV)*deltsec2
+      zte(:,:)=dt(:,1:NLEV)+dtdt(:,1:NLEV)*deltsec2
+
+!
+!     set L/CP depending on t
+!
+
+      where(zte(:,:) < TMELT)
+       zalcpe(:,:)=ALS/(ACPD*(1.+ADV*zqe(:,:)))
+      elsewhere
+       zalcpe(:,:)=ALV/(ACPD*(1.+ADV*zqe(:,:)))
+      endwhere
+
+!
+!*    2) search for lifting level
+!
+
+      if(ncsurf == 1) then
+
+!
+!     a) start at surface (lifting level only if dry unstable)
+!
+
+      zfac=sigma(NLEV)**akap
+      do jhor=1,NHOR
+       ztnew=dt(jhor,NLEP)*zfac
+       if(zdqtot(jhor,NLEV) > 0. .and. ztnew > zte(jhor,NLEV)) then
+
+!
+!     surface air specific humidity
+!
+
+        zqsnl=RDBRV*RA1*exp(RA2*(zte(jhor,NLEV)-TMELT)                  &
+     &                          /(zte(jhor,NLEV)-RA4))                  &
+     &       /(dp(jhor)*sigma(NLEV))
+        zqsnl=zqsnl/(1.-(1./RDBRV-1.)*zqsnl)
+        zqnew=dq(jhor,NLEP)*AMIN1(1.,zqe(jhor,NLEV)/zqsnl)
+
+!
+!     saturation humidity:
+!
+
+        zqsnl=RDBRV*RA1*exp(RA2*(ztnew-TMELT)/(ztnew-RA4))              &
+     &       /(dp(jhor)*sigma(NLEV))
+        zcor=1./(1.-(1./RDBRV-1.)*zqsnl)
+        zqsnl=zqsnl*zcor
+
+!
+!     condensation if supersaturated
+!
+
+        if(zqsnl < zqnew) then
+
+!
+!     update constants (ice/water phase)
+!
+
+         if(ztnew < TMELT) then
+          zlcp=ALS/(ACPD*(1.+ADV*zqnew))
+         else
+          zlcp=ALV/(ACPD*(1.+ADV*zqnew))
+         endif
+
+!
+!     temperature correction term
+!
+
+         zdqsdt=RA2*(TMELT-RA4)*zqsnl*zcor/((ztnew-RA4)*(ztnew-RA4))
+
+
+!
+!     update t and q
+!
+
+         zrain=(zqnew-zqsnl)/(1.+zlcp*zdqsdt)
+         ztnew=ztnew+zlcp*zrain
+         zqnew=zqnew-zrain
+
+!
+!     second iteration:
+!
+
+         zqsnl=RDBRV*RA1*exp(RA2*(ztnew-TMELT)/(ztnew-RA4))             &
+     &        /(dp(jhor)*sigma(NLEV))
+         zcor=1./(1.-(1./RDBRV-1.)*zqsnl)
+         zqsnl=zqsnl*zcor
+         zdqsdt=RA2*(TMELT-RA4)*zqsnl*zcor/((ztnew-RA4)*(ztnew-RA4))
+         zrain=(zqnew-zqsnl)/(1.+zlcp*zdqsdt)
+         ztnew=ztnew+zlcp*zrain
+         zqnew=zqnew-zrain
+
+!
+!     if convection: set lifting level and parcel q,t (zpq,ztp)
+!                    calculate prelim. dq,dt (zdqdt,zdtdt)
+!                    update surplus of total energy (zp)
+!
+
+         ilift(jhor)=NLEP
+         itop(jhor)=NLEV
+         ztp(jhor)=ztnew
+         zqp(jhor)=zqnew
+         zqsa=RDBRV*RA1*exp(RA2*(zte(jhor,NLEV)-TMELT)                  &
+     &                          /(zte(jhor,NLEV)-RA4))                  &
+     &       /(dp(jhor)*sigma(NLEV))
+         zqsa=zqsa/(1.-(1./RDBRV-1.)*zqsa)
+         zdqdt(jhor,NLEV)=AMAX1(zqsa-zqe(jhor,NLEV),0.)
+         zdtdt(jhor,NLEV)=ztp(jhor)-zte(jhor,NLEV)
+         zpt(jhor)=zdtdt(jhor,NLEV)*dsigma(NLEV)/zalcpe(jhor,NLEV)
+         zpq(jhor)=zdqdt(jhor,NLEV)*dsigma(NLEV)
+         if(kbeta > 0 ) then
+          zbetta(jhor)=AMIN1(1.,zqe(jhor,NLEV)/zqsa)*dsigma(NLEV)
+          zpbetta(jhor)=dsigma(NLEV)
+         endif
+
+!
+!     moisture accession (delete for original kuo)
+!
+
+         zi(jhor)=zdqtot(jhor,NLEV)*dsigma(NLEV)
+        endif
+       endif
+      enddo
+
+      endif
+
+!
+!     b) continue search for free atmosphere
+!
+      do jlev=NLEM,1,-1
+       jlep=jlev+1
+       zfac=(sigma(jlev)/sigma(jlep))**akap
+       do jhor=1,NHOR
+        if(ilift(jhor) == -1                                            &
+!    &    .and. zi(jhor) > 0.                   ! use for original kuo
+     &    .and. zdqtot(jhor,jlep) > 0.) then
+
+!
+!     adiabatic uplift of parcel from below
+!
+
+         ztnew=zte(jhor,jlep)*zfac
+         zqnew=zqe(jhor,jlep)
+
+!
+!     saturation humidity:
+!
+
+         zqsnl=RDBRV*RA1*exp(RA2*(ztnew-TMELT)/(ztnew-RA4))             &
+     &        /(dp(jhor)*sigma(jlev))
+         zcor=1./(1.-(1./RDBRV-1.)*zqsnl)
+         zqsnl=zqsnl*zcor
+
+!
+!     condensation if supersaturated
+!
+
+         if(zqsnl < zqnew) then
+
+!
+!     update constants (ice/water phase)
+!
+
+          if(ztnew < TMELT) then
+           zlcp=ALS/(ACPD*(1.+ADV*zqnew))
+          else
+           zlcp=ALV/(ACPD*(1.+ADV*zqnew))
+          endif
+
+!
+!     temperature correction term
+!
+
+          zdqsdt=RA2*(TMELT-RA4)*zqsnl*zcor/((ztnew-RA4)*(ztnew-RA4))
+
+
+!
+!     update t and q
+!
+
+          zrain=(zqnew-zqsnl)/(1.+zlcp*zdqsdt)
+          ztnew=ztnew+zlcp*zrain
+          zqnew=zqnew-zrain
+
+!
+!     second iteration:
+!
+
+          zqsnl=RDBRV*RA1*exp(RA2*(ztnew-TMELT)/(ztnew-RA4))            &
+     &         /(dp(jhor)*sigma(jlev))
+          zcor=1./(1.-(1./RDBRV-1.)*zqsnl)
+          zqsnl=zqsnl*zcor
+          zdqsdt=RA2*(TMELT-RA4)*zqsnl*zcor/((ztnew-RA4)*(ztnew-RA4))
+          zrain=(zqnew-zqsnl)/(1.+zlcp*zdqsdt)
+          ztnew=ztnew+zlcp*zrain
+          zqnew=zqnew-zrain
+
+!
+!     check for buyoncy
+!
+
+          if(ztnew > zte(jhor,jlev)) then
+
+!
+!     if convection: set lifting level and parcel q,t (zpq,ztp)
+!                    calculate prelim. dq,dt (zdqdt,zdtdt)
+!                    update surplus of total energy (zp)
+!
+
+           ilift(jhor)=jlep
+           itop(jhor)=jlev
+           ztp(jhor)=ztnew
+           zqp(jhor)=zqnew
+           zqsa=RDBRV*RA1*exp(RA2*(zte(jhor,jlev)-TMELT)                &
+     &                           /(zte(jhor,jlev)-RA4))                 &
+     &         /(dp(jhor)*sigma(jlev))
+           zqsa=zqsa/(1.-(1./RDBRV-1.)*zqsa)
+           zdqdt(jhor,jlev)=AMAX1(zqsa-zqe(jhor,jlev),0.)
+           zdtdt(jhor,jlev)=ztp(jhor)-zte(jhor,jlev)
+           zpt(jhor)=zdtdt(jhor,jlev)*dsigma(jlev)/zalcpe(jhor,jlev)
+           zpq(jhor)=zdqdt(jhor,jlev)*dsigma(jlev)
+           if(kbeta > 0 ) then
+            zbetta(jhor)=AMIN1(1.,zqe(jhor,jlev)/zqsa)*dsigma(jlev)
+            zpbetta(jhor)=dsigma(jlev)
+           endif
+
+!
+!          check if lifting level is supersaturated
+!
+
+           ztnew=zte(jhor,jlep)
+           zqnew=zqe(jhor,jlep)
+           zqsnl=RDBRV*RA1*exp(RA2*(zte(jhor,jlep)-TMELT)               &
+     &                            /(zte(jhor,jlep)-RA4))                &
+     &         /(dp(jhor)*sigma(jlep))
+           zqsnl=zqsnl/(1.-(1./RDBRV-1.)*zqsnl)
+           if(zqe(jhor,jlep) > zqsnl) then
+
+!
+!     update constants (ice/water phase)
+!
+
+           if(ztnew < TMELT) then
+            zlcp=ALS/(ACPD*(1.+ADV*zqnew))
+           else
+            zlcp=ALV/(ACPD*(1.+ADV*zqnew))
+           endif
+
+!
+!     temperature correction term
+!
+
+           zdqsdt=RA2*(TMELT-RA4)*zqsnl*zcor/((ztnew-RA4)*(ztnew-RA4))
+
+!
+!     update t and q
+!
+
+           zrain=(zqnew-zqsnl)/(1.+zlcp*zdqsdt)
+           ztnew=ztnew+zlcp*zrain
+           zqnew=zqnew-zrain
+
+!
+!     second iteration:
+!
+
+           zqsnl=RDBRV*RA1*exp(RA2*(ztnew-TMELT)/(ztnew-RA4))            &
+     &          /(dp(jhor)*sigma(jlep))
+           zcor=1./(1.-(1./RDBRV-1.)*zqsnl)
+           zqsnl=zqsnl*zcor
+           zdqsdt=RA2*(TMELT-RA4)*zqsnl*zcor/((ztnew-RA4)*(ztnew-RA4))
+           zrain=(zqnew-zqsnl)/(1.+zlcp*zdqsdt)
+           ztnew=ztnew+zlcp*zrain
+           zqnew=zqnew-zrain
+           zdqdt(jhor,jlep)=AMAX1(zqnew-zqe(jhor,jlep),0.)
+           zdtdt(jhor,jlep)=ztnew-zte(jhor,jlep)
+           zpt(jhor)=zdtdt(jhor,jlep)*dsigma(jlep)/zalcpe(jhor,jlep)    &
+     &              +zpt(jhor)
+           zpq(jhor)=zdqdt(jhor,jlep)*dsigma(jlep)                      &
+     &              +zpq(jhor)
+           if(kbeta > 0 ) then
+            zbetta(jhor)=AMIN1(1.,zqe(jhor,jlep)/zqsnl)*dsigma(jlep)    &
+     &                  +zbetta(jhor)
+            zpbetta(jhor)=dsigma(jlep)+zpbetta(jhor)
+           endif
+           endif
+
+!
+!     moisture accession (delete for original kuo)
+!
+
+           zi(jhor)=zdqtot(jhor,jlev)*dsigma(jlev)                      &
+     &             +zdqtot(jhor,jlep)*dsigma(jlep)
+          endif
+         endif
+        endif
+       enddo
+      enddo
+
+!
+!*    3) search for top level
+!
+
+      do jlev=NLEM,1,-1
+       jlep=jlev+1
+       zfac=(sigma(jlev)/sigma(jlep))**akap
+       do jhor=1,NHOR
+        if(jlep == itop(jhor)) then
+
+!
+!     3a) parcel uplift
+!
+
+         ztnew=ztp(jhor)*zfac
+         zqnew=zqp(jhor)
+
+!
+!     saturation humidity
+!
+
+         zqsnl=RDBRV*RA1*exp(RA2*(ztnew-TMELT)/(ztnew-RA4))             &
+     &        /(dp(jhor)*sigma(jlev))
+         zcor=1./(1.-(1./RDBRV-1.)*zqsnl)
+         zqsnl=zqsnl*zcor
+
+!
+!     3b) more condensation
+!
+
+         if(zqsnl < zqnew) then
+
+!
+!     update constants (ice/water phase)
+!
+
+          if(ztnew < TMELT) then
+           zlcp=ALS/(ACPD*(1.+ADV*zqnew))
+          else
+           zlcp=ALV/(ACPD*(1.+ADV*zqnew))
+          endif
+
+!
+!     temperature correction term
+!
+
+          zdqsdt=RA2*(TMELT-RA4)*zqsnl*zcor/((ztnew-RA4)*(ztnew-RA4))
+
+!
+!     update t,q
+!
+
+          zrain=(zqnew-zqsnl)/(1.+zlcp*zdqsdt)
+          ztnew=ztnew+zlcp*zrain
+          zqnew=zqnew-zrain
+
+!
+!     second iteration:
+!
+
+          zqsnl=RDBRV*RA1*exp(RA2*(ztnew-TMELT)/(ztnew-RA4))            &
+     &         /(dp(jhor)*sigma(jlev))
+          zcor=1./(1.-(1./RDBRV-1.)*zqsnl)
+          zqsnl=zqsnl*zcor
+          zdqsdt=RA2*(TMELT-RA4)*zqsnl*zcor/((ztnew-RA4)*(ztnew-RA4))
+          zrain=(zqnew-zqsnl)/(1.+zlcp*zdqsdt)
+          ztnew=ztnew+zlcp*zrain
+          zqnew=zqnew-zrain
+
+!
+!     3c) check for buyoncy
+!
+
+          if(ztnew > zte(jhor,jlev)) then
+
+!
+!     3d) if further convection: update parcel q,t (zpq,ztp)
+!                                calculate prelim. dq,dt (zdqdt,zdtdt)
+!                                update surplus of total energy (zp)
+!
+
+           itop(jhor)=jlev
+           ztp(jhor)=ztnew
+           zqp(jhor)=zqnew
+           zqsa=RDBRV*RA1*exp(RA2*(zte(jhor,jlev)-TMELT)                &
+     &                            /(zte(jhor,jlev)-RA4))                &
+     &         /(dp(jhor)*sigma(jlev))
+           zqsa=zqsa/(1.-(1./RDBRV-1.)*zqsa)
+           zdqdt(jhor,jlev)=AMAX1(zqsa-zqe(jhor,jlev),0.)
+           zdtdt(jhor,jlev)=ztp(jhor)-zte(jhor,jlev)
+           zpt(jhor)=zdtdt(jhor,jlev)*dsigma(jlev)/zalcpe(jhor,jlev)    &
+     &              +zpt(jhor)
+           zpq(jhor)=zdqdt(jhor,jlev)*dsigma(jlev)                      &
+     &              +zpq(jhor)
+           if(kbeta > 0 ) then
+            zbetta(jhor)=AMIN1(1.,zqe(jhor,jlev)/zqsa)*dsigma(jlev)     &
+     &                  +zbetta(jhor)
+            zpbetta(jhor)=zpbetta(jhor)+dsigma(jlev)
+           endif
+
+!
+!     moisture accession (delete for original kuo)
+!
+
+           zi(jhor)=zdqtot(jhor,jlev)*dsigma(jlev)                      &
+     &             +zi(jhor)
+          endif
+         endif
+        endif
+       enddo
+      enddo
+
+!
+!*    4) calc. moisture distribution factors
+!
+
+      zi(:)=AMAX1(0.,zi(:))
+
+      if(kbeta==0) then
+
+!
+!     kuo without betta
+!
+
+       where(zpt(:)+zpq(:) > 0.)
+        zat(:)=zi(:)/(zpt(:)+zpq(:))
+        zaq(:)=zat(:)
+       end where
+      else
+
+!
+!     kuo with betta
+!
+
+       where(zpbetta(:) > 0.) zbetta(:)=(1.-zbetta(:)/zpbetta(:))**3
+       where(zpt(:) > 0.) zat(:)=zi(:)*(1.-zbetta(:))/zpt(:)
+       where(zpq(:) > 0.) zaq(:)=zi(:)*zbetta(:)/zpq(:)
+
+      endif
+
+!
+!*    5) update dqdt and dtdt, compute precip.
+!
+
+      do jlev=1,NLEV
+
+!
+!     5a) in cloud: add tendencies due to convection and sub. advection
+!         lifting level: sub. advection. (dtdt != 0 only if level supersat)
+!
+
+       where(ilift(:) >= jlev .and. itop(:) <= jlev .and. zi(:) > 0.)
+         dqdt(:,jlev)=zaq(:)*zdqdt(:,jlev)/deltsec2                     &
+     &               -dqt(:,jlev)
+         dtdt(:,jlev)=zat(:)*zdtdt(:,jlev)/deltsec2                     &
+     &               +dtdt(:,jlev)
+
+!
+!     5b) calc. precipitation
+!
+
+         dprc(:)=dprc(:)                                                &
+     &          +zat(:)*zdtdt(:,jlev)*dsigma(jlev)/zalcpe(:,jlev)
+         dprcl(:,jlev)=zat(:)*zdtdt(:,jlev)*dsigma(jlev)/zalcpe(:,jlev)/deltsec2
+
+       endwhere
+
+!
+!     5c) original kuo:
+!         rest of column: subtrac all q-tendencies (i.e. reset dqdt)
+!
+!      where(zi(:) > 0 .and. (jlev >= ilift(:) .or. jlev < itop(:)))
+!       dqdt(:,jlev)=-1.*dqt(:,jlev)
+!      endwhere
+
+!
+!     5d) flag and counter for clouds:
+!
+
+       where(zat(:)*zdtdt(:,jlev) > 0.)
+        icclev(:,jlev)=1
+        icctot(:)=icctot(:)+1
+       endwhere
+       if(sigma(jlev) < 0.4) then
+        where(icclev(:,jlev)==1 .and. itop(:)==jlev)
+         icclev(:,jlev)=2
+        endwhere
+       endif
+
+      enddo
+
+!
+!*    6) final precip. in m/s and snow fall
+!
+
+      zfac1=1./GA/deltsec2/1000.
+      dprc(:)=dprc(:)*dp(:)*zfac1
+      where(dt(:,NLEV) <= TMELT) dprs(:)=dprs(:)+dprc(:)
+
+!
+!*    7) momentum mixing
+!
+
+      if(nmoment == 1) then
+
+!
+!     7a) update u and v
+!
+
+       zue(:,:)=du(:,1:NLEV)+dudt(:,1:NLEV)*deltsec2
+       zve(:,:)=dv(:,1:NLEV)+dvdt(:,1:NLEV)*deltsec2
+
+!
+!     7a) make distribution factor
+!
+
+       zau(:)=0.
+       where(zpt(:)+zpq(:) > 0.)
+        zau(:)=AMIN1(1.,zi(:)/(zpt(:)+zpq(:)))
+       end where
+
+!
+!     7b) reference u and v
+!
+
+       zup(:)=0.
+       zvp(:)=0.
+       zsums(:)=0.
+       do jlev=1,NLEV
+        where(ilift(:) >= jlev .and. itop(:) <= jlev .and. zi(:) > 0.)
+         zup(:)=zup(:)+zue(:,jlev)*dsigma(jlev)
+         zvp(:)=zvp(:)+zve(:,jlev)*dsigma(jlev)
+         zsums(:)=zsums(:)+dsigma(jlev)
+        endwhere
+       enddo
+       where(zsums(:) > 0.)
+        zup(:)=zup(:)/zsums(:)
+        zvp(:)=zvp(:)/zsums(:)
+       endwhere
+
+!
+!     7c) make and add tendencies
+!
+
+       do jlev=1,NLEV
+        where(ilift(:) >= jlev .and. itop(:) <= jlev .and. zi(:) > 0.)
+          zdudt(:,jlev)=zau(:)*(zup(:)-zue(:,jlev))
+          zdvdt(:,jlev)=zau(:)*(zvp(:)-zve(:,jlev))
+          dudt(:,jlev)=dudt(:,jlev)+zdudt(:,jlev)/deltsec2
+          dvdt(:,jlev)=dvdt(:,jlev)+zdvdt(:,jlev)/deltsec2
+        endwhere
+       enddo
+
+      endif
+
+!
+!*    dbug diagnostic for nprint==2 (see pumamod)
+!
+
+      if(nprint==2) then
+       allocate(zprf1(NLON*NLAT,NLEV))
+       allocate(zprf2(NLON*NLAT,NLEV))
+       allocate(zprf3(NLON*NLAT,NLEV))
+       allocate(zprf4(NLON*NLAT,NLEV))
+       allocate(zprf5(NLON*NLAT))
+       allocate(zprf6(NLON*NLAT))
+       allocate(zprf7(NLON*NLAT))
+       allocate(zprf8(NLON*NLAT))
+       allocate(zprf9(NLON*NLAT))
+       allocate(zprf10(NLON*NLAT))
+       allocate(zprf11(NHOR))
+       allocate(zprf12(NHOR))
+       zprf11(:)=real(ilift(:))
+       zprf12(:)=real(itop(:))
+       call mpgagp(zprf1,zdqdt,NLEV)
+       call mpgagp(zprf2,zdtdt,NLEV)
+       call mpgagp(zprf3,zdqtot,NLEV)
+       call mpgagp(zprf4,dqt,NLEV)
+       call mpgagp(zprf5,zprf11,1)
+       call mpgagp(zprf6,zprf12,1)
+       call mpgagp(zprf7,dprc,1)
+       call mpgagp(zprf8,zaq,1)
+       call mpgagp(zprf9,zat,1)
+       call mpgagp(zprf10,zi,1)
+       deallocate(zprf11)
+       deallocate(zprf12)
+       if(mypid==NROOT) then
+        write(nud,*)'In Kuo:'
+        write(nud,*)'ilift= ',zprf5(nprhor),' itop= ',zprf6(nprhor)
+        do jlev=1,NLEV
+         write(nud,*)'L= ',jlev,' dqtot= ',zprf3(nprhor,jlev)                &
+     &                    ,' dqt= ',zprf4(nprhor,jlev)
+         if(zprf5(nprhor) >= jlev .and. zprf6(nprhor) <= jlev           &
+     &     .and. zprf10(nprhor) > 0.) then
+          zzdt=zprf9(nprhor)*zprf2(nprhor,jlev)/deltsec2
+          zzdq=zprf8(nprhor)*zprf1(nprhor,jlev)/deltsec2
+          write(nud,*)'L= ',jlev,' dtdt= ',zzdt,' dqdt= ',zzdq
+         endif
+        enddo
+        write(nud,*)'prc (mm/day)= ',zprf7(nprhor)*1000.*ntspd*deltsec2*0.5
+       endif
+       deallocate(zprf1)
+       deallocate(zprf2)
+       deallocate(zprf3)
+       deallocate(zprf4)
+       deallocate(zprf5)
+       deallocate(zprf6)
+       deallocate(zprf7)
+       deallocate(zprf8)
+       deallocate(zprf9)
+       deallocate(zprf10)
+      endif
+
+!
+!     franks dbug
+!
+
+      if(ndiaggp==1) then
+       do jlev=1,NLEV
+        where(ilift(:) >= jlev .and. itop(:) <= jlev .and. zi(:) > 0.)
+         dgp3d(:,jlev,8)=zat(:)*zdtdt(:,jlev)/deltsec2
+         dgp3d(:,jlev,16)=zaq(:)*zdqdt(:,jlev)/deltsec2                 &
+     &                   -dqt(:,jlev)
+        elsewhere
+         dgp3d(:,jlev,8)=0.
+         dgp3d(:,jlev,16)=0.
+        endwhere
+       enddo
+      end if
+
+      return
+      end subroutine kuo_old

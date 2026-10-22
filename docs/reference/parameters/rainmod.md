@@ -1,8 +1,8 @@
 # Clouds and precipitation: `rainmod_nl`
 
-File: `rainmod_namelist`. These are the default implementation's inputs,
-read by `rainini` in {repo}`plasim/src/rainmod.f90`. Alternative compiled
-rain modules need their own interface review.
+File: `rainmod_namelist`. These are the unified precipitation implementation's
+inputs, read by `rainini` in {repo}`plasim/src/rainmod.f90`. The convection
+scheme is selected at runtime via `nconvection`.
 
 ```{table}
 :class: parameter-table
@@ -30,11 +30,16 @@ rain modules need their own interface review.
 | `pdeepth` | real; Pa | 70000 | Additional pressure threshold used to modify the top of the shallow-convection layer. |
 | `rkshallow` | real; m²/s | 10 | Diffusivity used by shallow convection. |
 | `gamma` | real; 1 | 0.01; T42/≥10 levels 0.007 | Precipitation-evaporation coefficient multiplying the local saturation deficit and layer sigma thickness, divided by `deltsec2` in the humidity-tendency limit. |
+| `nconvection` | integer; selector | 0 | Convection scheme selector: 0 for default Kuo; 1 for Betts–Miller (`mkbm`); 2 for Moist Convective Adjustment (`mca`); 3 for historical Kuo (`kuo_old`). |
+| `kbetta` | integer; selector | −1 | Legacy namelist alias for `kbeta` from older documentation; if non-negative, overrides `kbeta`. |
+| `rsoft` | real; fraction | 1.0 | Relative humidity threshold factor for soft convection in Moist Convective Adjustment (`nconvection=2`). |
+| `tadjust` | real; timesteps | 1.0 | Convective relaxation time scale in timesteps for Moist Convective Adjustment (`nconvection=2`; must be ≥ 1.0). |
 ```
 
-Rain switches do not select the compiled rain implementation. Several
-settings interact: a shallow scheme needs its branch enabled, cloud
+The runtime switch `nconvection` selects among the unified convection schemes.
+Several settings interact: a shallow scheme needs its branch enabled, cloud
 thresholds affect diagnostic cloud construction, and `rbeta` only overrides
 the computed partition with `kbeta=2`. Source checks cover `rainini`,
-`rainstep`, `kuo`, shallow convection, `mkclouds`, and precipitation evaporation.
-The old defaults for shallow convection and some tuning are not current.
+`rainstep`, `kuo`, `mkbm`, `mca`, `kuo_old`, shallow convection, `mkclouds`,
+and precipitation evaporation. The old defaults for shallow convection and
+some tuning are not current.
