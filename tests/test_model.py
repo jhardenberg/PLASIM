@@ -74,7 +74,7 @@ def doubles(data: bytes) -> tuple[float, ...]:
 
 def build_model(
     build: Path, *, lsg: bool = False, ranks: int = 1, precision: str = "-fdefault-real-8",
-    latitudes: int = 32, fflags: str = "-O0",
+    latitudes: int = 32, fflags: str = "-O0", jobs: int | None = None,
 ) -> Path:
     """Build L10 at the selected latitude count with optional MPI and real LSG."""
     compiler = "mpif90" if ranks > 1 else "gfortran"
@@ -104,7 +104,13 @@ def build_model(
         "GUILIB": "", "OCEAN": "lsgmod" if lsg else "lsgmod_stub",
         "OCEANCOUP": "cpl" if lsg else "cpl_stub",
     })
-    command(["make", "-e", "-j1", "plasim.x"], cwd=build, env=env)
+    if jobs is None:
+        jobs_env = os.environ.get("PLASIM_BUILD_JOBS")
+        if jobs_env and jobs_env.isdigit():
+            jobs = max(1, int(jobs_env))
+        else:
+            jobs = max(1, min(4, os.cpu_count() or 1))
+    command(["make", "-e", f"-j{jobs}", "plasim.x"], cwd=build, env=env)
     return build / "plasim.x"
 
 

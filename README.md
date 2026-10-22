@@ -253,6 +253,12 @@ for a small runnable example, timing scope, and revision/MPI comparisons.
 Run the regression suite from the repository root:
 
 ```sh
+python3 tests/run_tests.py -v
+```
+
+or with the standard single-process discovery command:
+
+```sh
 python3 -m unittest discover -s tests -v
 ```
 
