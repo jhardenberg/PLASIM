@@ -791,6 +791,65 @@ class AlternativeComponentTests(unittest.TestCase):
         vals = doubles(state["dt"])
         self.assertTrue(all(map(math.isfinite, vals)))
 
+    def test_stub_interfaces_and_mpabort(self) -> None:
+        """Verify replacement stubs (cpl_stub, lsgmod_stub, mpimod_stub mpabort) signatures and diagnostics."""
+        work = self.work / "test_stubs"
+        work.mkdir()
+        test_src = work / "test_stubs.f90"
+        test_src.write_text("""
+          subroutine get_restart_array(a,b,c,d,e)
+          end subroutine
+          subroutine put_restart_array(a,b,c,d,e)
+          end subroutine
+          subroutine get_surf_array(a,b,c,d,e)
+          end subroutine
+
+          program test_stubs
+          use pumamod, only: nud
+          implicit none
+          integer :: ndatim(7) = 0
+          real :: zls(64,32) = 0.0
+          real :: zsst(2048) = 0.0
+          real :: ztaux(2048) = 0.0
+          real :: ztauy(2048) = 0.0
+          real :: zpme(2048) = 0.0
+          real :: zroff(2048) = 0.0
+          real :: zice(2048) = 0.0
+          real :: zheat(2048) = 0.0
+          real :: zfldo(2048) = 0.0
+
+          ! Test cpl_stub entry points with full oceanmod signatures
+          call clsgini(ndatim,32,320,1,0,zls,64,32)
+          call clsgstep(ndatim,1,zsst,ztaux,ztauy,zpme,zroff,zice,zheat,zfldo)
+          call clsgstop
+
+          ! Test lsgmod_stub entry points with cpl caller signatures
+          call lsgini(320,1,64,32)
+          call lsgstep
+          call lsgstop
+          call lsg
+
+          ! Test mpabort writing to nud
+          open(11, file="test_diag.txt")
+          nud = 11
+          call mpabort("TEST_ABORT_STUB")
+          end program test_stubs
+        """, encoding="ascii")
+        binary = work / "test_stubs.x"
+        command([
+            "gfortran", "-O0", "-fcheck=all",
+            str(SOURCE / "resmod_def.f90"),
+            str(SOURCE / "plasimmod.f90"),
+            str(SOURCE / "mpimod_stub.f90"),
+            str(SOURCE / "cpl_stub.f90"),
+            str(SOURCE / "lsgmod_stub.f90"),
+            str(test_src),
+            "-o", str(binary),
+        ], cwd=work)
+        subprocess.run([str(binary)], cwd=work, capture_output=True, text=True)
+        self.assertIn("TEST_ABORT_STUB", (work / "Abort_Message").read_text())
+        self.assertIn("TEST_ABORT_STUB", (work / "test_diag.txt").read_text())
+
 
 if __name__ == "__main__":
     unittest.main()

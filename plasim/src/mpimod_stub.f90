@@ -128,6 +128,7 @@
 !     ==================
 
       subroutine mpabort(ym)
+      use pumamod, only: nud
 
       character (len=* ) :: ym
       character (len=64) :: ystar = ' '
