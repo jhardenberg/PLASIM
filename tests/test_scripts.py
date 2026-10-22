@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -307,6 +308,47 @@ class MostRunScriptTests(unittest.TestCase):
             self.assertTrue((work / "restart" / "mat77").is_file())
             self.assertTrue((work / "restart" / "kleiswi").is_file())
             self.assertTrue((work / "restart" / "TEST_LSGREST.0001").is_file())
+
+
+class DeriveLsgSraTests(unittest.TestCase):
+    """Tests for scripts/derive_lsg_sra.py across model resolutions."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.temp = tempfile.TemporaryDirectory(prefix="plasim-derive-sra-")
+        cls.addClassCleanup(cls.temp.cleanup)
+        cls.work = Path(cls.temp.name)
+
+    def test_derive_sra_resolutions_and_diagnostics(self) -> None:
+        """Verify derive_lsg_sra.py adapts T21, T31, and T42 masks to achieve kmiss_a=0 and kmiss_v=0."""
+        script = SCRIPTS / "derive_lsg_sra.py"
+        topogr = ROOT / "lsg" / "dat" / "topogr"
+
+        cases = [
+            ("T21", 64, 32, ROOT / "plasim" / "dat" / "T21" / "N032_surf_0172.sra"),
+            ("T31", 96, 48, ROOT / "plasim" / "dat" / "T31" / "N048_surf_0172.sra"),
+            ("T42", 128, 64, ROOT / "plasim" / "dat" / "T42" / "N064_surf_0172.sra"),
+        ]
+
+        for res, nxa, nya, input_sra in cases:
+            with self.subTest(resolution=res):
+                out_sra = self.work / f"N{nya:03d}_surf_0172.sra"
+                proc = run_command([
+                    sys.executable, str(script),
+                    "-i", str(input_sra),
+                    "-t", str(topogr),
+                    "-o", str(out_sra),
+                    "-s", "B",
+                ])
+                self.assertEqual(proc.returncode, 0, f"derive_lsg_sra failed for {res}: {proc.stderr}")
+                self.assertIn("Missing atm ocean points (kmiss_a): 0", proc.stdout)
+                self.assertIn("Missing ocean vectors (kmiss_v):    0", proc.stdout)
+                self.assertTrue(out_sra.is_file())
+
+                header = [int(x) for x in out_sra.read_text(encoding="ascii").splitlines()[0].split()]
+                self.assertEqual(header[0], 172)
+                self.assertEqual(header[4], nxa)
+                self.assertEqual(header[5], nya)
 
 
 if __name__ == "__main__":

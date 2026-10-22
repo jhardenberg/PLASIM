@@ -55,6 +55,26 @@ stopped after repeated GitHub rate limits. These short checks do not establish
 long-term climate validity or MPI scaling. Timing migrations are functional
 changes, not numerical equivalence claims for old T31/T42 climates.
 
+## Issue #20: coupled LSG surface masks and grid consistency
+
+Checked `cplini` in `cpl.f90`, `topogr` in `lsg/dat/`, `most.c`, and
+`scripts/derive_lsg_sra.py`. In PlaSim–LSG coupling, `cplini` maps atmospheric
+cells (`nlon` × `nlat`) to the LSG ocean E-grid (72 × 76). Uncoupled atmospheric
+ocean points (`kmiss_a > 0`) produce uncompensated fluxes over land bathymetry,
+while starved ocean vector points (`kmiss_v > 0`) zero out wind stresses on
+active ocean currents.
+Historically, `lsg/dat` supplied an adapted mask only for T21 (`N032_surf_0172.sra`).
+At T31 and T42, falling back to default PlaSim masks produced 58 and 137
+uncoupled cells and 2 starved vectors.
+The automated Strategy B derivation implemented in `scripts/derive_lsg_sra.py`
+closes atmospheric points with zero ocean depth (`zslmoa < 1e-9`), preserves the
+Panama barrier, and selectively opens atmospheric cells overlapping starved ocean
+vectors (clearing Gibraltar and North Greenland). Across T21, T31, and T42,
+Strategy B achieves `kmiss_a = 0` and `kmiss_v = 0` with 19 coastal scalar
+extrapolations (`kmiss_s`). The ocean grid, bathymetry, and matrices remain
+unaltered. Verified `derive_lsg_sra.py` across all three resolutions and added
+T31 support to `scripts/sra2nc`.
+
 ## Historical chapter coverage
 
 | Original material | Current Sphinx destination | Code comparison and resulting update |

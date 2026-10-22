@@ -250,9 +250,73 @@ reads and prepares the surface fields during initialization:
   clipped to [0, 1]. Values are not hard-thresholded at 0.5; land and sea
   surface fluxes weight processes by the fractional land area.
 - **Coupled LSG mask:** When running coupled to the LSG ocean model, always
-  preserve the matching coupled land–sea mask (`plasim/dat/T21/N032_surf_0172.sra`
-  or `lsg/dat/`), because ocean matrix geometry and atmospheric land masks must
-  align along coastlines.
+  preserve the matching coupled land–sea mask (`lsg/dat/Nnnn_surf_0172.sra`),
+  because ocean matrix geometry and atmospheric land masks must
+  align along coastlines. See [](lsg-surface-masks) below.
+
+(lsg-surface-masks)=
+## Coupled LSG land–sea mask adaptation (code 172)
+
+When running PlaSim coupled to the 3D LSG deep-ocean model, atmospheric surface
+fluxes (heat, freshwater, and momentum) are exchanged across two disparate grid
+systems:
+1. The **atmospheric Gaussian grid** (`nlon` × `nlat`, e.g., 64 × 32 at T21, 96 × 48 at T31, 128 × 64 at T42), where surface points are partitioned into land and ocean by the land–sea mask (`dls`, code `0172`).
+2. The **LSG ocean Arakawa E-grid** (72 × 72 interior, 72 × 76 total), defined by bathymetry depths in `lsg/dat/topogr`. On the E-grid, ocean scalar points (`zslmoa`, where depth $H > 0$) carry tracer properties (temperature, salinity), while ocean velocity vector points (`oslmv = 1`) carry horizontal currents on a shifted subgrid.
+
+### Grid mismatch and uncoupled cells (Issue #20)
+
+During initialization in `cpl.f90` (`cplini`), the coupler computes area-overlap weights (`zomao` and `zomaov`) between atmospheric grid cells and ocean cells. The coupler tracks two diagnostic counters:
+- **`kmiss_a` (Uncoupled atmospheric ocean points):** Atmospheric ocean cells ($dls < 0.5$) that have zero ocean depth underneath ($H = 0$) on the LSG grid. Because no ocean column exists to receive atmospheric fluxes at these locations, heat and freshwater exchanges cannot be balanced, violating physical coupling consistency.
+- **`kmiss_v` (Starved ocean velocity vectors):** LSG velocity vector points (`oslmv = 1`) that do not overlap any active atmospheric ocean cells in their four-point interpolation stencil (`zomaov`). If `kmiss_v > 0`, the wind stress on that ocean velocity point is uncoupled and set to zero.
+
+Historically, `lsg/dat` provided a hand-tuned land–sea mask only for T21 resolution (`N032_surf_0172.sra`). When running coupled simulations at higher resolutions (T31 or T42), MoSt copied only the T21 mask from `lsg/dat`, leaving the atmospheric model to read the standard uncoupled masks from `plasim/dat/T31/` or `plasim/dat/T42/`. This led to significant grid mismatches:
+- **T31 default mask:** 58 uncoupled atmospheric ocean cells (`kmiss_a = 58`), 2 starved vector cells (`kmiss_v = 2`).
+- **T42 default mask:** 137 uncoupled atmospheric ocean cells (`kmiss_a = 137`), 2 starved vector cells (`kmiss_v = 2`).
+
+### Automated mask derivation (Strategy B)
+
+To guarantee topological consistency between the atmosphere and the fixed LSG bathymetry across all resolutions without modifying the underlying ocean model or matrices, the script `scripts/derive_lsg_sra.py` implements an automated derivation algorithm (**Strategy B**):
+
+1. **Eliminate uncoupled atmospheric cells:** Any atmospheric grid cell with zero underlying LSG ocean depth (`zslmoa < 1e-9`) is converted to land (`dls = 1.0`). This guarantees `kmiss_a = 0`.
+2. **Preserve continental barriers:** The narrow Isthmus of Panama ($7^\circ\text{--}11^\circ\text{ N}, 276^\circ\text{--}283^\circ\text{ E}$), which is open water in raw uncoupled Gaussian interpolations, is closed to land to prevent unphysical Pacific–Atlantic atmospheric exchange.
+3. **Targeted vector opening:** For each starved LSG ocean vector point (`oslmv = 1` where `kmiss_v > 0`), the algorithm locates the overlapping atmospheric cell that contains the highest LSG ocean coverage and opens it to ocean (`dls = 0.0`). This opens narrow key passages—specifically the Strait of Gibraltar and the passage north of Greenland—without over-eroding continental boundaries.
+4. **Preserve coastal scalar extrapolation:** The coupler's standard coastal flood-fill (`cfill`) safely extrapolates atmospheric fluxes to any isolated coastal ocean scalar cells (`kmiss_s = 19` at T31 and T42, compared to 42 in standard T21).
+
+The resulting land–sea masks achieve `kmiss_a = 0` and `kmiss_v = 0` across T21, T31, and T42:
+
+| Resolution | Grid points | Atmospheric uncoupled (`kmiss_a`) | Starved vectors (`kmiss_v`) | Extrapolated scalars (`kmiss_s`) | Shipped dataset file |
+| --- | --- | --- | --- | --- | --- |
+| **T21** | 64 × 32 | 0 | 0 | 42 | `lsg/dat/N032_surf_0172.sra` |
+| **T31** | 96 × 48 | 0 | 0 | 19 | `lsg/dat/N048_surf_0172.sra` |
+| **T42** | 128 × 64 | 0 | 0 | 19 | `lsg/dat/N064_surf_0172.sra` |
+
+### Visual comparison of T42 masks
+
+The figures below show the difference between the default uncoupled PlaSim T42 land–sea mask and the LSG-adapted Strategy B mask:
+
+![Global comparison of default and LSG-adapted T42 land–sea masks](../images/t42_sra_comparison_global.png)
+
+*Figure 1: Global distribution of the default uncoupled PlaSim T42 land–sea mask (left), the LSG-adapted Strategy B mask (center), and their point-by-point difference (right). Red cells represent areas closed to land to prevent uncoupled atmospheric ocean cells (`kmiss_a = 0`); blue cells represent narrow passages opened to ocean to support LSG vector stencils (`kmiss_v = 0`).*
+
+![Regional zooms around critical straits](../images/t42_sra_comparison_zooms.png)
+
+*Figure 2: Regional zooms highlighting critical passages: (a) Strait of Gibraltar opened for ocean exchange; (b) Denmark Strait aligned with ocean topography; (c) Isthmus of Panama preserved as a land barrier; (d) Northern Greenland channel opened to eliminate starved ocean vectors.*
+
+### Offline derivation with `derive_lsg_sra.py`
+
+Pre-derived masks for T21, T31, and T42 are provided in `lsg/dat/` and automatically copied by MoSt into the run directory when `LSG Ocean` is enabled.
+
+To regenerate or inspect masks offline using `scripts/derive_lsg_sra.py`:
+
+```sh
+python3 scripts/derive_lsg_sra.py \
+    -i plasim/dat/T42/N064_surf_0172.sra \
+    -t lsg/dat/topogr \
+    -o lsg/dat/N064_surf_0172.sra \
+    -s B
+```
+
+The script runs with pure Python 3 standard library modules, verifies the overlap geometry against the LSG bathymetry, and prints coupling diagnostic statistics.
 
 ## Prepare, convert, and inspect data
 
@@ -262,6 +326,7 @@ The repository supplies conversion helpers under `scripts/`:
 | --- | --- |
 | `sra2nc` | Converts a formatted `.sra` text file to NetCDF (`sra2nc input.sra output.nc`). |
 | `nc2sra` | Converts a 2D NetCDF variable to a formatted `.sra` file (`nc2sra input.nc output.sra code [-d YYYYMMDD] [-t HHMM]`). |
+| `derive_lsg_sra.py` | Derives LSG-consistent atmospheric land–sea masks matching LSG ocean bathymetry and vector points across resolutions (T21, T31, T42). |
 | `makesra` | Compiles Fortran conversion utilities for Service format datasets. |
 | `earth.sh` | Extracts and prepares Earth boundary datasets for selected resolutions. |
 | `aqua.sh` | Generates aquaplanet boundary datasets (all-ocean orography and zero land fraction). |
@@ -291,5 +356,6 @@ When creating new boundary files with `nc2sra`:
 - Calling modules: `landini` ({repo}`plasim/src/landmod.f90`), `oceanini`
   ({repo}`plasim/src/oceanmod.f90`), `iceini` ({repo}`plasim/src/icemod.f90`),
   `simbaini` ({repo}`plasim/src/simba.f90`), `radini` ({repo}`plasim/src/radmod.f90`),
-  `miscini` ({repo}`plasim/src/miscmod.f90`), and `mpsurfgp` in {repo}`plasim/src/mpimod.f90`.
-- Scripts: {repo}`scripts/sra2nc`, {repo}`scripts/nc2sra`, and {repo}`scripts/makesra`.
+  `miscini` ({repo}`plasim/src/miscmod.f90`), `mpsurfgp` in {repo}`plasim/src/mpimod.f90`,
+  and `cplini` in {repo}`cpl.f90`.
+- Scripts: {repo}`scripts/derive_lsg_sra.py`, {repo}`scripts/sra2nc`, {repo}`scripts/nc2sra`, and {repo}`scripts/makesra`.
