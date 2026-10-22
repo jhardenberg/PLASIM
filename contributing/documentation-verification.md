@@ -12,6 +12,49 @@ updates check the merged developments identified below, including mainline
 change model sources. Source checks and runtime checks below are deliberately
 distinguished.
 
+## Issue #72: aligned atmospheric and coupling defaults
+
+Checked MoSt `PlasimSteps`, `CheckPlasimNamelist`, `InitNamelist`, and
+`WriteNamelistFile`; model `readnl` in `plasim.f90` and `oceanini` in
+`oceanmod.f90`; and the `clsgini`/`clsgstep` to LSG `inipar` timing path.
+Standard automatic T21/T31/T42 timesteps now match MoSt (45/30/20 minutes),
+with T15/T63 presets of 60/15 minutes in both MoSt and the model. T63's
+15-minute timestep gives 96 steps/Earth day and 960 steps per ten-day
+exchange; prior master used 20 minutes automatically and 10 in MoSt. Other grid
+fallback formulas outside those presets are retained. Zero or omitted `NAOMOD` resolves to ten times the
+actual atmospheric steps/day before the namelist echo and MPI broadcast.
+Valid positive explicit intervals retain precedence; fractional-day,
+subdaily, negative, and mismatched ocean-clock inputs stop before LSG.
+The timestep and coupling parameter rows, migration, restart cautions, and
+benchmark T42 workload metadata reflect these functional changes. Restart
+record layouts and the T21 numerical reference are unchanged; old T31/T42
+continuations must retain their original atmospheric timing explicitly.
+
+Validation for PR #73: all 59 regression tests passed with Homebrew GNU
+Fortran 15.2.0 and Open MPI 5.0.7. The new real coupled resolution checks
+use `-O2 -fdefault-real-8` (C `-O0`), with serial twenty-day and two-rank
+ten-day runs at T21/T31/T42. They confirm 45/30/20-minute steps,
+320/480/720-step exchanges, 864000-second LSG timesteps, the expected
+atmospheric/ocean advance counts, finite evolving ocean temperature and
+salinity, and nonzero exchanged stresses/heat fluxes. Automatic and explicit
+MoSt presets produce byte-identical first-step atmospheric state. T31/T42
+continuous twenty-day runs match ten-plus-ten-day continuations byte for
+byte for both restart files and final ocean output. Explicit atmospheric
+minute/step-count overrides retain ten-day coupling; invalid intervals and
+mismatched clocks fail before LSG in serial and MPI. The C harness checks
+MoSt's actual preset/writer path, including `NAOMOD=0`. T15/T63 model presets
+were checked from source only; no new Earth boundary-data runs exist for them.
+Existing numerical references, tolerances, and debug-build flags are retained.
+
+All 29 benchmark-tool tests passed. A ten-day T42 benchmark smoke run passed
+both ocean configurations at 72 steps/day (final atmospheric step 26640;
+one LSG step); the runner's explicit `NTSPD` keeps revision workloads aligned.
+Strict HTML and inventory/parameter checks passed. Browser review confirmed
+the timing table, navigation, and migration text. External link checking was
+stopped after repeated GitHub rate limits. These short checks do not establish
+long-term climate validity or MPI scaling. Timing migrations are functional
+changes, not numerical equivalence claims for old T31/T42 climates.
+
 ## Historical chapter coverage
 
 | Original material | Current Sphinx destination | Code comparison and resulting update |

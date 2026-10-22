@@ -60,15 +60,52 @@ Selecting **LSG Ocean** changes both the compiled executable and the prepared
 | Input | Group / file | Purpose |
 | --- | --- | --- |
 | `nlsg` | `oceanmod_nl` / `oceanmod_namelist` | Coupling mode (`1` uses atmospheric SST forcing and ocean heat-flux feedback). |
-| `naomod` | `oceanmod_nl` / `oceanmod_namelist` | Atmospheric timesteps between LSG coupling exchanges (default `320`, which equals 10 days at 32 steps/day). |
+| `naomod` | `oceanmod_nl` / `oceanmod_namelist` | Atmospheric timesteps between LSG exchanges; default `0` selects ten days using the effective atmospheric timestep. Positive explicit intervals must be whole atmospheric days. |
 | Coupling controls | `cplpar` / `cpl_namelist` | Grid interpolation and flux-correction switches. |
 | Ocean parameters | `param` / `input` | LSG integration, output controls, and vertical-diffusion parameters. |
 | `astar`, `zstar`, `arange`, `lambda` | `param` / `input` | Optional LSG vertical-diffusion profile parameters (negative sentinel values retain default settings). |
 
-At the standard T21 timestep of 45 minutes (32 steps per day), `NAOMOD=320`
-couples the atmosphere and LSG every 10 atmospheric days. During LSG
-initialization, the ocean timestep `DT` is derived automatically from PlaSim's
-coupling interval after reading `input`.
+MoSt and the model use the same automatic atmospheric presets:
+
+| Resolution | Timestep (minutes) | Steps per Earth day | Automatic `NAOMOD` (ten days) |
+| --- | ---: | ---: | ---: |
+| T21 | 45 | 32 | 320 |
+| T31 | 30 | 48 | 480 |
+| T42 | 20 | 72 | 720 |
+| T63 preset | 15 | 96 | 960 |
+
+MoSt writes `NAOMOD=0`; the model resolves zero or an omitted value to
+`10*atmospheric_ntspd` after reading the namelist. This also follows explicit
+atmospheric `MPSTEP` or `NTSPD` settings. The effective interval is printed
+at startup. A positive `NAOMOD` remains an explicit step-count override;
+for daily coupling use the atmospheric steps/day from the table. Negative,
+subdaily, or fractional-day intervals are rejected before LSG initialization.
+An ocean-local `NTSPD` override must match the atmospheric count when LSG
+is enabled.
+
+LSG's ocean timestep `DT` is derived from that whole-day interval after
+reading `input`; the default is 864000 seconds for Earth. The LSG calendar
+still requires 360 days/year.
+
+### Migration of existing experiments
+
+The previous direct-model automatic timesteps were 36 minutes at T31 and
+30 minutes at T42; MoSt already used 30 and 20 minutes. The T63 preset
+now uses 15 minutes in both paths; previously the direct model selected
+20 minutes and the MoSt table specified 10 minutes. The former fixed
+`NAOMOD=320` meant ten days only at T21. Explicit old values remain explicit:
+for example, `NAOMOD=320` at the new T31/T42 timesteps is now rejected because
+it is not a whole number of days. Use `NAOMOD=0` for the new ten-day default,
+or choose a valid explicit whole-day interval.
+
+Restart formats are unchanged, but these are intentional timing changes.
+Preserve the original atmospheric timestep when continuing an existing
+experiment: `nstep` is stored in atmospheric steps and its date depends on
+steps/day. Preserve its valid coupling interval and associated ocean state
+and matrix as well. A legacy run with a fractional-day exchange/ocean-time
+mismatch cannot be continued as an equivalent correctly synchronized run by
+merely changing `NAOMOD`; choose and document a new experiment setup. See
+{doc}`restarts` for continuation requirements.
 
 ```{note}
 Because the default coupling interval is 10 atmospheric days, a test run shorter

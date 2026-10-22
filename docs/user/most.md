@@ -15,6 +15,14 @@ MoSt supports both an interactive X11 graphical window (`./most.x`) and a
 headless configuration-file mode (`./most.x -c`) for remote servers without a
 display.
 
+## Atmospheric timestep and LSG exchange defaults
+
+MoSt and direct model initialization use the same T21/T31/T42 defaults:
+45/30/20 minutes. In the ocean namelist, MoSt writes `NAOMOD=0` to request
+automatic ten-day LSG exchanges based on the model's effective timestep.
+See {doc}`parallel-ocean` for resolved step counts, explicit overrides,
+validation, and migration of existing experiments.
+
 ## Step 1: Install prerequisites and build MoSt
 
 To configure and build PlaSim through MoSt, install:

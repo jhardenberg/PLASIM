@@ -1,5 +1,19 @@
 # Restarts and reproducible experiments
 
+## Timing defaults and continuation
+
+Atmospheric automatic timesteps now match MoSt (T21/T31/T42: 45/30/20
+minutes), and omitted or zero ocean `NAOMOD` selects ten atmospheric days.
+Older direct T31/T42 runs used 36/30 minutes. T63 now uses 15 minutes
+in both paths; its older model automatic value was 20 minutes and MoSt
+preset was 10 minutes. Keep their original timestep
+explicit when continuing: the saved step counter does not encode its own
+timestep duration. Keep a valid original coupling interval explicit and
+retain the corresponding LSG restart and matrix. Legacy fractional-day
+LSG intervals are now rejected because they silently truncated the ocean
+timestep. Changing those intervals is a new numerical setup, not an exact
+continuation. See {doc}`parallel-ocean` for the timing table and migration.
+
 ## How `plasim_status` and `plasim_restart` work
 
 At the end of every executable run (`epilog`), PlaSim writes its complete
