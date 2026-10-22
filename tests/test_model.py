@@ -74,7 +74,8 @@ def doubles(data: bytes) -> tuple[float, ...]:
 
 def build_model(
     build: Path, *, lsg: bool = False, ranks: int = 1, precision: str = "-fdefault-real-8",
-    latitudes: int = 32, fflags: str = "-O0", jobs: int | None = None,
+    latitudes: int = 32, fflags: str = "-O0", rainmod: str = "rainmod", fftmod: str = "fftmod",
+    jobs: int | None = None,
 ) -> Path:
     """Build L10 at the selected latitude count with optional MPI and real LSG."""
     compiler = "mpif90" if ranks > 1 else "gfortran"
@@ -103,6 +104,8 @@ def build_model(
         "GUIMOD": "guimod_stub", "PUMAX": "pumax_stub",
         "GUILIB": "", "OCEAN": "lsgmod" if lsg else "lsgmod_stub",
         "OCEANCOUP": "cpl" if lsg else "cpl_stub",
+        "RAINMOD": rainmod,
+        "FFTMOD": fftmod,
     })
     if jobs is None:
         jobs_env = os.environ.get("PLASIM_BUILD_JOBS")
@@ -780,6 +783,98 @@ class ConfigurePrecisionTests(unittest.TestCase):
         prec_file = work / "most_precision_options"
         self.assertTrue(prec_file.is_file(), f"most_precision_options was not created for nagfor:\n{result.stdout}")
         self.assertIn("MOST_PREC=-r8", prec_file.read_text())
+
+
+class AlternativeComponentTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.temp = tempfile.TemporaryDirectory(prefix="plasim-components-")
+        cls.addClassCleanup(cls.temp.cleanup)
+        cls.work = Path(cls.temp.name)
+
+    def test_fft991mod_build_and_run(self) -> None:
+        """Verify fft991mod compiles, runs, and integrates one day."""
+        executable = build_model(self.work / "build-fft991", fftmod="fft991mod")
+        run = prepare_run(self.work, "run-fft991", days=1)
+        run_model(executable, run)
+        state = records(run / "plasim_status")
+        vals = doubles(state["dt"])
+        self.assertTrue(all(map(math.isfinite, vals)))
+        self.assertIn("one day", (run / "plasim_diag").read_text())
+
+    def test_tracer_transport_activation(self) -> None:
+        """Verify semi-Lagrangian tracer transport activates when nsela=1."""
+        executable = build_model(self.work / "build-tracer")
+        run = prepare_run(self.work, "run-tracer", days=1)
+        (run / "plasim_namelist").write_text(
+            "&plasim_nl\n n_run_years=0, n_run_months=0, n_run_days=1, n_run_steps=0, "
+            "kick=0, ngui=0, seed=1, nsela=1\n/\n", encoding="ascii"
+        )
+        run_model(executable, run)
+        diag = (run / "plasim_diag").read_text()
+        self.assertIn("one day", diag)
+        state = records(run / "plasim_status")
+        vals = doubles(state["dt"])
+        self.assertTrue(all(map(math.isfinite, vals)))
+
+    def test_stub_interfaces_and_mpabort(self) -> None:
+        """Verify replacement stubs (cpl_stub, lsgmod_stub, mpimod_stub mpabort) signatures and diagnostics."""
+        work = self.work / "test_stubs"
+        work.mkdir()
+        test_src = work / "test_stubs.f90"
+        test_src.write_text("""
+          subroutine get_restart_array(a,b,c,d,e)
+          end subroutine
+          subroutine put_restart_array(a,b,c,d,e)
+          end subroutine
+          subroutine get_surf_array(a,b,c,d,e)
+          end subroutine
+
+          program test_stubs
+          use pumamod, only: nud
+          implicit none
+          integer :: ndatim(7) = 0
+          real :: zls(64,32) = 0.0
+          real :: zsst(2048) = 0.0
+          real :: ztaux(2048) = 0.0
+          real :: ztauy(2048) = 0.0
+          real :: zpme(2048) = 0.0
+          real :: zroff(2048) = 0.0
+          real :: zice(2048) = 0.0
+          real :: zheat(2048) = 0.0
+          real :: zfldo(2048) = 0.0
+
+          ! Test cpl_stub entry points with full oceanmod signatures
+          call clsgini(ndatim,32,320,1,0,zls,64,32)
+          call clsgstep(ndatim,1,zsst,ztaux,ztauy,zpme,zroff,zice,zheat,zfldo)
+          call clsgstop
+
+          ! Test lsgmod_stub entry points with cpl caller signatures
+          call lsgini(320,1,64,32)
+          call lsgstep
+          call lsgstop
+          call lsg
+
+          ! Test mpabort writing to nud
+          open(11, file="test_diag.txt")
+          nud = 11
+          call mpabort("TEST_ABORT_STUB")
+          end program test_stubs
+        """, encoding="ascii")
+        binary = work / "test_stubs.x"
+        command([
+            "gfortran", "-O0", "-fcheck=all",
+            str(SOURCE / "resmod_def.f90"),
+            str(SOURCE / "plasimmod.f90"),
+            str(SOURCE / "mpimod_stub.f90"),
+            str(SOURCE / "cpl_stub.f90"),
+            str(SOURCE / "lsgmod_stub.f90"),
+            str(test_src),
+            "-o", str(binary),
+        ], cwd=work)
+        subprocess.run([str(binary)], cwd=work, capture_output=True, text=True)
+        self.assertIn("TEST_ABORT_STUB", (work / "Abort_Message").read_text())
+        self.assertIn("TEST_ABORT_STUB", (work / "test_diag.txt").read_text())
 
 
 if __name__ == "__main__":
