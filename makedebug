@@ -1,4 +1,0 @@
-most.x:	most.c
-	gfortran -o most.x -g most.c -lm -L/usr/X11R6/lib -lX11
-clean:
-	rm -f *.o *.x
