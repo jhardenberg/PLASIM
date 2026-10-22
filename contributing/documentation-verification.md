@@ -12,6 +12,29 @@ updates check the merged developments identified below, including mainline
 change model sources. Source checks and runtime checks below are deliberately
 distinguished.
 
+## T31 benchmark extension and timing alignment
+
+Checked `benchmarks/run.py` (`RESOLUTIONS`, `arguments`, `build`, `prepare`,
+`state_summary`) against MoSt `PlasimSteps`: T21/T31/T42 use 45/30/20-minute
+Earth timesteps (32/48/72 steps/day). The runner writes `NTSPD` explicitly
+so older source revisions with different automatic defaults use the same
+benchmark timestep. This anticipates the model-default alignment requested
+in issue #72. Coupled T31 uses its native N048 land mask because `lsg/dat`
+only supplies an N032 replacement. Its one/ten-day exchange intervals are
+48/480 atmospheric steps. T21/T42 remain the default selected resolutions.
+
+Earlier validation of PR #71 used 40-step/day T31 and 48-step/day T42;
+those historical smoke results do not validate the revised workload or
+provide matching performance baselines. Updated validation is recorded
+below after rerunning the benchmark with the explicit MoSt timings.
+
+All 31 benchmark-tool tests passed after alignment. The exact
+`benchmark-smoke.sh T31` example passed both serial cases at 48 steps/day
+for ten days (final atmospheric step 17760; one LSG step and finite
+nonzero returned heat flux). Strict Sphinx HTML and reference-inventory
+checks passed. These are execution checks, not climate/scaling validation.
+Previous MPI smoke results retain their historical timing scope above.
+
 ## Issue #72: aligned atmospheric and coupling defaults
 
 Checked MoSt `PlasimSteps`, `CheckPlasimNamelist`, `InitNamelist`, and

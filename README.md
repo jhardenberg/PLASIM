@@ -4,7 +4,7 @@
 
 # PlaSim-LSG TNG (The Next Generation)
 
-PlaSim-LSG TNG (The Next Generation) is an intermediate-complexity atmosphere–ocean general circulation model (AOGCM) designed for climate research, paleoclimate studies, climate dynamics, and educational use. 
+PlaSim-LSG TNG (The Next Generation) is an intermediate-complexity atmosphere–ocean general circulation model (AOGCM) designed for climate research, paleoclimate studies, climate dynamics, and educational use.
 This repository was originally a streamlined fork of [the original PLASIM repository](https://github.com/HartmutBorth/PLASIM) developed at University of Hamburg and is now maintained independently.
 
 The model couples:
@@ -78,7 +78,7 @@ For details on directory layout, multi-year runs, and experiment management, con
 
 ## Performance benchmarks
 
-A standalone performance benchmark suite is provided in [`benchmarks/`](benchmarks/README.md) to measure model throughput, evaluate multi-core scaling, and compare compiler flags or git revisions across standardized T21 and T42 workloads:
+A standalone performance benchmark suite is provided in [`benchmarks/`](benchmarks/README.md) to measure model throughput, evaluate multi-core scaling, and compare compiler flags or git revisions across standardized T21 and T42 workloads (or optional T31 via `--resolutions T31`):
 
 ```sh
 python3 benchmarks/run.py --benchmark smoke --cores 1,2
