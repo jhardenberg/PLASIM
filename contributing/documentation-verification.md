@@ -227,3 +227,18 @@ actually checked. Update descriptions to match code when old information
 is stale. If the code reveals a suspected bug, reproduce it where practical
 and report it separately instead of silently correcting the implementation
 or documenting intended behavior as if it were current.
+
+## Direct NetCDF-4 output verification
+
+- Checked `plasim/src/netcdfmod.f90` and `plasim/src/netcdfmod_stub.f90`:
+  - Module `netcdfmod` implements direct NetCDF-4 output with coordinate variables `lon`, `lat`, `lev`, `time`, and 50 physical variables.
+  - Chunking configured per horizontal Gaussian slice (`NLON` × `NLAT`) and deflate compression set via `ndeflate` (level 0–9, default 4).
+  - Time-averaging modes: instantaneous (`noutput_avg = 0`), daily mean (`noutput_avg = 1`), monthly mean (`noutput_avg = 2`).
+  - Fallback stub `netcdfmod_stub.f90` provides graceful build on environments lacking NetCDF libraries, aborting cleanly if `nnetcdf > 0` is requested at runtime.
+- Checked `plasim/src/plasimmod.f90` and `plasim/src/plasim.f90`:
+  - Added namelist variables `nnetcdf`, `noutput_avg`, and `ndeflate` with defaults `0`, `1`, `4` respectively, preserving classic Service-format Earth baselines by default.
+  - Added MPI broadcasts in `readnl`.
+  - Conditioned classic Service file output routines on `nnetcdf == 0`.
+- Checked `most.c`:
+  - Updated run-script generation to detect `plasim_output.nc` and move it directly to `output/$DATANAME` without invoking `srv2nc`.
+- Checked `docs/reference/parameters/plasim.md` and parameter inventory via `python3 docs/generate_reference.py --check`.

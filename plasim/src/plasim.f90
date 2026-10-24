@@ -133,6 +133,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 
       subroutine prolog
       use pumamod
+      use netcdfmod
 
       logical :: lrestart
 
@@ -209,6 +210,9 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       call mpbci(naqua   ) ! aqua planet switch
       call mpbci(nveg    ) ! vegetation switch
       call mpbci(noutput ) ! write data switch
+      call mpbci(nnetcdf ) ! direct netcdf output switch
+      call mpbci(noutput_avg) ! netcdf output averaging
+      call mpbci(ndeflate) ! netcdf deflate level
       call mpbci(nafter  ) ! write data interval
       call mpbci(nwpd    ) ! number of writes per day
       call mpbci(ncoeff  ) ! number of modes to print
@@ -384,8 +388,9 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
       endif
 
       if (mypid == NROOT) then
-         if (noutput > 0) call outini    ! Open output file <plasim_output>
+         if (noutput > 0 .and. nnetcdf == 0) call outini    ! Open output file <plasim_output>
       endif
+      if (noutput > 0 .and. nnetcdf > 0) call netcdf_init
 !
 !*    initialize miscellaneous additional parameterization
 !     which are included in *miscmod*
@@ -504,6 +509,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 
       subroutine master
       use pumamod
+      use netcdfmod
 
 !     ***************************
 !     * short initial timesteps *
@@ -574,7 +580,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
          call gridpointd
 
          if (mypid == NROOT) then
-            if (mod(nstep,nafter) == 0 .and. noutput > 0) then
+            if (mod(nstep,nafter) == 0 .and. noutput > 0 .and. nnetcdf == 0) then
                call outsp
             endif
             if (mod(nstep,ndiag) == 0) then
@@ -587,15 +593,19 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
          if (ngui > 0) call guistep_plasim
          call spectrald
 
-          call outaccu
-         if (mod(nstep,nafter) == 0) then
-          if(noutput > 0) then
-           call outgp
-           koutdiag=ndiaggp3d+ndiaggp2d+ndiagsp3d+ndiagsp2d+ndiagcf     &
-     &             +nentropy+nenergy
-           if(koutdiag > 0) call outdiag
-          endif
-          call outreset
+         if (noutput > 0) then
+            if (nnetcdf == 0) then
+               call outaccu
+               if (mod(nstep,nafter) == 0) then
+                  call outgp
+                  koutdiag=ndiaggp3d+ndiaggp2d+ndiagsp3d+ndiagsp2d+ndiagcf     &
+            &             +nentropy+nenergy
+                  if(koutdiag > 0) call outdiag
+                  call outreset
+               endif
+            else
+               call netcdf_step
+            endif
          endif
 
          iyea  = ndatim(1)    ! current year
@@ -628,6 +638,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 
       subroutine epilog
       use pumamod
+      use netcdfmod
       real    (kind=8) :: zut,zst
       integer (kind=8) :: imem,ipr,ipf,isw,idr,idw
 !
@@ -647,7 +658,8 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 !
 !     close output file
 !
-      if (mypid == NROOT) close(40)
+      if (mypid == NROOT .and. nnetcdf == 0 .and. noutput > 0) close(40)
+      if (noutput > 0 .and. nnetcdf > 0) call netcdf_close
 !
 !     close efficiency diagnostic file
 !
@@ -1013,7 +1025,7 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
                    , ndiagsp   , ndiagsp2d , ndiagsp3d                  &
                    , ndl     , nentropy, nentro3d, neqsig  , nflux      &
                    , ngui    , nguidbg , nhdiff  , nhordif , nkits      &
-                   , noutput    &
+                   , noutput , nnetcdf , noutput_avg , ndeflate   &
                    , npackgp , npacksp , nperpetual        , nprhor     &
                    , nprint  , nqspec  , nrad    , nsela   , nsync      &
                    , ntime   , ntspd   , nveg    , nwpd    &
@@ -1050,6 +1062,10 @@ plasimversion = "https://github.com/Edilbert/PLASIM/ : 15-Dec-2015"
 
       open(11,file=plasim_namelist,form='formatted')
       read (11,plasim_nl)
+
+      if (ndeflate < 0 .or. ndeflate > 9) then
+         ndeflate = 4
+      endif
 
 !     aqua planet settings
 

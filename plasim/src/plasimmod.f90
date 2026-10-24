@@ -149,6 +149,9 @@
 
       integer :: kick     =  1  ! add noise for kick > 0
       integer :: noutput  =  1  ! master switch for output: 0=no output
+      integer :: nnetcdf  =  0  ! output format switch: 0=classic service format, 1=direct NetCDF-4
+      integer :: noutput_avg = 1 ! NetCDF averaging mode: 0=instantaneous, 1=daily average, 2=monthly average
+      integer :: ndeflate =  4  ! NetCDF-4 deflate compression level (0-9)
       integer :: nafter   =  0  ! write data interval: 0 = once per day
       integer :: naqua    =  0  ! 1: switch to aqua planet mode
       integer :: nveg     =  1  ! 1: run vegetation module
