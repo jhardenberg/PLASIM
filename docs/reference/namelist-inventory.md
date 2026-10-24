@@ -11,18 +11,18 @@ planet-specific lists must not be interchanged.
 
 ## `plasim_nl` — `plasim.f90`
 
-Source: {repo}`plasim/src/plasim.f90` (68 names).
+Source: {repo}`plasim/src/plasim.f90` (71 names).
 
 ```text
 kick, mpstep, nadv, naqua, ncoeff, ndel, ndheat, ndiag, ndiagcf, ndiaggp,
 ndiaggp2d, ndiaggp3d, ndiagsp, ndiagsp2d, ndiagsp3d, ndl, nentropy,
 nentro3d, neqsig, nflux, ngui, nguidbg, nhdiff, nhordif, nkits, noutput,
-npackgp, npacksp, nperpetual, nprhor, nprint, nqspec, nrad, nsela, nsync,
-ntime, ntspd, nveg, nwpd, n_start_year, n_start_month, n_run_steps,
-n_run_years, n_run_months, n_run_days, n_days_per_month, n_days_per_year,
-seed, sellon, syncstr, synctime, dtep, dtns, dtrop, dttrp, tdissd, tdissz,
-tdisst, tdissq, tgr, restim, t0, tfrc, sigh, nenergy, nener3d, nsponge,
-dampsp
+nnetcdf, noutput_avg, ndeflate, npackgp, npacksp, nperpetual, nprhor,
+nprint, nqspec, nrad, nsela, nsync, ntime, ntspd, nveg, nwpd, n_start_year,
+n_start_month, n_run_steps, n_run_years, n_run_months, n_run_days,
+n_days_per_month, n_days_per_year, seed, sellon, syncstr, synctime, dtep,
+dtns, dtrop, dttrp, tdissd, tdissz, tdisst, tdissq, tgr, restim, t0, tfrc,
+sigh, nenergy, nener3d, nsponge, dampsp
 ```
 
 ## `planet_nl` — `p_earth.f90`

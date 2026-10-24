@@ -5,7 +5,7 @@
 	$(MOST_CC) -c $(MOST_CC_OPTS) $<
 
 %.o : %.f90
-	$(MOST_F90) -c $(MOST_F90_OPTS) $(MOST_PREC) $<
+	$(MOST_F90) -c $(MOST_F90_OPTS) $(MOST_PREC) $(NETCDF_INC) $<
 
 %.o : %.f
 	$(MOST_F90) -c $(MOST_F90_OPTS) $<
@@ -30,15 +30,25 @@ PLAMOD=p_earth
 LANDMOD=landmod
 OCEAN=lsgmod
 OCEANCOUP=cpl
+NETCDFMOD?=netcdfmod
 
-OBJ=${MPIMOD}.o ${FFTMOD}.o ${GUIMOD}.o ${RAINMOD}.o ${VEGMOD}.o ${PLAMOD}.o resmod.o plasim.o plasimmod.o calmod.o gaussmod.o legmod.o outmod.o miscmod.o fluxmod.o radmod.o surfmod.o ${LANDMOD}.o seamod.o icemod.o oceanmod.o restartmod.o specblock.o tracermod.o tpcore.o trc_routines.o ${PUMAX}.o ${OCEAN}.o ${OCEANCOUP}.o
+ifeq ($(NETCDFMOD),netcdfmod_stub)
+   NETCDF_INC=
+   NETCDF_LIB=
+else
+   NETCDF_INC?=$(shell nf-config --fflags 2>/dev/null)
+   NETCDF_LIB?=$(shell nf-config --flibs 2>/dev/null) $(shell nc-config --libs 2>/dev/null)
+endif
+
+OBJ=${MPIMOD}.o ${FFTMOD}.o ${GUIMOD}.o ${RAINMOD}.o ${VEGMOD}.o ${PLAMOD}.o resmod.o plasim.o plasimmod.o calmod.o gaussmod.o legmod.o outmod.o miscmod.o fluxmod.o radmod.o surfmod.o ${LANDMOD}.o seamod.o icemod.o oceanmod.o restartmod.o specblock.o tracermod.o tpcore.o trc_routines.o ${PUMAX}.o ${OCEAN}.o ${OCEANCOUP}.o ${NETCDFMOD}.o
 
 plasim.x:	$(OBJ)
-	$(MOST_F90) -o plasim.x $(MOST_F90_OPTS) $(OBJ) ${GUILIB}
+	$(MOST_F90) -o plasim.x $(MOST_F90_OPTS) $(OBJ) ${GUILIB} $(NETCDF_LIB)
 
 resmod.o:	resmod.f90
 plasimmod.o:	plasimmod.f90 resmod.o
-plasim.o:	plasim.f90 plasimmod.o
+plasim.o:	plasim.f90 plasimmod.o ${NETCDFMOD}.o
+${NETCDFMOD}.o:	${NETCDFMOD}.f90 plasimmod.o legmod.o ${FFTMOD}.o
 ${FFTMOD}.o:	${FFTMOD}.f90
 ${MPIMOD}.o:	${MPIMOD}.f90 plasimmod.o
 ${GUIMOD}.o:	${GUIMOD}.f90 plasimmod.o radmod.o ${OCEANCOUP}.o

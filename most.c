@@ -1840,8 +1840,11 @@ int WriteRunScript(int model)
       fputs("   INST=0\n",fp);
       fputs("   while [ $INST -lt $INSTANCES ]\n   do\n",fp);
       fputs("      EXT=`printf '%02d' $INST`\n",fp);
-      fprintf(fp,"      if [ -e %s_$EXT ]; then mv %s_$EXT ${EXT}_$DATANAME; fi\n",
-              outp_name,outp_name);
+      fprintf(fp,"      if [ -e %s_$EXT.nc ]; then\n",outp_name);
+      fprintf(fp,"         mv %s_$EXT.nc ${EXT}_$DATANAME\n",outp_name);
+      fprintf(fp,"      elif [ -e %s_$EXT ]; then\n",outp_name);
+      fprintf(fp,"         mv %s_$EXT ${EXT}_$DATANAME\n",outp_name);
+      fprintf(fp,"      fi\n");
       fprintf(fp,"      if [ -e %s_$EXT ]; then mv %s_$EXT ${EXT}_$DIAGNAME; fi\n",
               diag_name,diag_name);
       fprintf(fp,"      if [ -e %s_status_$EXT ]; then\n",
@@ -1856,7 +1859,11 @@ int WriteRunScript(int model)
    else
    {
       fprintf(fp,"   if [ -e %s ]; then mv %s output/$DIAGNAME; fi\n",diag_name,diag_name);
-      fprintf(fp,"   if [ -e %s ]; then $srv2nc $average %s output/$DATANAME; fi\n",outp_name,outp_name);
+      fprintf(fp,"   if [ -e %s.nc ]; then\n",outp_name);
+      fprintf(fp,"      mv %s.nc output/$DATANAME\n",outp_name);
+      fprintf(fp,"   elif [ -e %s ]; then\n",outp_name);
+      fprintf(fp,"      $srv2nc $average %s output/$DATANAME\n",outp_name);
+      fprintf(fp,"   fi\n");
       fprintf(fp,"   if [ -e ocean_output ]; then $srv2nc $average ocean_output output/$OCENAME; fi\n");
       fprintf(fp,"   if [ -e ice_output ]; then $srv2nc $average ice_output output/$ICENAME; fi\n");
       fprintf(fp,"   if [ -e lsg_output ]; then $srv2nc lsg_output output/$LSGNAME; fi\n");

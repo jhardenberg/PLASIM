@@ -84,7 +84,10 @@ The conversion to nondimensional damping then uses the selected
 | Parameter | Type; input units | Default | Meaning and interactions |
 | --- | --- | --- | --- |
 | `noutput` | integer; switch | 1 | Enables atmospheric output and is passed to the sea modules as their master output switch. |
-| `nwpd` | integer; writes/day | 1 | If between 1 and `ntspd`, sets output interval to integer `ntspd/nwpd`; otherwise the fallback is daily. Nondivisors need not yield the requested exact daily count. |
+| `nnetcdf` | integer; switch | 0 | Output format switch. `0` writes classic binary Service format (`plasim_output`). `1` writes direct compressed NetCDF-4 (`plasim_output.nc`). |
+| `noutput_avg` | integer; code | 1 | Time-averaging mode for NetCDF output when `nnetcdf = 1`. `1` computes true 24-hour daily averages across all timesteps in each calendar day (`ntspd` steps, integrating the diurnal cycle; `nwpd` is ignored). `2` computes monthly averages across all timesteps in the calendar month (`nwpd` is ignored). `0` writes instantaneous snapshots at interval `ntspd / nwpd` governed by `nwpd`. |
+| `ndeflate` | integer; level (0–9) | 4 | NetCDF-4 deflate (zlib compression) level for direct NetCDF output (`0` = no compression, `9` = maximum compression). |
+| `nwpd` | integer; writes/day | 1 | Writes per model day. Sets output interval to `ntspd / nwpd` steps for classic Service format (`nnetcdf = 0`) and for instantaneous NetCDF output (`nnetcdf = 1, noutput_avg = 0`). Ignored when NetCDF daily (`noutput_avg = 1`) or monthly (`noutput_avg = 2`) averaging is active. |
 | `ndiag` | integer; steps | 0 → `10*ntspd` | Diagnostic interval; nonpositive input becomes ten model days. |
 | `ndiagcf` | integer; switch | 0 | Enables clear-sky radiation/cloud-forcing diagnostic fluxes; adds output fields. |
 | `ndiaggp` | integer; switch | 0 | 1 enables the built-in gridpoint tendency diagnostics and adds 21 to `ndiaggp3d`. |
